@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Forge — TCGテストプレイ用カード制作</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg-deep: #1a1410;
+  --bg-mid: #241c17;
+  --bg-light: #2d241e;
+  --parchment: #f4ead5;
+  --parchment-dim: #d4c8a8;
+  --gold: #c9a961;
+  --gold-bright: #e6c878;
+  --ink: #1a1410;
+  --ink-dim: #4a3c2e;
+  --accent-red: #8b2c1f;
+  --accent-blue: #2c4f7c;
+  --accent-green: #3d6b3a;
+  --accent-brown: #6b4f2c;
+  --accent-purple: #5d3a6b;
+  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(201, 169, 97, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(139, 44, 31, 0.06) 0%, transparent 40%);
+  color: var(--parchment);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ============ HEADER ============ */
+header {
+  border-bottom: 2px solid var(--gold);
+  background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+  padding: 24px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.brand-mark {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.brand-mark::before {
+  content: "❦ ";
+  color: var(--gold-bright);
+}
+.brand-tag {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+  letter-spacing: 0.15em;
+  font-style: italic;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ============ BUTTONS ============ */
+button, .btn {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  border-radius: 0;
+  position: relative;
+}
+button:hover, .btn:hover {
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 0 0 12px rgba(201, 169, 97, 0.4);
+}
+.btn-primary {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold);
+  font-weight: 700;
+}
+.btn-primary:hover {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 20px rgba(230, 200, 120, 0.6);
+}
+.btn-danger {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+.btn-danger:hover {
+  background: var(--accent-red);
+  color: var(--parchment);
+}
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+/* ============ MAIN LAYOUT ============ */
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 32px;
+}
+@media (max-width: 980px) {
+  main { grid-template-columns: 1fr; }
+}
+
+/* ============ EDITOR PANEL ============ */
+.editor-panel {
+  background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-light) 100%);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  padding: 24px;
+  position: sticky;
+  top: 120px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+.editor-panel::-webkit-scrollbar { width: 8px; }
+.editor-panel::-webkit-scrollbar-track { background: var(--bg-deep); }
+.editor-panel::-webkit-scrollbar-thumb { background: var(--gold); }
+
+.panel-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+.field {
+  margin-bottom: 16px;
+}
+.field label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  font-family: inherit;
+  font-size: 0.95rem;
+  border-radius: 0;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201, 169, 97, 0.4);
+}
+.field textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: 'Noto Serif JP', serif;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(201, 169, 97, 0.2);
+}
+.editor-actions button { flex: 1; }
+
+/* ============ CARD LIST PANEL ============ */
+.list-panel { display: flex; flex-direction: column; gap: 24px; }
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 12px;
+}
+.list-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+.list-count {
+  color: var(--parchment-dim);
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(189px, 1fr));
+  gap: 20px;
+}
+
+/* ============ CARD PREVIEW (in list) ============ */
+.card-preview {
+  width: 189px;
+  height: 264px;
+  background: #FAFAF7;
+  color: var(--ink);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  font-family: 'Noto Sans JP', sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  user-select: none;
+}
+.card-preview:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(201, 169, 97, 0.5);
+}
+.card-preview.selected {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 4px;
+}
+
+.cp-name-bar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+}
+.cp-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.cp-cost {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+.cp-art {
+  background: #EFEFEF;
+  height: 90px;
+  margin: 3px 3px 0;
+  border: 1px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 8px;
+  color: #888;
+  padding: 4px;
+  font-style: italic;
+  line-height: 1.2;
+  overflow: hidden;
+}
+.cp-type-bar {
+  height: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.cp-text {
+  flex: 1;
+  font-size: 8px;
+  padding: 6px 8px;
+  line-height: 1.35;
+  overflow: hidden;
+}
+.cp-flavor {
+  font-style: italic;
+  color: #555;
+  font-size: 7.5px;
+  margin-top: 4px;
+  font-family: 'Noto Serif JP', serif;
+}
+.cp-power {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: currentColor;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cp-power span { color: white; }
+
+/* Card index badge */
+.cp-index {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 28px;
+  height: 28px;
+  background: var(--gold);
+  color: var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 12px;
+  border: 2px solid var(--bg-deep);
+  z-index: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--parchment-dim);
+  font-family: 'Noto Serif JP', serif;
+  font-style: italic;
+}
+.empty-state h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  letter-spacing: 0.1em;
+  font-style: normal;
+}
+
+/* ============ MODAL ============ */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--bg-mid);
+  border: 1px solid var(--gold);
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+.modal h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  margin-bottom: 16px;
+  letter-spacing: 0.1em;
+}
+.modal p {
+  margin-bottom: 20px;
+  color: var(--parchment-dim);
+  font-family: 'Noto Serif JP', serif;
+}
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ============ TOAST ============ */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--bg-mid);
+  border: 1px solid var(--gold);
+  padding: 14px 20px;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.1em;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 300;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============ HIDDEN PDF CANVAS ============ */
+#pdfCanvas { display: none; }
+
+footer {
+  text-align: center;
+  padding: 40px 20px 60px;
+  color: var(--parchment-dim);
+  font-family: 'Noto Serif JP', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  border-top: 1px solid rgba(201, 169, 97, 0.2);
+  margin-top: 60px;
+}
+footer .ornament {
+  color: var(--gold);
+  letter-spacing: 0.5em;
+  margin-bottom: 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">CARD FORGE</div>
+      <div class="brand-tag">— Forge thy deck, test thy strategy —</div>
+    </div>
+    <div class="actions">
+      <button onclick="exportJSON()" class="btn-small">📥 JSONエクスポート</button>
+      <button onclick="document.getElementById('importJsonFile').click()" class="btn-small">📤 JSONインポート</button>
+      <input type="file" id="importJsonFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button onclick="exportCSV()" class="btn-small">CSV出力</button>
+      <button onclick="document.getElementById('importCsvFile').click()" class="btn-small">CSV読込</button>
+      <input type="file" id="importCsvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
+      <button onclick="generatePDF()" class="btn-primary">⚔ PDF生成</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Editor -->
+  <aside class="editor-panel">
+    <div class="panel-title" id="editorTitle">新しいカード</div>
+    <div class="field">
+      <label>カード名</label>
+      <input type="text" id="f-name" placeholder="例: 炎の戦士">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>タイプ</label>
+        <select id="f-type">
+          <option value="クリーチャー">クリーチャー</option>
+          <option value="スペル">スペル</option>
+          <option value="建造物">建造物</option>
+          <option value="アイテム">アイテム</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>コスト</label>
+        <input type="text" id="f-cost" placeholder="3">
+      </div>
+    </div>
+    <div class="field">
+      <label>パワー / 攻撃力</label>
+      <input type="text" id="f-power" placeholder="2500 (空欄またはハイフンも可)">
+    </div>
+    <div class="field">
+      <label>効果テキスト</label>
+      <textarea id="f-effect" placeholder="このカードが場に出たとき..."></textarea>
+    </div>
+    <div class="field">
+      <label>フレーバーテキスト</label>
+      <textarea id="f-flavor" placeholder="燃え盛る怒りは盾をも溶かす。"></textarea>
+    </div>
+    <div class="field">
+      <label>イラストメモ</label>
+      <textarea id="f-art" placeholder="赤い鎧を着た剣士、炎を背負っている"></textarea>
+    </div>
+    <div class="editor-actions">
+      <button onclick="resetEditor()">クリア</button>
+      <button class="btn-primary" id="saveBtn" onclick="saveCard()">追加</button>
+    </div>
+    <div class="editor-actions" id="editingActions" style="display:none">
+      <button class="btn-danger" onclick="deleteCard()">このカードを削除</button>
+    </div>
+  </aside>
+
+  <!-- List -->
+  <section class="list-panel">
+    <div class="list-header">
+      <div class="list-title">CARD LIBRARY</div>
+      <div class="list-count" id="cardCount">0枚</div>
+    </div>
+    <div class="card-grid" id="cardGrid"></div>
+  </section>
+</main>
+
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h3 id="modalTitle">確認</h3>
+    <p id="modalText"></p>
+    <div class="modal-actions">
+      <button onclick="closeModal()">キャンセル</button>
+      <button class="btn-primary" id="modalConfirm">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="ornament">❦ · · · ❦ · · · ❦</div>
+  Card Forge — Browser-only Card Crafter for TCG Playtesting
+</footer>
+
+<script>
+// ============ DATA MANAGEMENT ============
+const STORAGE_KEY = 'card_forge_data_v1';
+const TYPE_COLORS = {
+  'クリーチャー': '#8b2c1f',
+  'スペル':       '#2c4f7c',
+  '建造物':       '#6b4f2c',
+  'アイテム':     '#3d6b3a',
+  'その他':       '#5d3a6b'
+};
+
+let cards = [];
+let editingIdx = null;
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) cards = JSON.parse(raw);
+  } catch(e) { cards = []; }
+  if (cards.length === 0) {
+    // 初回サンプル
+    cards = [
+      {name:"炎の戦士", type:"クリーチャー", cost:"3", power:"2500",
+       effect:"このカードが場に出たとき、相手に1ダメージ与える。",
+       flavor:"燃え盛る怒りは盾をも溶かす。",
+       art:"赤い鎧を着た剣士、炎を背負っている"},
+      {name:"癒しの妖精", type:"クリーチャー", cost:"2", power:"1000",
+       effect:"ターン終了時、自分のライフを1回復する。",
+       flavor:"森の声を聞く者だけが、その姿を見る。",
+       art:"緑の羽根を持つ小さな妖精"},
+      {name:"雷光の一撃", type:"スペル", cost:"1", power:"",
+       effect:"相手のクリーチャー1体に3ダメージ与える。",
+       flavor:"閃光の前に、影さえ立ち止まる。",
+       art:"稲妻が空から降り注ぐ"}
+    ];
+    saveData();
+  }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+}
+
+// ============ RENDERING ============
+function render() {
+  const grid = document.getElementById('cardGrid');
+  document.getElementById('cardCount').textContent = `${cards.length}枚`;
+
+  if (cards.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <h3>EMPTY LIBRARY</h3>
+        <p>左のフォームから最初のカードを鋳造せよ</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = cards.map((c, i) => {
+    const color = TYPE_COLORS[c.type] || TYPE_COLORS['その他'];
+    const showPower = c.power && c.power !== '-' && c.power !== '';
+    return `
+      <div class="card-preview ${editingIdx === i ? 'selected' : ''}" onclick="editCard(${i})" style="color: ${color}">
+        <div class="cp-index">${i+1}</div>
+        <div class="cp-name-bar" style="background: ${color}">
+          <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
+          <div class="cp-cost">${escapeHtml(c.cost || '-')}</div>
+        </div>
+        <div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>
+        <div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>
+        <div class="cp-text">
+          ${escapeHtml(c.effect || '')}
+          ${c.flavor ? `<div class="cp-flavor">― ${escapeHtml(c.flavor)}</div>` : ''}
+        </div>
+        ${showPower ? `<div class="cp-power"><span>${escapeHtml(c.power)}</span></div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============ EDITOR ============
+function readForm() {
+  return {
+    name:   document.getElementById('f-name').value.trim(),
+    type:   document.getElementById('f-type').value,
+    cost:   document.getElementById('f-cost').value.trim(),
+    power:  document.getElementById('f-power').value.trim(),
+    effect: document.getElementById('f-effect').value.trim(),
+    flavor: document.getElementById('f-flavor').value.trim(),
+    art:    document.getElementById('f-art').value.trim()
+  };
+}
+function writeForm(c) {
+  document.getElementById('f-name').value   = c.name || '';
+  document.getElementById('f-type').value   = c.type || 'クリーチャー';
+  document.getElementById('f-cost').value   = c.cost || '';
+  document.getElementById('f-power').value  = c.power || '';
+  document.getElementById('f-effect').value = c.effect || '';
+  document.getElementById('f-flavor').value = c.flavor || '';
+  document.getElementById('f-art').value    = c.art || '';
+}
+function resetEditor() {
+  editingIdx = null;
+  writeForm({type:'クリーチャー'});
+  document.getElementById('editorTitle').textContent = '新しいカード';
+  document.getElementById('saveBtn').textContent = '追加';
+  document.getElementById('editingActions').style.display = 'none';
+  document.getElementById('f-name').focus();
+  render();
+}
+function editCard(i) {
+  editingIdx = i;
+  writeForm(cards[i]);
+  document.getElementById('editorTitle').textContent = `編集中: ${cards[i].name || '無名'}`;
+  document.getElementById('saveBtn').textContent = '更新';
+  document.getElementById('editingActions').style.display = 'flex';
+  render();
+  document.querySelector('.editor-panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function saveCard() {
+  const data = readForm();
+  if (!data.name) { toast('カード名を入力してください'); return; }
+  if (editingIdx === null) {
+    cards.push(data);
+    toast(`「${data.name}」を追加`);
+  } else {
+    cards[editingIdx] = data;
+    toast(`「${data.name}」を更新`);
+  }
+  saveData();
+  resetEditor();
+}
+function deleteCard() {
+  if (editingIdx === null) return;
+  const name = cards[editingIdx].name;
+  showModal('カードを削除', `「${name}」を削除します。よろしいですか？`, () => {
+    cards.splice(editingIdx, 1);
+    saveData();
+    resetEditor();
+    toast(`「${name}」を削除`);
+  });
+}
+
+// ============ MODAL & TOAST ============
+let modalCallback = null;
+function showModal(title, text, onConfirm) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent = text;
+  modalCallback = onConfirm;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('show');
+  modalCallback = null;
+}
+document.getElementById('modalConfirm').onclick = () => {
+  if (modalCallback) modalCallback();
+  closeModal();
+};
+document.getElementById('confirmModal').onclick = (e) => {
+  if (e.target.id === 'confirmModal') closeModal();
+};
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ============ EXPORT / IMPORT ============
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(cards, null, 2)], {type:'application/json'});
+  download(blob, 'cards.json');
+  toast('JSONエクスポート完了');
+}
+function importJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('配列ではありません');
+      showModal('JSONインポート', `${data.length}枚のカードを読み込みます。現在のデータは置き換えられます。`, () => {
+        cards = data;
+        saveData();
+        resetEditor();
+        toast(`${data.length}枚を読み込みました`);
+      });
+    } catch(err) {
+      toast('JSONの読み込みに失敗しました');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+function exportCSV() {
+  const headers = ['name','type','cost','power','effect','flavor','art'];
+  const rows = [headers.join(',')];
+  cards.forEach(c => {
+    rows.push(headers.map(h => csvEscape(c[h] || '')).join(','));
+  });
+  // BOM付きでExcel互換
+  const blob = new Blob(['\uFEFF' + rows.join('\n')], {type:'text/csv'});
+  download(blob, 'cards.csv');
+  toast('CSV出力完了');
+}
+function csvEscape(s) {
+  s = String(s);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+function importCSV(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      let text = e.target.result;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const parsed = parseCSV(text);
+      if (parsed.length < 2) throw new Error('データなし');
+      const headers = parsed[0].map(h => h.trim());
+      const data = parsed.slice(1).filter(r => r.some(v => v && v.trim()))
+        .map(row => {
+          const o = {};
+          headers.forEach((h, i) => { o[h] = (row[i] || '').trim(); });
+          // 日本語→英語ヘッダのマッピング
+          return {
+            name: o.name || o['カード名'] || '',
+            type: o.type || o['タイプ'] || 'その他',
+            cost: o.cost || o['コスト'] || '',
+            power: o.power || o['パワー'] || '',
+            effect: o.effect || o['効果テキスト'] || o['効果'] || '',
+            flavor: o.flavor || o['フレーバーテキスト'] || o['フレーバー'] || '',
+            art: o.art || o['イラストメモ'] || o['イラスト'] || ''
+          };
+        });
+      showModal('CSVインポート', `${data.length}枚のカードを読み込みます。現在のデータは置き換えられます。`, () => {
+        cards = data;
+        saveData();
+        resetEditor();
+        toast(`${data.length}枚を読み込みました`);
+      });
+    } catch(err) {
+      toast('CSVの読み込みに失敗しました');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i+1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else cell += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (ch === '\r') { /* skip */ }
+      else cell += ch;
+    }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============ PDF GENERATION ============
+async function generatePDF() {
+  if (cards.length === 0) { toast('カードがありません'); return; }
+
+  const { jsPDF } = window.jspdf;
+  // A4: 210 x 297mm
+  const doc = new jsPDF({unit: 'mm', format: 'a4'});
+
+  const A4_W = 210, A4_H = 297;
+  const CARD_W = 63, CARD_H = 88;
+  const COLS = 3, ROWS = 3;
+  const marginX = (A4_W - CARD_W * COLS) / 2;
+  const marginY = (A4_H - CARD_H * ROWS) / 2;
+  const perPage = COLS * ROWS;
+
+  for (let i = 0; i < cards.length; i++) {
+    const slot = i % perPage;
+    if (slot === 0 && i > 0) doc.addPage();
+    if (slot === 0) drawCropMarks(doc, A4_W, A4_H, marginX, marginY, CARD_W, CARD_H, COLS, ROWS);
+
+    const col = slot % COLS;
+    const row = Math.floor(slot / COLS);
+    const x = marginX + col * CARD_W;
+    const y = marginY + row * CARD_H;
+    drawCard(doc, x, y, CARD_W, CARD_H, cards[i]);
+  }
+
+  doc.save('カード印刷.pdf');
+  toast(`${cards.length}枚のPDFを生成`);
+}
+
+function drawCropMarks(doc, A4_W, A4_H, mX, mY, CW, CH, cols, rows) {
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.15);
+  // 縦線位置
+  for (let i = 0; i <= cols; i++) {
+    const x = mX + i * CW;
+    doc.line(x, 0, x, mY - 1);              // 上
+    doc.line(x, A4_H - mY + 1, x, A4_H);    // 下
+  }
+  // 横線位置
+  for (let i = 0; i <= rows; i++) {
+    const y = mY + i * CH;
+    doc.line(0, y, mX - 1, y);              // 左
+    doc.line(A4_W - mX + 1, y, A4_W, y);    // 右
+  }
+}
+
+function hexToRgb(hex) {
+  const m = hex.replace('#','');
+  return [parseInt(m.slice(0,2),16), parseInt(m.slice(2,4),16), parseInt(m.slice(4,6),16)];
+}
+
+function drawCard(doc, x, y, W, H, card) {
+  const color = TYPE_COLORS[card.type] || TYPE_COLORS['その他'];
+  const [cr, cg, cb] = hexToRgb(color);
+
+  // 背景
+  doc.setFillColor(250, 250, 247);
+  doc.rect(x, y, W, H, 'F');
+  // ガイド枠
+  doc.setDrawColor(136);
+  doc.setLineWidth(0.1);
+  doc.rect(x, y, W, H);
+
+  const pad = 2;
+
+  // 名前バー
+  const barH = 8;
+  doc.setFillColor(cr, cg, cb);
+  doc.rect(x + pad, y + pad, W - pad*2, barH, 'F');
+
+  // 名前
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  const nameMaxW = W - pad*2 - 12;
+  let name = card.name || '';
+  while (name && doc.getTextWidth(name) > nameMaxW) {
+    name = name.slice(0, -1);
+  }
+  if (name !== (card.name||'') && name.length > 0) name = name.slice(0,-1) + '…';
+  doc.text(name, x + pad + 2, y + pad + 5.5);
+
+  // コスト円
+  const costX = x + W - pad - 4.5;
+  const costY = y + pad + barH/2;
+  doc.setFillColor(255,255,255);
+  doc.circle(costX, costY, 3.2, 'F');
+  doc.setTextColor(cr, cg, cb);
+  doc.setFontSize(9);
+  const costText = String(card.cost || '-');
+  const costW = doc.getTextWidth(costText);
+  doc.text(costText, costX - costW/2, costY + 1.2);
+
+  // イラスト枠
+  const artH = 32;
+  const artX = x + pad + 1;
+  const artY = y + pad + barH + 1;
+  const artW = W - pad*2 - 2;
+  doc.setFillColor(239, 239, 239);
+  doc.setDrawColor(cr, cg, cb);
+  doc.setLineWidth(0.3);
+  doc.rect(artX, artY, artW, artH, 'FD');
+  // イラストメモ
+  doc.setTextColor(102,102,102);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  const artText = card.art || '[ イラスト ]';
+  const artLines = doc.splitTextToSize(artText, artW - 4);
+  const linesToShow = artLines.slice(0, 4);
+  const startY = artY + artH/2 - (linesToShow.length * 2.5)/2 + 2;
+  linesToShow.forEach((line, idx) => {
+    const w = doc.getTextWidth(line);
+    doc.text(line, artX + artW/2 - w/2, startY + idx*2.8);
+  });
+
+  // タイプバー
+  const typeY = artY + artH + 1;
+  doc.setFillColor(cr, cg, cb);
+  doc.rect(x + pad, typeY, W - pad*2, 4.5, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(card.type || '—', x + pad + 2, typeY + 3.2);
+
+  // 効果テキスト
+  const textTop = typeY + 4.5 + 1.5;
+  const textBottom = y + H - pad - 8;
+  const textX = x + pad + 1.5;
+  const textW = W - pad*2 - 3;
+
+  doc.setTextColor(0,0,0);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  let curY = textTop + 2.5;
+
+  if (card.effect) {
+    const lines = doc.splitTextToSize(card.effect, textW);
+    lines.forEach(line => {
+      if (curY < textBottom) {
+        doc.text(line, textX, curY);
+        curY += 3.2;
+      }
+    });
+    curY += 1.5;
+  }
+  if (card.flavor) {
+    doc.setTextColor(85,85,85);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    const flines = doc.splitTextToSize('― ' + card.flavor, textW);
+    flines.forEach(line => {
+      if (curY < textBottom) {
+        doc.text(line, textX, curY);
+        curY += 3;
+      }
+    });
+  }
+
+  // パワー
+  if (card.power && card.power !== '-' && card.power !== '') {
+    const pwW = 12, pwH = 6;
+    const pwX = x + W - pad - pwW;
+    const pwY = y + H - pad - pwH;
+    doc.setFillColor(cr, cg, cb);
+    doc.rect(pwX, pwY, pwW, pwH, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    const pw = String(card.power);
+    const pww = doc.getTextWidth(pw);
+    doc.text(pw, pwX + pwW/2 - pww/2, pwY + 4.2);
+  }
+}
+
+// ============ INIT ============
+loadData();
+render();
+</script>
+</body>
+</html>
