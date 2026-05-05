@@ -19,11 +19,6 @@
   --gold-bright: #e6c878;
   --ink: #1a1410;
   --ink-dim: #4a3c2e;
-  --accent-red: #8b2c1f;
-  --accent-blue: #2c4f7c;
-  --accent-green: #3d6b3a;
-  --accent-brown: #6b4f2c;
-  --accent-purple: #5d3a6b;
   --shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
@@ -40,7 +35,6 @@ body {
   line-height: 1.6;
 }
 
-/* ============ HEADER ============ */
 header {
   border-bottom: 2px solid var(--gold);
   background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
@@ -72,10 +66,7 @@ header {
   letter-spacing: 0.1em;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
-.brand-mark::before {
-  content: "❦ ";
-  color: var(--gold-bright);
-}
+.brand-mark::before { content: "❦ "; color: var(--gold-bright); }
 .brand-tag {
   font-family: 'Noto Serif JP', serif;
   font-size: 0.85rem;
@@ -83,13 +74,8 @@ header {
   letter-spacing: 0.15em;
   font-style: italic;
 }
-.actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
-/* ============ BUTTONS ============ */
 button, .btn {
   font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.9rem;
@@ -102,7 +88,6 @@ button, .btn {
   letter-spacing: 0.05em;
   transition: all 0.2s ease;
   border-radius: 0;
-  position: relative;
 }
 button:hover, .btn:hover {
   background: var(--gold);
@@ -120,20 +105,10 @@ button:hover, .btn:hover {
   border-color: var(--gold-bright);
   box-shadow: 0 0 20px rgba(230, 200, 120, 0.6);
 }
-.btn-danger {
-  border-color: var(--accent-red);
-  color: var(--accent-red);
-}
-.btn-danger:hover {
-  background: var(--accent-red);
-  color: var(--parchment);
-}
-.btn-small {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-}
+.btn-danger { border-color: #c0392b; color: #c0392b; }
+.btn-danger:hover { background: #c0392b; color: var(--parchment); }
+.btn-small { padding: 6px 12px; font-size: 0.8rem; }
 
-/* ============ MAIN LAYOUT ============ */
 main {
   max-width: 1400px;
   margin: 0 auto;
@@ -142,11 +117,8 @@ main {
   grid-template-columns: 380px 1fr;
   gap: 32px;
 }
-@media (max-width: 980px) {
-  main { grid-template-columns: 1fr; }
-}
+@media (max-width: 980px) { main { grid-template-columns: 1fr; } }
 
-/* ============ EDITOR PANEL ============ */
 .editor-panel {
   background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-light) 100%);
   border: 1px solid rgba(201, 169, 97, 0.3);
@@ -170,9 +142,7 @@ main {
   padding-bottom: 12px;
   margin-bottom: 20px;
 }
-.field {
-  margin-bottom: 16px;
-}
+.field { margin-bottom: 16px; }
 .field label {
   display: block;
   font-size: 0.8rem;
@@ -190,7 +160,6 @@ main {
   font-family: inherit;
   font-size: 0.95rem;
   border-radius: 0;
-  transition: border-color 0.2s;
 }
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: none;
@@ -217,9 +186,7 @@ main {
 }
 .editor-actions button { flex: 1; }
 
-/* ============ CARD LIST PANEL ============ */
 .list-panel { display: flex; flex-direction: column; gap: 24px; }
-
 .list-header {
   display: flex;
   justify-content: space-between;
@@ -233,24 +200,20 @@ main {
   color: var(--gold);
   letter-spacing: 0.1em;
 }
-.list-count {
-  color: var(--parchment-dim);
-  font-size: 0.9rem;
-  letter-spacing: 0.1em;
-}
+.list-count { color: var(--parchment-dim); font-size: 0.9rem; letter-spacing: 0.1em; }
 
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(189px, 1fr));
-  gap: 20px;
+  gap: 28px 20px;
 }
 
-/* ============ CARD PREVIEW (in list) ============ */
+/* ============ CARD PREVIEW ============ */
 .card-preview {
   width: 189px;
   height: 264px;
   background: #FAFAF7;
-  color: var(--ink);
+  color: #1a1410;
   position: relative;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -271,7 +234,7 @@ main {
 }
 
 .cp-name-bar {
-  height: 24px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -286,22 +249,17 @@ main {
   white-space: nowrap;
   flex: 1;
 }
-.cp-cost {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: white;
-  color: inherit;
+.cp-level {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
+  margin-left: 6px;
   font-size: 10px;
-  font-weight: 700;
-  margin-left: 4px;
 }
+.cp-level-star { color: #ffd700; font-size: 11px; }
 .cp-art {
   background: #EFEFEF;
-  height: 90px;
+  height: 70px;
   margin: 3px 3px 0;
   border: 1px solid currentColor;
   display: flex;
@@ -325,32 +283,32 @@ main {
   font-weight: 700;
   margin-top: 3px;
 }
-.cp-text {
+.cp-skills {
   flex: 1;
-  font-size: 8px;
-  padding: 6px 8px;
-  line-height: 1.35;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   overflow: hidden;
 }
-.cp-flavor {
-  font-style: italic;
-  color: #555;
+.cp-skill {
+  border: 1px solid #ddd;
+  padding: 4px 5px;
   font-size: 7.5px;
-  margin-top: 4px;
-  font-family: 'Noto Serif JP', serif;
+  line-height: 1.3;
+  background: #fff;
+  flex: 1;
+  overflow: hidden;
 }
-.cp-power {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  background: currentColor;
-  padding: 3px 10px;
-  font-size: 11px;
+.cp-skill-label {
   font-weight: 700;
+  color: currentColor;
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  margin-bottom: 1px;
 }
-.cp-power span { color: white; }
+.cp-skill-text { color: #333; }
 
-/* Card index badge */
 .cp-index {
   position: absolute;
   top: -8px;
@@ -386,24 +344,19 @@ main {
   font-style: normal;
 }
 
-/* ============ MODAL ============ */
 .modal-bg {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,0.8);
   display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 20px;
+  align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
 }
 .modal-bg.show { display: flex; }
 .modal {
   background: var(--bg-mid);
   border: 1px solid var(--gold);
   padding: 32px;
-  max-width: 500px;
-  width: 100%;
+  max-width: 500px; width: 100%;
   box-shadow: 0 0 40px rgba(0,0,0,0.8);
 }
 .modal h3 {
@@ -412,22 +365,12 @@ main {
   margin-bottom: 16px;
   letter-spacing: 0.1em;
 }
-.modal p {
-  margin-bottom: 20px;
-  color: var(--parchment-dim);
-  font-family: 'Noto Serif JP', serif;
-}
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
+.modal p { margin-bottom: 20px; color: var(--parchment-dim); font-family: 'Noto Serif JP', serif; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
 
-/* ============ TOAST ============ */
 .toast {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 32px; right: 32px;
   background: var(--bg-mid);
   border: 1px solid var(--gold);
   padding: 14px 20px;
@@ -441,13 +384,7 @@ main {
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
 }
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ============ HIDDEN PDF CANVAS ============ */
-#pdfCanvas { display: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
 
 footer {
   text-align: center;
@@ -459,11 +396,7 @@ footer {
   border-top: 1px solid rgba(201, 169, 97, 0.2);
   margin-top: 60px;
 }
-footer .ornament {
-  color: var(--gold);
-  letter-spacing: 0.5em;
-  margin-bottom: 8px;
-}
+footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -487,7 +420,6 @@ footer .ornament {
 </header>
 
 <main>
-  <!-- Editor -->
   <aside class="editor-panel">
     <div class="panel-title" id="editorTitle">新しいカード</div>
     <div class="field">
@@ -498,7 +430,7 @@ footer .ornament {
       <div class="field">
         <label>タイプ</label>
         <select id="f-type">
-          <option value="クリーチャー">クリーチャー</option>
+          <option value="主人公">主人公</option>
           <option value="スペル">スペル</option>
           <option value="建造物">建造物</option>
           <option value="アイテム">アイテム</option>
@@ -506,21 +438,17 @@ footer .ornament {
         </select>
       </div>
       <div class="field">
-        <label>コスト</label>
-        <input type="text" id="f-cost" placeholder="3">
+        <label>レベル</label>
+        <input type="text" id="f-level" placeholder="3">
       </div>
     </div>
     <div class="field">
-      <label>パワー / 攻撃力</label>
-      <input type="text" id="f-power" placeholder="2500 (空欄またはハイフンも可)">
+      <label>スキル1</label>
+      <textarea id="f-skill1" placeholder="例: 炎斬り — 相手に2ダメージ与える。"></textarea>
     </div>
     <div class="field">
-      <label>効果テキスト</label>
-      <textarea id="f-effect" placeholder="このカードが場に出たとき..."></textarea>
-    </div>
-    <div class="field">
-      <label>フレーバーテキスト</label>
-      <textarea id="f-flavor" placeholder="燃え盛る怒りは盾をも溶かす。"></textarea>
+      <label>スキル2</label>
+      <textarea id="f-skill2" placeholder="例: 鼓舞 — 自分のクリーチャー全員に+1パワー。"></textarea>
     </div>
     <div class="field">
       <label>イラストメモ</label>
@@ -535,7 +463,6 @@ footer .ornament {
     </div>
   </aside>
 
-  <!-- List -->
   <section class="list-panel">
     <div class="list-header">
       <div class="list-title">CARD LIBRARY</div>
@@ -564,14 +491,13 @@ footer .ornament {
 </footer>
 
 <script>
-// ============ DATA MANAGEMENT ============
-const STORAGE_KEY = 'card_forge_data_v1';
+const STORAGE_KEY = 'card_forge_data_v2'; // v2: 新項目構成
 const TYPE_COLORS = {
-  'クリーチャー': '#8b2c1f',
-  'スペル':       '#2c4f7c',
-  '建造物':       '#6b4f2c',
-  'アイテム':     '#3d6b3a',
-  'その他':       '#5d3a6b'
+  '主人公':   '#8b2c1f',
+  'スペル':   '#2c4f7c',
+  '建造物':   '#6b4f2c',
+  'アイテム': '#3d6b3a',
+  'その他':   '#5d3a6b'
 };
 
 let cards = [];
@@ -583,20 +509,19 @@ function loadData() {
     if (raw) cards = JSON.parse(raw);
   } catch(e) { cards = []; }
   if (cards.length === 0) {
-    // 初回サンプル
     cards = [
-      {name:"炎の戦士", type:"クリーチャー", cost:"3", power:"2500",
-       effect:"このカードが場に出たとき、相手に1ダメージ与える。",
-       flavor:"燃え盛る怒りは盾をも溶かす。",
+      {name:"炎の戦士", type:"主人公", level:"3",
+       skill1:"炎斬り — 攻撃時、相手に追加2ダメージ。",
+       skill2:"猛進 — 場に出たターンに攻撃可能。",
        art:"赤い鎧を着た剣士、炎を背負っている"},
-      {name:"癒しの妖精", type:"クリーチャー", cost:"2", power:"1000",
-       effect:"ターン終了時、自分のライフを1回復する。",
-       flavor:"森の声を聞く者だけが、その姿を見る。",
+      {name:"癒しの妖精", type:"主人公", level:"2",
+       skill1:"森の祝福 — ターン終了時、自分のライフを1回復。",
+       skill2:"幻惑 — 攻撃を受けるとき、50%で回避。",
        art:"緑の羽根を持つ小さな妖精"},
-      {name:"雷光の一撃", type:"スペル", cost:"1", power:"",
-       effect:"相手のクリーチャー1体に3ダメージ与える。",
-       flavor:"閃光の前に、影さえ立ち止まる。",
-       art:"稲妻が空から降り注ぐ"}
+      {name:"雷光の魔導書", type:"スペル", level:"1",
+       skill1:"雷撃 — 相手のクリーチャー1体に3ダメージ。",
+       skill2:"連鎖 — 雷撃発動後、もう1度コインを振って表なら同じ対象に追加2ダメージ。",
+       art:"稲妻を放つ古い魔導書"}
     ];
     saveData();
   }
@@ -605,7 +530,6 @@ function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
 }
 
-// ============ RENDERING ============
 function render() {
   const grid = document.getElementById('cardGrid');
   document.getElementById('cardCount').textContent = `${cards.length}枚`;
@@ -621,21 +545,25 @@ function render() {
 
   grid.innerHTML = cards.map((c, i) => {
     const color = TYPE_COLORS[c.type] || TYPE_COLORS['その他'];
-    const showPower = c.power && c.power !== '-' && c.power !== '';
     return `
       <div class="card-preview ${editingIdx === i ? 'selected' : ''}" onclick="editCard(${i})" style="color: ${color}">
         <div class="cp-index">${i+1}</div>
         <div class="cp-name-bar" style="background: ${color}">
           <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
-          <div class="cp-cost">${escapeHtml(c.cost || '-')}</div>
+          <div class="cp-level">Lv.${escapeHtml(c.level || '-')}</div>
         </div>
         <div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>
         <div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>
-        <div class="cp-text">
-          ${escapeHtml(c.effect || '')}
-          ${c.flavor ? `<div class="cp-flavor">― ${escapeHtml(c.flavor)}</div>` : ''}
+        <div class="cp-skills">
+          <div class="cp-skill">
+            <div class="cp-skill-label">SKILL 1</div>
+            <div class="cp-skill-text">${escapeHtml(c.skill1 || '')}</div>
+          </div>
+          <div class="cp-skill">
+            <div class="cp-skill-label">SKILL 2</div>
+            <div class="cp-skill-text">${escapeHtml(c.skill2 || '')}</div>
+          </div>
         </div>
-        ${showPower ? `<div class="cp-power"><span>${escapeHtml(c.power)}</span></div>` : ''}
       </div>`;
   }).join('');
 }
@@ -645,30 +573,27 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ============ EDITOR ============
 function readForm() {
   return {
     name:   document.getElementById('f-name').value.trim(),
     type:   document.getElementById('f-type').value,
-    cost:   document.getElementById('f-cost').value.trim(),
-    power:  document.getElementById('f-power').value.trim(),
-    effect: document.getElementById('f-effect').value.trim(),
-    flavor: document.getElementById('f-flavor').value.trim(),
+    level:  document.getElementById('f-level').value.trim(),
+    skill1: document.getElementById('f-skill1').value.trim(),
+    skill2: document.getElementById('f-skill2').value.trim(),
     art:    document.getElementById('f-art').value.trim()
   };
 }
 function writeForm(c) {
   document.getElementById('f-name').value   = c.name || '';
-  document.getElementById('f-type').value   = c.type || 'クリーチャー';
-  document.getElementById('f-cost').value   = c.cost || '';
-  document.getElementById('f-power').value  = c.power || '';
-  document.getElementById('f-effect').value = c.effect || '';
-  document.getElementById('f-flavor').value = c.flavor || '';
+  document.getElementById('f-type').value   = c.type || '主人公';
+  document.getElementById('f-level').value  = c.level || '';
+  document.getElementById('f-skill1').value = c.skill1 || '';
+  document.getElementById('f-skill2').value = c.skill2 || '';
   document.getElementById('f-art').value    = c.art || '';
 }
 function resetEditor() {
   editingIdx = null;
-  writeForm({type:'クリーチャー'});
+  writeForm({type:'主人公'});
   document.getElementById('editorTitle').textContent = '新しいカード';
   document.getElementById('saveBtn').textContent = '追加';
   document.getElementById('editingActions').style.display = 'none';
@@ -708,7 +633,6 @@ function deleteCard() {
   });
 }
 
-// ============ MODAL & TOAST ============
 let modalCallback = null;
 function showModal(title, text, onConfirm) {
   document.getElementById('modalTitle').textContent = title;
@@ -735,7 +659,6 @@ function toast(msg) {
   setTimeout(() => el.classList.remove('show'), 2000);
 }
 
-// ============ EXPORT / IMPORT ============
 function exportJSON() {
   const blob = new Blob([JSON.stringify(cards, null, 2)], {type:'application/json'});
   download(blob, 'cards.json');
@@ -763,12 +686,12 @@ function importJSON(ev) {
   ev.target.value = '';
 }
 function exportCSV() {
-  const headers = ['name','type','cost','power','effect','flavor','art'];
-  const rows = [headers.join(',')];
+  const headers = ['name','type','level','skill1','skill2','art'];
+  const labels  = ['カード名','タイプ','レベル','スキル1','スキル2','イラストメモ'];
+  const rows = [labels.map(csvEscape).join(',')];
   cards.forEach(c => {
     rows.push(headers.map(h => csvEscape(c[h] || '')).join(','));
   });
-  // BOM付きでExcel互換
   const blob = new Blob(['\uFEFF' + rows.join('\n')], {type:'text/csv'});
   download(blob, 'cards.csv');
   toast('CSV出力完了');
@@ -795,15 +718,13 @@ function importCSV(ev) {
         .map(row => {
           const o = {};
           headers.forEach((h, i) => { o[h] = (row[i] || '').trim(); });
-          // 日本語→英語ヘッダのマッピング
           return {
-            name: o.name || o['カード名'] || '',
-            type: o.type || o['タイプ'] || 'その他',
-            cost: o.cost || o['コスト'] || '',
-            power: o.power || o['パワー'] || '',
-            effect: o.effect || o['効果テキスト'] || o['効果'] || '',
-            flavor: o.flavor || o['フレーバーテキスト'] || o['フレーバー'] || '',
-            art: o.art || o['イラストメモ'] || o['イラスト'] || ''
+            name:   o.name   || o['カード名'] || '',
+            type:   o.type   || o['タイプ'] || 'その他',
+            level:  o.level  || o['レベル'] || '',
+            skill1: o.skill1 || o['スキル1'] || o['スキル１'] || '',
+            skill2: o.skill2 || o['スキル2'] || o['スキル２'] || '',
+            art:    o.art    || o['イラストメモ'] || ''
           };
         });
       showModal('CSVインポート', `${data.length}枚のカードを読み込みます。現在のデータは置き換えられます。`, () => {
@@ -853,7 +774,6 @@ async function generatePDF() {
   if (cards.length === 0) { toast('カードがありません'); return; }
 
   const { jsPDF } = window.jspdf;
-  // A4: 210 x 297mm
   const doc = new jsPDF({unit: 'mm', format: 'a4'});
 
   const A4_W = 210, A4_H = 297;
@@ -882,17 +802,15 @@ async function generatePDF() {
 function drawCropMarks(doc, A4_W, A4_H, mX, mY, CW, CH, cols, rows) {
   doc.setDrawColor(0);
   doc.setLineWidth(0.15);
-  // 縦線位置
   for (let i = 0; i <= cols; i++) {
     const x = mX + i * CW;
-    doc.line(x, 0, x, mY - 1);              // 上
-    doc.line(x, A4_H - mY + 1, x, A4_H);    // 下
+    doc.line(x, 0, x, mY - 1);
+    doc.line(x, A4_H - mY + 1, x, A4_H);
   }
-  // 横線位置
   for (let i = 0; i <= rows; i++) {
     const y = mY + i * CH;
-    doc.line(0, y, mX - 1, y);              // 左
-    doc.line(A4_W - mX + 1, y, A4_W, y);    // 右
+    doc.line(0, y, mX - 1, y);
+    doc.line(A4_W - mX + 1, y, A4_W, y);
   }
 }
 
@@ -924,7 +842,7 @@ function drawCard(doc, x, y, W, H, card) {
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  const nameMaxW = W - pad*2 - 12;
+  const nameMaxW = W - pad*2 - 16;
   let name = card.name || '';
   while (name && doc.getTextWidth(name) > nameMaxW) {
     name = name.slice(0, -1);
@@ -932,19 +850,14 @@ function drawCard(doc, x, y, W, H, card) {
   if (name !== (card.name||'') && name.length > 0) name = name.slice(0,-1) + '…';
   doc.text(name, x + pad + 2, y + pad + 5.5);
 
-  // コスト円
-  const costX = x + W - pad - 4.5;
-  const costY = y + pad + barH/2;
-  doc.setFillColor(255,255,255);
-  doc.circle(costX, costY, 3.2, 'F');
-  doc.setTextColor(cr, cg, cb);
+  // レベル(右上)
+  const lvText = 'Lv.' + (card.level || '-');
   doc.setFontSize(9);
-  const costText = String(card.cost || '-');
-  const costW = doc.getTextWidth(costText);
-  doc.text(costText, costX - costW/2, costY + 1.2);
+  const lvW = doc.getTextWidth(lvText);
+  doc.text(lvText, x + W - pad - 2 - lvW, y + pad + 5.3);
 
   // イラスト枠
-  const artH = 32;
+  const artH = 22;
   const artX = x + pad + 1;
   const artY = y + pad + barH + 1;
   const artW = W - pad*2 - 2;
@@ -958,11 +871,11 @@ function drawCard(doc, x, y, W, H, card) {
   doc.setFontSize(7);
   const artText = card.art || '[ イラスト ]';
   const artLines = doc.splitTextToSize(artText, artW - 4);
-  const linesToShow = artLines.slice(0, 4);
-  const startY = artY + artH/2 - (linesToShow.length * 2.5)/2 + 2;
+  const linesToShow = artLines.slice(0, 3);
+  const startArtY = artY + artH/2 - (linesToShow.length * 2.8)/2 + 2;
   linesToShow.forEach((line, idx) => {
     const w = doc.getTextWidth(line);
-    doc.text(line, artX + artW/2 - w/2, startY + idx*2.8);
+    doc.text(line, artX + artW/2 - w/2, startArtY + idx*2.8);
   });
 
   // タイプバー
@@ -974,57 +887,47 @@ function drawCard(doc, x, y, W, H, card) {
   doc.setFontSize(8);
   doc.text(card.type || '—', x + pad + 2, typeY + 3.2);
 
-  // 効果テキスト
-  const textTop = typeY + 4.5 + 1.5;
-  const textBottom = y + H - pad - 8;
-  const textX = x + pad + 1.5;
-  const textW = W - pad*2 - 3;
+  // スキルエリア(2分割)
+  const skillsTop = typeY + 4.5 + 1.5;
+  const skillsBottom = y + H - pad - 1;
+  const skillsH = skillsBottom - skillsTop;
+  const skillBoxH = (skillsH - 2) / 2; // 上下に2つの枠
+  const skillX = x + pad + 1;
+  const skillW = W - pad*2 - 2;
 
-  doc.setTextColor(0,0,0);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  let curY = textTop + 2.5;
-
-  if (card.effect) {
-    const lines = doc.splitTextToSize(card.effect, textW);
-    lines.forEach(line => {
-      if (curY < textBottom) {
-        doc.text(line, textX, curY);
-        curY += 3.2;
-      }
-    });
-    curY += 1.5;
-  }
-  if (card.flavor) {
-    doc.setTextColor(85,85,85);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    const flines = doc.splitTextToSize('― ' + card.flavor, textW);
-    flines.forEach(line => {
-      if (curY < textBottom) {
-        doc.text(line, textX, curY);
-        curY += 3;
-      }
-    });
-  }
-
-  // パワー
-  if (card.power && card.power !== '-' && card.power !== '') {
-    const pwW = 12, pwH = 6;
-    const pwX = x + W - pad - pwW;
-    const pwY = y + H - pad - pwH;
-    doc.setFillColor(cr, cg, cb);
-    doc.rect(pwX, pwY, pwW, pwH, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    const pw = String(card.power);
-    const pww = doc.getTextWidth(pw);
-    doc.text(pw, pwX + pwW/2 - pww/2, pwY + 4.2);
-  }
+  drawSkillBox(doc, skillX, skillsTop, skillW, skillBoxH, 'SKILL 1', card.skill1 || '', cr, cg, cb);
+  drawSkillBox(doc, skillX, skillsTop + skillBoxH + 2, skillW, skillBoxH, 'SKILL 2', card.skill2 || '', cr, cg, cb);
 }
 
-// ============ INIT ============
+function drawSkillBox(doc, x, y, w, h, label, text, cr, cg, cb) {
+  // 枠
+  doc.setFillColor(255,255,255);
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.15);
+  doc.rect(x, y, w, h, 'FD');
+
+  // ラベル
+  doc.setFillColor(cr, cg, cb);
+  doc.rect(x, y, w, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6);
+  doc.text(label, x + 1.5, y + 2.2);
+
+  // 本文
+  doc.setTextColor(40, 40, 40);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  const lines = doc.splitTextToSize(text, w - 3);
+  const maxLines = Math.floor((h - 4) / 3);
+  const shown = lines.slice(0, maxLines);
+  let curY = y + 5.5;
+  shown.forEach(line => {
+    doc.text(line, x + 1.5, curY);
+    curY += 3;
+  });
+}
+
 loadData();
 render();
 </script>
