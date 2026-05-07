@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Card Forge — TCGテストプレイ用カード制作</title>
+<title>Card Forge — 手塚カード制作ツール</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+JP:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg-deep: #1a1410;
@@ -20,6 +21,13 @@
   --gold-bright: #e6c878;
   --ink: #1a1410;
   --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  /* レベル別のカラー */
+  --lv1-bg: #f5f0e6;
+  --lv2-bg: #f0e4c8;
+  --lv2-frame: #b59560;
+  --lv3-bg: #fff8e1;
+  --lv3-frame: #d4af37;
+  --lv3-glow: rgba(212, 175, 55, 0.5);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -37,33 +45,33 @@ body {
 header {
   border-bottom: 2px solid var(--gold);
   background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
-  padding: 20px 32px;
+  padding: 18px 32px;
   position: sticky; top: 0; z-index: 100;
   box-shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
 .header-inner {
-  max-width: 1400px; margin: 0 auto;
+  max-width: 1500px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 24px; flex-wrap: wrap;
+  gap: 20px; flex-wrap: wrap;
 }
-.brand { display: flex; align-items: baseline; gap: 16px; }
+.brand { display: flex; align-items: baseline; gap: 14px; }
 .brand-mark {
   font-family: 'Cinzel', serif;
-  font-size: 1.8rem; font-weight: 700;
+  font-size: 1.7rem; font-weight: 700;
   color: var(--gold); letter-spacing: 0.1em;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .brand-mark::before { content: "❦ "; color: var(--gold-bright); }
 .brand-tag {
   font-family: 'Noto Serif JP', serif;
-  font-size: 0.8rem; color: var(--parchment-dim);
+  font-size: 0.78rem; color: var(--parchment-dim);
   letter-spacing: 0.15em; font-style: italic;
 }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ============ TABS ============ */
 .tabs {
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 0 32px;
   display: flex;
@@ -76,7 +84,7 @@ header {
   border: none;
   border-bottom: 3px solid transparent;
   color: var(--parchment-dim);
-  padding: 14px 24px;
+  padding: 14px 22px;
   font-family: 'Cinzel', serif;
   letter-spacing: 0.1em;
   font-size: 0.95rem;
@@ -116,28 +124,27 @@ button:hover, .btn:hover {
 }
 .btn-primary:hover {
   background: var(--gold-bright); border-color: var(--gold-bright);
-  box-shadow: 0 0 20px rgba(230, 200, 120, 0.6);
 }
 .btn-danger { border-color: #c0392b; color: #c0392b; }
 .btn-danger:hover { background: #c0392b; color: var(--parchment); }
 .btn-small { padding: 6px 12px; font-size: 0.78rem; }
 .btn-icon { padding: 6px 10px; font-size: 0.9rem; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ============ MAIN LAYOUT ============ */
 main {
-  max-width: 1400px; margin: 0 auto;
+  max-width: 1500px; margin: 0 auto;
   padding: 24px 32px;
 }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* === LIBRARY TAB === */
+/* === LIBRARY LAYOUT === */
 .library-layout {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: 380px 1fr;
   gap: 28px;
 }
-@media (max-width: 980px) { .library-layout { grid-template-columns: 1fr; } }
+@media (max-width: 1080px) { .library-layout { grid-template-columns: 1fr; } }
 
 .editor-panel {
   background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-light) 100%);
@@ -159,7 +166,7 @@ main {
   border-bottom: 1px solid var(--gold);
   padding-bottom: 10px; margin-bottom: 16px;
 }
-.field { margin-bottom: 14px; }
+.field { margin-bottom: 13px; }
 .field label {
   display: block;
   font-size: 0.75rem;
@@ -188,6 +195,35 @@ main {
   font-family: 'Noto Serif JP', serif;
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.field-checkbox {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0;
+}
+.field-checkbox input[type="checkbox"] {
+  width: 18px; height: 18px;
+  cursor: pointer;
+}
+.field-checkbox label {
+  margin: 0; cursor: pointer; text-transform: none;
+  letter-spacing: normal; font-size: 0.85rem;
+  color: var(--parchment);
+}
+
+.editor-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(201, 169, 97, 0.2);
+}
+.editor-section-title {
+  font-size: 0.8rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  font-family: 'Cinzel', serif;
+}
+
 .editor-actions {
   display: flex; gap: 8px;
   margin-top: 16px; padding-top: 16px;
@@ -202,11 +238,11 @@ main {
   padding: 14px 16px;
   margin-bottom: 20px;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr auto;
   gap: 12px;
   align-items: end;
 }
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   .filter-bar { grid-template-columns: 1fr 1fr; }
 }
 .filter-bar .field { margin-bottom: 0; }
@@ -230,7 +266,7 @@ main {
   gap: 28px 18px;
 }
 
-/* ============ CARD PREVIEW ============ */
+/* ============ CARD PREVIEW (共通基本) ============ */
 .card-preview {
   width: 189px; height: 264px;
   background: #FAFAF7; color: #1a1410;
@@ -241,6 +277,7 @@ main {
   display: flex; flex-direction: column;
   padding: 6px;
   user-select: none;
+  overflow: hidden;
 }
 .card-preview:hover {
   transform: translateY(-4px) scale(1.02);
@@ -250,6 +287,28 @@ main {
 .card-preview.in-deck { outline: 2px solid #5fbf5f; outline-offset: 2px; }
 .card-preview.dragging { opacity: 0.4; }
 
+/* レベル別の枠装飾 */
+.card-preview.lv2 { background: var(--lv2-bg); border: 2px solid var(--lv2-frame); padding: 4px; }
+.card-preview.lv3 { background: var(--lv3-bg); border: 3px solid var(--lv3-frame); padding: 3px; box-shadow: 0 0 12px var(--lv3-glow), 0 4px 12px rgba(0,0,0,0.5); }
+.card-preview.lv3:hover { box-shadow: 0 0 20px var(--lv3-glow), 0 8px 24px rgba(201, 169, 97, 0.5); }
+
+/* 自信作のキラキラ */
+.card-preview.shinsaku::before {
+  content: "★ 自信作 ★";
+  position: absolute;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--lv3-frame);
+  color: white;
+  font-size: 8px;
+  padding: 2px 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  z-index: 3;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
 .cp-name-bar {
   height: 26px;
   display: flex; align-items: center; justify-content: space-between;
@@ -257,40 +316,85 @@ main {
   font-weight: 700; font-size: 11px;
 }
 .cp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.cp-level { font-size: 10px; margin-left: 6px; white-space: nowrap; }
+.cp-level { font-size: 9px; margin-left: 6px; white-space: nowrap; opacity: 0.95; }
+
+.cp-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 6px;
+  background: rgba(0,0,0,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  font-size: 9px;
+  font-weight: 700;
+  color: #1a1410;
+}
+.cp-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.cp-stat-label {
+  background: currentColor;
+  color: white !important;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 8px;
+}
+.cp-stat-val { color: #1a1410; }
+
 .cp-art {
-  background: #EFEFEF; height: 70px;
+  background: #EFEFEF; height: 50px;
   margin: 3px 3px 0;
   border: 1px solid currentColor;
   display: flex; align-items: center; justify-content: center;
-  text-align: center; font-size: 8px; color: #888;
+  text-align: center; font-size: 7.5px; color: #888;
   padding: 4px; font-style: italic;
   line-height: 1.2; overflow: hidden;
 }
 .cp-type-bar {
-  height: 14px;
+  height: 13px;
   display: flex; align-items: center;
   padding: 0 8px; color: white;
-  font-size: 9px; font-weight: 700;
+  font-size: 8.5px; font-weight: 700;
   margin-top: 3px;
 }
-.cp-skills {
-  flex: 1; padding: 4px 6px;
+.cp-skills, .cp-effects {
+  flex: 1; padding: 3px 5px;
   display: flex; flex-direction: column;
-  gap: 4px; overflow: hidden;
+  gap: 3px; overflow: hidden;
 }
-.cp-skill {
+.cp-skill, .cp-effect {
   border: 1px solid #ddd;
-  padding: 4px 5px;
-  font-size: 7.5px; line-height: 1.3;
+  padding: 3px 4px;
+  font-size: 7px; line-height: 1.25;
   background: #fff; flex: 1; overflow: hidden;
 }
-.cp-skill-label {
+.cp-skill-label, .cp-effect-label {
   font-weight: 700; color: currentColor;
-  font-size: 7px; letter-spacing: 0.05em;
+  font-size: 6.5px; letter-spacing: 0.05em;
   margin-bottom: 1px;
+  display: flex; justify-content: space-between;
 }
-.cp-skill-text { color: #333; }
+.cp-skill-cost {
+  background: currentColor;
+  color: white !important;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 6px;
+}
+.cp-skill-text, .cp-effect-text { color: #333; }
+
+.cp-other-ability {
+  padding: 3px 4px;
+  font-size: 6.5px;
+  background: rgba(0,0,0,0.05);
+  border-top: 1px dashed #999;
+  color: #555;
+  font-style: italic;
+  line-height: 1.3;
+  max-height: 30px;
+  overflow: hidden;
+}
 
 .cp-index {
   position: absolute;
@@ -302,30 +406,24 @@ main {
   font-family: 'Cinzel', serif;
   font-weight: 700; font-size: 12px;
   border: 2px solid var(--bg-deep);
-  z-index: 1;
+  z-index: 4;
 }
 
-/* カード操作ボタン (ホバー時表示) */
 .cp-controls {
   position: absolute;
   top: -8px; right: -8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  z-index: 2;
+  display: flex; flex-direction: column; gap: 4px;
+  opacity: 0; transition: opacity 0.2s;
+  z-index: 4;
 }
 .card-preview:hover .cp-controls { opacity: 1; }
 .cp-ctrl-btn {
   width: 26px; height: 26px;
-  background: var(--bg-mid);
-  color: var(--gold);
+  background: var(--bg-mid); color: var(--gold);
   border: 1px solid var(--gold);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  padding: 0;
+  font-size: 11px; padding: 0;
   cursor: pointer;
 }
 .cp-ctrl-btn:hover { background: var(--gold); color: var(--ink); }
@@ -346,15 +444,15 @@ main {
   font-style: normal;
 }
 
-/* ============ DECK TAB ============ */
+/* ============ DECKS TAB ============ */
 .deck-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 24px;
 }
-@media (max-width: 980px) { .deck-layout { grid-template-columns: 1fr; } }
+@media (max-width: 1080px) { .deck-layout { grid-template-columns: 1fr; } }
 
-.deck-list {
+.deck-list-side {
   background: var(--bg-mid);
   border: 1px solid rgba(201, 169, 97, 0.3);
   padding: 16px;
@@ -362,10 +460,6 @@ main {
   max-height: calc(100vh - 150px);
   overflow-y: auto;
 }
-.deck-list::-webkit-scrollbar { width: 8px; }
-.deck-list::-webkit-scrollbar-track { background: var(--bg-deep); }
-.deck-list::-webkit-scrollbar-thumb { background: var(--gold); }
-
 .deck-item {
   padding: 12px 14px;
   border: 1px solid rgba(201, 169, 97, 0.2);
@@ -375,21 +469,9 @@ main {
   transition: all 0.15s;
 }
 .deck-item:hover { border-color: var(--gold); }
-.deck-item.active {
-  border-color: var(--gold);
-  background: rgba(201, 169, 97, 0.1);
-}
-.deck-item-name {
-  color: var(--parchment);
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-}
-.deck-item-meta {
-  color: var(--parchment-dim);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
+.deck-item.active { border-color: var(--gold); background: rgba(201, 169, 97, 0.1); }
+.deck-item-name { color: var(--parchment); font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+.deck-item-meta { color: var(--parchment-dim); font-size: 0.75rem; letter-spacing: 0.05em; }
 
 .deck-detail {
   background: var(--bg-mid);
@@ -407,21 +489,15 @@ main {
 .deck-header-info { flex: 1; min-width: 200px; }
 .deck-header-info h2 {
   font-family: 'Cinzel', serif;
-  color: var(--gold);
-  letter-spacing: 0.1em;
-  font-size: 1.4rem;
-  margin-bottom: 4px;
+  color: var(--gold); letter-spacing: 0.1em;
+  font-size: 1.4rem; margin-bottom: 4px;
 }
 .deck-header-info p {
   color: var(--parchment-dim);
   font-family: 'Noto Serif JP', serif;
-  font-style: italic;
-  font-size: 0.9rem;
+  font-style: italic; font-size: 0.9rem;
 }
-
-.deck-section {
-  margin-bottom: 24px;
-}
+.deck-section { margin-bottom: 24px; }
 .deck-section-title {
   font-family: 'Cinzel', serif;
   color: var(--gold);
@@ -439,7 +515,6 @@ main {
 .deck-cards .card-preview {
   width: 100%; height: auto;
   aspect-ratio: 63 / 88;
-  font-size: 0.85em;
 }
 .add-card-list {
   max-height: 380px;
@@ -457,20 +532,9 @@ main {
   transition: background 0.15s;
 }
 .add-card-row:hover { background: rgba(201, 169, 97, 0.08); }
-.add-card-name {
-  flex: 1;
-  color: var(--parchment);
-  font-size: 0.9rem;
-}
-.add-card-meta {
-  color: var(--parchment-dim);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-.add-card-btn {
-  padding: 3px 10px;
-  font-size: 0.75rem;
-}
+.add-card-name { flex: 1; color: var(--parchment); font-size: 0.9rem; }
+.add-card-meta { color: var(--parchment-dim); font-size: 0.75rem; letter-spacing: 0.05em; }
+.add-card-btn { padding: 3px 10px; font-size: 0.75rem; }
 
 /* === STATS TAB === */
 .stats-layout {
@@ -494,18 +558,15 @@ main {
 }
 .stat-row {
   display: grid;
-  grid-template-columns: 100px 1fr 50px;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
+  grid-template-columns: 110px 1fr 50px;
+  gap: 12px; align-items: center;
+  margin-bottom: 8px; font-size: 0.9rem;
 }
 .stat-label { color: var(--parchment); }
 .stat-bar {
   background: var(--bg-deep);
   height: 18px;
-  position: relative;
-  overflow: hidden;
+  position: relative; overflow: hidden;
 }
 .stat-bar-fill {
   height: 100%;
@@ -520,26 +581,22 @@ main {
 }
 .stat-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px; margin-bottom: 24px;
 }
 .stat-big {
   background: var(--bg-mid);
   border: 1px solid rgba(201, 169, 97, 0.3);
-  padding: 20px;
-  text-align: center;
+  padding: 18px; text-align: center;
 }
 .stat-big-value {
   font-family: 'Cinzel', serif;
-  font-size: 2.2rem;
-  color: var(--gold);
-  font-weight: 700;
-  line-height: 1;
+  font-size: 2.2rem; color: var(--gold);
+  font-weight: 700; line-height: 1;
 }
 .stat-big-label {
   color: var(--parchment-dim);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   letter-spacing: 0.1em;
   margin-top: 8px;
   text-transform: uppercase;
@@ -554,7 +611,7 @@ main {
 }
 .type-row {
   display: grid;
-  grid-template-columns: 1fr 60px 60px auto;
+  grid-template-columns: 1fr 60px 60px 100px auto;
   gap: 12px;
   align-items: center;
   padding: 10px;
@@ -565,74 +622,61 @@ main {
   border: 1px solid rgba(201, 169, 97, 0.3);
   color: var(--parchment);
   padding: 7px 10px;
-  font-family: inherit;
-  font-size: 0.9rem;
+  font-family: inherit; font-size: 0.9rem;
 }
 .type-row input[type="color"] {
   width: 60px; height: 32px;
   border: 1px solid rgba(201, 169, 97, 0.3);
   background: var(--bg-deep);
-  cursor: pointer;
-  padding: 2px;
+  cursor: pointer; padding: 2px;
+}
+.type-row .type-builtin {
+  font-size: 0.75rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
 }
 .color-preview {
   width: 100%; height: 32px;
   border: 1px solid rgba(201, 169, 97, 0.3);
 }
 
-/* ============ MOBILE RESPONSIVE ============ */
+/* ============ MOBILE ============ */
 @media (max-width: 768px) {
   header { padding: 12px 14px; }
   .brand-mark { font-size: 1.2rem; }
   .brand-tag { display: none; }
   .actions { display: none; }
-  .tabs { padding: 0 8px; overflow-x: auto; flex-wrap: nowrap; }
-  .tab-btn { padding: 12px 16px; font-size: 0.85rem; white-space: nowrap; }
-
+  .tabs { padding: 0 4px; overflow-x: auto; flex-wrap: nowrap; }
+  .tab-btn { padding: 12px 14px; font-size: 0.8rem; white-space: nowrap; }
   main { padding: 14px; }
-  .editor-panel, .deck-list { display: none; }
-
+  .editor-panel, .deck-list-side { display: none; }
   .library-layout, .deck-layout { grid-template-columns: 1fr; }
-
-  .filter-bar {
-    grid-template-columns: 1fr 1fr;
-    padding: 10px;
-    gap: 8px;
-  }
+  .filter-bar { grid-template-columns: 1fr 1fr; padding: 10px; gap: 8px; }
   .filter-bar .field-search { grid-column: 1 / -1; }
   .filter-bar > button { grid-column: 1 / -1; }
-
-  .card-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px 12px;
-  }
-  .card-preview {
-    width: 100%; height: auto;
-    aspect-ratio: 63 / 88;
-    padding: 4px;
-  }
-  .cp-name-bar { height: 22px; padding: 0 6px; font-size: 10px; }
-  .cp-level { font-size: 9px; }
-  .cp-art { height: 50px; margin: 2px 2px 0; font-size: 7px; padding: 3px; }
-  .cp-type-bar { height: 12px; padding: 0 6px; font-size: 8px; margin-top: 2px; }
-  .cp-skills { padding: 3px 4px; gap: 3px; }
-  .cp-skill { padding: 3px 4px; font-size: 6.5px; }
-  .cp-skill-label { font-size: 6px; }
+  .card-grid { grid-template-columns: repeat(2, 1fr); gap: 24px 12px; }
+  .card-preview { width: 100%; height: auto; aspect-ratio: 63 / 88; padding: 4px; }
+  .card-preview.lv2 { padding: 3px; }
+  .card-preview.lv3 { padding: 2px; }
+  .cp-name-bar { height: 22px; padding: 0 6px; font-size: 9.5px; }
+  .cp-stats-bar { font-size: 8px; padding: 2px 4px; }
+  .cp-art { height: 40px; margin: 2px 2px 0; font-size: 6.5px; padding: 3px; }
+  .cp-type-bar { height: 11px; padding: 0 6px; font-size: 7.5px; margin-top: 2px; }
+  .cp-skills, .cp-effects { padding: 2px 3px; gap: 2px; }
+  .cp-skill, .cp-effect { padding: 2px 3px; font-size: 6px; }
+  .cp-skill-label, .cp-effect-label { font-size: 5.5px; }
+  .cp-other-ability { font-size: 5.5px; padding: 2px 3px; }
   .cp-index { width: 22px; height: 22px; font-size: 10px; top: -6px; left: -6px; }
   .cp-controls { display: none; }
-
-  .list-title { font-size: 1.05rem; }
+  .card-preview.shinsaku::before { font-size: 6.5px; padding: 1px 5px; top: 5px; }
   .deck-cards { grid-template-columns: repeat(2, 1fr); }
   .deck-header h2 { font-size: 1.2rem; }
   .stat-row { grid-template-columns: 80px 1fr 40px; font-size: 0.8rem; }
-
   .mobile-hint {
-    display: block;
-    text-align: center;
+    display: block; text-align: center;
     color: var(--parchment-dim);
     font-family: 'Noto Serif JP', serif;
-    font-style: italic;
-    font-size: 0.75rem;
+    font-style: italic; font-size: 0.75rem;
     margin-bottom: 12px;
   }
 }
@@ -642,8 +686,7 @@ main {
 .modal-bg {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.85);
-  display: none;
-  align-items: center; justify-content: center;
+  display: none; align-items: center; justify-content: center;
   z-index: 200; padding: 20px;
 }
 .modal-bg.show { display: flex; }
@@ -653,8 +696,7 @@ main {
   padding: 28px;
   max-width: 500px; width: 100%;
   box-shadow: 0 0 40px rgba(0,0,0,0.8);
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 90vh; overflow-y: auto;
 }
 .modal h3 {
   font-family: 'Cinzel', serif;
@@ -665,12 +707,11 @@ main {
 .modal p { margin-bottom: 18px; color: var(--parchment-dim); font-family: 'Noto Serif JP', serif; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 
-/* === Card Zoom Modal === */
+/* === Card Zoom === */
 .card-zoom-bg {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.92);
-  display: none;
-  align-items: center; justify-content: center;
+  display: none; align-items: center; justify-content: center;
   z-index: 250; padding: 20px;
 }
 .card-zoom-bg.show { display: flex; }
@@ -689,33 +730,37 @@ main {
   width: 34px; height: 34px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  cursor: pointer; padding: 0;
+  font-size: 16px; cursor: pointer; padding: 0;
 }
 .card-zoom-close:hover { background: var(--gold); color: var(--ink); }
 .card-zoom-card {
-  width: min(85vw, 320px);
+  width: min(85vw, 360px);
   aspect-ratio: 63 / 88;
   pointer-events: none;
 }
 .card-zoom-card .cp-index, .card-zoom-card .cp-controls { display: none; }
 .card-zoom-card .card-preview { padding: 8px; }
+.card-zoom-card .card-preview.lv2 { padding: 6px; }
+.card-zoom-card .card-preview.lv3 { padding: 5px; }
 .card-zoom-card .cp-name-bar { height: 36px; padding: 0 12px; font-size: 16px; }
-.card-zoom-card .cp-level { font-size: 14px; }
-.card-zoom-card .cp-art { height: 100px; margin: 5px 5px 0; font-size: 11px; padding: 6px; }
-.card-zoom-card .cp-type-bar { height: 20px; padding: 0 12px; font-size: 12px; margin-top: 5px; }
-.card-zoom-card .cp-skills { padding: 6px 8px; gap: 6px; }
-.card-zoom-card .cp-skill { padding: 6px 8px; font-size: 11px; }
-.card-zoom-card .cp-skill-label { font-size: 10px; margin-bottom: 3px; }
+.card-zoom-card .cp-level { font-size: 13px; }
+.card-zoom-card .cp-stats-bar { font-size: 12px; padding: 4px 10px; }
+.card-zoom-card .cp-stat-label { font-size: 11px; padding: 2px 6px; }
+.card-zoom-card .cp-art { height: 80px; margin: 5px 5px 0; font-size: 11px; padding: 6px; }
+.card-zoom-card .cp-type-bar { height: 18px; padding: 0 12px; font-size: 11px; margin-top: 5px; }
+.card-zoom-card .cp-skills, .card-zoom-card .cp-effects { padding: 6px 8px; gap: 5px; }
+.card-zoom-card .cp-skill, .card-zoom-card .cp-effect { padding: 5px 7px; font-size: 10px; }
+.card-zoom-card .cp-skill-label, .card-zoom-card .cp-effect-label { font-size: 9px; margin-bottom: 2px; }
+.card-zoom-card .cp-skill-cost { font-size: 8.5px; padding: 1px 5px; }
+.card-zoom-card .cp-other-ability { font-size: 9px; padding: 4px 6px; max-height: none; }
+.card-zoom-card .card-preview.shinsaku::before { font-size: 11px; padding: 2px 10px; }
 .card-zoom-meta {
   color: var(--parchment-dim);
   font-family: 'Cinzel', serif;
   letter-spacing: 0.1em;
-  font-size: 0.85rem;
-  text-align: center;
+  font-size: 0.85rem; text-align: center;
 }
 
-/* ============ TOAST ============ */
 .toast {
   position: fixed;
   bottom: 28px; right: 28px;
@@ -754,59 +799,130 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
   <div class="header-inner">
     <div class="brand">
       <div class="brand-mark">CARD FORGE</div>
-      <div class="brand-tag">— Forge thy deck, test thy strategy —</div>
+      <div class="brand-tag">— 手塚カード制作ツール —</div>
     </div>
     <div class="actions">
+      <button onclick="document.getElementById('importXlsxFile').click()" class="btn-small">📊 Excel取込</button>
+      <input type="file" id="importXlsxFile" accept=".xlsx" style="display:none" onchange="importXLSX(event)">
       <button onclick="exportJSON()" class="btn-small">📥 JSON出力</button>
       <button onclick="document.getElementById('importJsonFile').click()" class="btn-small">📤 JSON読込</button>
       <input type="file" id="importJsonFile" accept=".json" style="display:none" onchange="importJSON(event)">
-      <button onclick="exportCSV()" class="btn-small">CSV出力</button>
-      <button onclick="document.getElementById('importCsvFile').click()" class="btn-small">CSV読込</button>
-      <input type="file" id="importCsvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
       <button onclick="generatePDF('all')" class="btn-primary">⚔ 全PDF</button>
     </div>
   </div>
 </header>
 
 <nav class="tabs">
-  <button class="tab-btn active" onclick="switchTab('library')">📚 LIBRARY</button>
-  <button class="tab-btn" onclick="switchTab('decks')">🃏 DECKS</button>
-  <button class="tab-btn" onclick="switchTab('stats')">📊 STATS</button>
-  <button class="tab-btn" onclick="switchTab('settings')">⚙ SETTINGS</button>
+  <button class="tab-btn active" data-tab="library" onclick="switchTab('library', this)">📚 LIBRARY</button>
+  <button class="tab-btn" data-tab="decks" onclick="switchTab('decks', this)">🃏 DECKS</button>
+  <button class="tab-btn" data-tab="stats" onclick="switchTab('stats', this)">📊 STATS</button>
+  <button class="tab-btn" data-tab="settings" onclick="switchTab('settings', this)">⚙ SETTINGS</button>
 </nav>
 
 <main>
-  <!-- ============ LIBRARY TAB ============ -->
+  <!-- ============ LIBRARY ============ -->
   <section class="tab-panel active" id="tab-library">
     <div class="library-layout">
       <aside class="editor-panel">
         <div class="panel-title" id="editorTitle">新しいカード</div>
+
+        <div class="field">
+          <label>カードタイプ ★</label>
+          <select id="f-type" onchange="onTypeChange()"></select>
+        </div>
+
         <div class="field">
           <label>カード名</label>
-          <input type="text" id="f-name" placeholder="例: 炎の戦士">
+          <input type="text" id="f-name" placeholder="例: ブラック・ジャック">
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>タイプ</label>
-            <select id="f-type"></select>
+
+        <!-- 主人公・キャラ用フィールド (動的表示) -->
+        <div id="fields-leveled" style="display:none">
+          <div class="field-row">
+            <div class="field">
+              <label>レベル</label>
+              <select id="f-level">
+                <option value="1">1 (原案/脇役)</option>
+                <option value="2">2 (ネーム/名脇役)</option>
+                <option value="3">3 (清書/相棒・ライバル)</option>
+              </select>
+            </div>
+            <div class="field" id="field-subrole">
+              <label>サブ区分</label>
+              <input type="text" id="f-subrole" placeholder="例: 相棒, ライバル">
+            </div>
           </div>
-          <div class="field">
-            <label>レベル</label>
-            <input type="text" id="f-level" placeholder="3">
+        </div>
+
+        <!-- HPとIP (キャラクターのみ) -->
+        <div id="fields-character" style="display:none">
+          <div class="field-row">
+            <div class="field">
+              <label>HP</label>
+              <input type="text" id="f-hp" placeholder="例: 70">
+            </div>
+            <div class="field">
+              <label>没で得るIP</label>
+              <input type="text" id="f-ip" placeholder="例: 1">
+            </div>
+          </div>
+          <div class="field-checkbox">
+            <input type="checkbox" id="f-shinsaku">
+            <label for="f-shinsaku">★ 自信作カード</label>
           </div>
         </div>
-        <div class="field">
-          <label>スキル1</label>
-          <textarea id="f-skill1" placeholder="例: 炎斬り — 攻撃時、相手に追加2ダメージ。"></textarea>
+
+        <!-- IP のみ (展開・テコ入れ・どんでん返し) -->
+        <div id="fields-ip-only" style="display:none">
+          <div class="field">
+            <label>没で得るIP</label>
+            <input type="text" id="f-ip2" placeholder="例: 2">
+          </div>
         </div>
-        <div class="field">
-          <label>スキル2</label>
-          <textarea id="f-skill2" placeholder="例: 猛進 — 場に出たターンに攻撃可能。"></textarea>
+
+        <!-- 技/スキル (主人公・キャラ) -->
+        <div id="fields-skills" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">技 / スキル</div>
+            <div class="field">
+              <label>技1</label>
+              <textarea id="f-skill1" placeholder="例: メス投げ　必要コスト１　指定したキャラに２０ダメージ"></textarea>
+            </div>
+            <div class="field">
+              <label>技2</label>
+              <textarea id="f-skill2" placeholder="(空欄でも可)"></textarea>
+            </div>
+          </div>
+          <div class="field" id="field-other-ability">
+            <label>その他の能力</label>
+            <textarea id="f-other" placeholder="例: このカードはデッキに何枚でも入れられる"></textarea>
+          </div>
         </div>
+
+        <!-- 効果 (展開・テコ入れ・どんでん返し) -->
+        <div id="fields-effects" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">カード効果</div>
+            <div class="field">
+              <label>効果1</label>
+              <textarea id="f-effect1" placeholder="例: 自分は3枚ドローする"></textarea>
+            </div>
+            <div class="field">
+              <label>効果2</label>
+              <textarea id="f-effect2" placeholder="(空欄でも可)"></textarea>
+            </div>
+            <div class="field">
+              <label>効果3 / 制限事項</label>
+              <textarea id="f-effect3" placeholder="例: このカードは1ターンに1度しか使えない"></textarea>
+            </div>
+          </div>
+        </div>
+
         <div class="field">
           <label>イラストメモ</label>
-          <textarea id="f-art" placeholder="赤い鎧を着た剣士、炎を背負っている"></textarea>
+          <textarea id="f-art" placeholder="絵の内容のメモ"></textarea>
         </div>
+
         <div class="editor-actions">
           <button onclick="resetEditor()">クリア</button>
           <button class="btn-primary" id="saveBtn" onclick="saveCard()">追加</button>
@@ -820,12 +936,22 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
         <div class="filter-bar">
           <div class="field field-search">
             <label>🔍 検索</label>
-            <input type="text" id="filter-search" placeholder="カード名・スキル・メモで検索" oninput="render()">
+            <input type="text" id="filter-search" placeholder="名前・スキル・効果で検索" oninput="render()">
           </div>
           <div class="field">
             <label>タイプ</label>
             <select id="filter-type" onchange="render()">
               <option value="">全タイプ</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>レベル</label>
+            <select id="filter-level" onchange="render()">
+              <option value="">全レベル</option>
+              <option value="1">レベル1</option>
+              <option value="2">レベル2</option>
+              <option value="3">レベル3</option>
+              <option value="-">なし</option>
             </select>
           </div>
           <div class="field">
@@ -851,15 +977,14 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     </div>
   </section>
 
-  <!-- ============ DECKS TAB ============ -->
+  <!-- ============ DECKS ============ -->
   <section class="tab-panel" id="tab-decks">
     <div class="deck-layout">
-      <aside class="deck-list">
+      <aside class="deck-list-side">
         <div class="panel-title">デッキ一覧</div>
         <button class="btn-primary" style="width:100%; margin-bottom: 12px;" onclick="createDeck()">+ 新規デッキ</button>
         <div id="deckListItems"></div>
       </aside>
-
       <section class="deck-detail" id="deckDetail">
         <div class="empty-state">
           <h3>NO DECK SELECTED</h3>
@@ -869,21 +994,21 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     </div>
   </section>
 
-  <!-- ============ STATS TAB ============ -->
+  <!-- ============ STATS ============ -->
   <section class="tab-panel" id="tab-stats">
     <div class="stat-summary" id="statSummary"></div>
     <div class="stats-layout" id="statsLayout"></div>
   </section>
 
-  <!-- ============ SETTINGS TAB ============ -->
+  <!-- ============ SETTINGS ============ -->
   <section class="tab-panel" id="tab-settings">
     <div class="settings-section">
       <div class="panel-title">タイプ管理</div>
       <p style="color: var(--parchment-dim); font-size: 0.85rem; margin-bottom: 14px;">
-        独自のタイプを追加できます。カラーをクリックして変更可能です。
+        基本5タイプは編集不可ですが、色は変更できます。カスタムタイプを追加することもできます。
       </p>
       <div id="typeList"></div>
-      <button class="btn-primary" onclick="addType()" style="margin-top: 12px;">+ タイプを追加</button>
+      <button class="btn-primary" onclick="addType()" style="margin-top: 12px;">+ カスタムタイプを追加</button>
     </div>
 
     <div class="settings-section">
@@ -892,8 +1017,10 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
         全カード・デッキ・タイプ設定をまとめてバックアップできます。
       </p>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="exportJSON()">📥 全データ出力(JSON)</button>
-        <button onclick="document.getElementById('importJsonFile').click()">📤 全データ読込(JSON)</button>
+        <button onclick="document.getElementById('importXlsxFile').click()" class="btn-primary">📊 Excelファイルから取込</button>
+        <button onclick="exportJSON()">📥 JSON出力</button>
+        <button onclick="document.getElementById('importJsonFile').click()">📤 JSON読込</button>
+        <button onclick="exportCSV()">CSV出力</button>
         <button class="btn-danger" onclick="resetAllData()">⚠ 全データ削除</button>
       </div>
     </div>
@@ -910,7 +1037,6 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     </div>
   </div>
 </div>
-
 <div class="modal-bg" id="promptModal">
   <div class="modal">
     <h3 id="promptTitle">入力</h3>
@@ -922,7 +1048,6 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     </div>
   </div>
 </div>
-
 <div class="card-zoom-bg" id="cardZoomBg" onclick="closeCardZoom(event)">
   <div class="card-zoom-content">
     <button class="card-zoom-close" onclick="closeCardZoom()">✕</button>
@@ -930,69 +1055,73 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     <div class="card-zoom-meta" id="cardZoomMeta"></div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <footer>
   <div class="ornament">❦ · · · ❦ · · · ❦</div>
-  Card Forge — Browser-only Card Crafter for TCG Playtesting
+  Card Forge — 手塚カードゲーム制作ツール
 </footer>
 
 <script>
 // ============ DATA ============
-const STORAGE_KEY = 'card_forge_data_v3'; // v3: タイプ管理・デッキ機能追加
+const STORAGE_KEY = 'card_forge_data_v4_tezuka';
 
-const DEFAULT_TYPES = [
-  { name: '主人公',   color: '#8b2c1f' },
-  { name: 'スペル',   color: '#2c4f7c' },
-  { name: '建造物',   color: '#6b4f2c' },
-  { name: 'アイテム', color: '#3d6b3a' },
-  { name: 'その他',   color: '#5d3a6b' }
+// 5つの基本タイプ
+const BUILTIN_TYPES = [
+  { name: '主人公',         color: '#8b2c1f', builtin: true, kind: 'leveled' },
+  { name: 'キャラクター',   color: '#2c4f7c', builtin: true, kind: 'character' },
+  { name: '展開アイディア', color: '#3d6b3a', builtin: true, kind: 'effect' },
+  { name: 'テコ入れ',       color: '#6b4f2c', builtin: true, kind: 'effect' },
+  { name: 'どんでん返し',   color: '#5d3a6b', builtin: true, kind: 'effect' }
 ];
+// kind の意味:
+// - 'leveled':   レベルあり、技あり、HPなし、IPなし   (主人公)
+// - 'character': レベル・サブ区分・HP・IP・技・自信作  (キャラクター)
+// - 'effect':    IPと効果1〜3                          (展開・テコ入れ・どんでん返し)
+// カスタム追加されたタイプはデフォルトで 'character' kind を持つ
 
 let state = {
   cards: [],
-  types: JSON.parse(JSON.stringify(DEFAULT_TYPES)),
-  decks: [],     // [{id, name, description, cardIds: [...]}]
+  types: [],
+  decks: [],
   currentDeckId: null
 };
 let editingIdx = null;
 let dragSrcIdx = null;
 let cardIdCounter = 1;
 
+function cid() { return 'c' + (cardIdCounter++); }
+
 function loadData() {
+  let loaded = false;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const data = JSON.parse(raw);
       state.cards = data.cards || [];
-      state.types = data.types || JSON.parse(JSON.stringify(DEFAULT_TYPES));
+      state.types = data.types || [];
       state.decks = data.decks || [];
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
+      loaded = true;
     }
-  } catch(e) {
-    console.error(e);
-  }
+  } catch(e) { console.error(e); }
 
-  if (state.cards.length === 0) {
-    state.cards = [
-      {id: cid(), name:"炎の戦士", type:"主人公", level:"3",
-       skill1:"炎斬り — 攻撃時、相手に追加2ダメージ。",
-       skill2:"猛進 — 場に出たターンに攻撃可能。",
-       art:"赤い鎧を着た剣士、炎を背負っている"},
-      {id: cid(), name:"癒しの妖精", type:"主人公", level:"2",
-       skill1:"森の祝福 — ターン終了時、自分のライフを1回復。",
-       skill2:"幻惑 — 攻撃を受けるとき、50%で回避。",
-       art:"緑の羽根を持つ小さな妖精"},
-      {id: cid(), name:"雷光の魔導書", type:"スペル", level:"1",
-       skill1:"雷撃 — 相手のクリーチャー1体に3ダメージ。",
-       skill2:"連鎖 — 雷撃発動後、もう1度コインを振って表なら同じ対象に追加2ダメージ。",
-       art:"稲妻を放つ古い魔導書"}
-    ];
-    saveData();
-  }
+  // 基本タイプは常に存在を保証
+  ensureBuiltinTypes();
 }
-function cid() { return 'c' + (cardIdCounter++); }
+
+function ensureBuiltinTypes() {
+  BUILTIN_TYPES.forEach(builtin => {
+    const exists = state.types.find(t => t.name === builtin.name);
+    if (!exists) {
+      state.types.push({...builtin});
+    } else {
+      // builtinフラグとkindは正規化(ユーザーが変更できないように)
+      exists.builtin = true;
+      exists.kind = builtin.kind;
+    }
+  });
+}
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -1003,191 +1132,109 @@ function saveData() {
   }));
 }
 
-function getTypeColor(typeName) {
-  const t = state.types.find(x => x.name === typeName);
-  return t ? t.color : '#5d3a6b';
+function getType(name) {
+  return state.types.find(t => t.name === name);
+}
+function getTypeColor(name) {
+  return getType(name)?.color || '#5d3a6b';
+}
+function getTypeKind(name) {
+  return getType(name)?.kind || 'character';
 }
 
 // ============ TABS ============
-function switchTab(tabName) {
+function switchTab(tabName, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
+  btn.classList.add('active');
   document.getElementById('tab-' + tabName).classList.add('active');
-
   if (tabName === 'stats') renderStats();
   if (tabName === 'settings') renderSettings();
   if (tabName === 'decks') renderDeckList();
 }
 
-// ============ FILTERING ============
-function getFilteredCards() {
-  const search = document.getElementById('filter-search').value.toLowerCase().trim();
-  const typeFilter = document.getElementById('filter-type').value;
-  const sortMode = document.getElementById('filter-sort').value;
+// ============ EDITOR (動的フィールド) ============
+function onTypeChange() {
+  const typeName = document.getElementById('f-type').value;
+  const kind = getTypeKind(typeName);
 
-  let filtered = state.cards.map((c, originalIdx) => ({...c, originalIdx}));
+  // 全部一旦隠す
+  document.getElementById('fields-leveled').style.display = 'none';
+  document.getElementById('fields-character').style.display = 'none';
+  document.getElementById('fields-ip-only').style.display = 'none';
+  document.getElementById('fields-skills').style.display = 'none';
+  document.getElementById('fields-effects').style.display = 'none';
 
-  if (search) {
-    filtered = filtered.filter(c =>
-      (c.name || '').toLowerCase().includes(search) ||
-      (c.skill1 || '').toLowerCase().includes(search) ||
-      (c.skill2 || '').toLowerCase().includes(search) ||
-      (c.art || '').toLowerCase().includes(search)
-    );
+  if (kind === 'leveled') {
+    // 主人公: レベル + 技 (HP/IP/自信作なし)
+    document.getElementById('fields-leveled').style.display = '';
+    document.getElementById('fields-skills').style.display = '';
+    document.getElementById('field-subrole').style.display = 'none';
+    document.getElementById('field-other-ability').style.display = 'none';
+  } else if (kind === 'character') {
+    // キャラクター: フル装備
+    document.getElementById('fields-leveled').style.display = '';
+    document.getElementById('field-subrole').style.display = '';
+    document.getElementById('fields-character').style.display = '';
+    document.getElementById('fields-skills').style.display = '';
+    document.getElementById('field-other-ability').style.display = '';
+  } else if (kind === 'effect') {
+    // 展開/テコ入れ/どんでん返し: IPと効果
+    document.getElementById('fields-ip-only').style.display = '';
+    document.getElementById('fields-effects').style.display = '';
   }
-  if (typeFilter) {
-    filtered = filtered.filter(c => c.type === typeFilter);
-  }
-
-  switch(sortMode) {
-    case 'name':
-      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      break;
-    case 'type':
-      filtered.sort((a, b) => (a.type || '').localeCompare(b.type || '') || (a.name || '').localeCompare(b.name || ''));
-      break;
-    case 'level-asc':
-      filtered.sort((a, b) => (parseFloat(a.level) || 0) - (parseFloat(b.level) || 0));
-      break;
-    case 'level-desc':
-      filtered.sort((a, b) => (parseFloat(b.level) || 0) - (parseFloat(a.level) || 0));
-      break;
-    // 'custom' → originalIdx順 = 既に正しい
-  }
-  return filtered;
 }
 
-function resetFilters() {
-  document.getElementById('filter-search').value = '';
-  document.getElementById('filter-type').value = '';
-  document.getElementById('filter-sort').value = 'custom';
-  render();
-}
-
-// ============ RENDERING ============
-function refreshTypeSelects() {
-  const editorSel = document.getElementById('f-type');
-  const filterSel = document.getElementById('filter-type');
-  const editorVal = editorSel.value;
-  const filterVal = filterSel.value;
-
-  editorSel.innerHTML = state.types.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
-  filterSel.innerHTML = '<option value="">全タイプ</option>' +
-    state.types.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
-
-  if (state.types.find(t => t.name === editorVal)) editorSel.value = editorVal;
-  if (state.types.find(t => t.name === filterVal)) filterSel.value = filterVal;
-}
-
-function render() {
-  refreshTypeSelects();
-  const grid = document.getElementById('cardGrid');
-  const filtered = getFilteredCards();
-  const isCustomSort = document.getElementById('filter-sort').value === 'custom' &&
-                        !document.getElementById('filter-search').value &&
-                        !document.getElementById('filter-type').value;
-
-  document.getElementById('cardCount').textContent = `${filtered.length} / ${state.cards.length}枚`;
-
-  if (state.cards.length === 0) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">
-      <h3>EMPTY LIBRARY</h3>
-      <p>左のフォームから最初のカードを鋳造せよ</p></div>`;
-    return;
-  }
-  if (filtered.length === 0) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">
-      <h3>NO MATCH</h3>
-      <p>フィルタ条件に合うカードはありません</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = filtered.map((c) => {
-    const i = c.originalIdx;
-    const color = getTypeColor(c.type);
-    const dragAttrs = isCustomSort ? `draggable="true" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)"` : '';
-    const reorderBtns = isCustomSort ? `
-      <button class="cp-ctrl-btn" onclick="event.stopPropagation(); moveCard(${i}, -1)" title="上へ">▲</button>
-      <button class="cp-ctrl-btn" onclick="event.stopPropagation(); moveCard(${i}, 1)" title="下へ">▼</button>
-    ` : '';
-
-    return `
-      <div class="card-preview ${editingIdx === i ? 'selected' : ''}" onclick="editCard(${i})" style="color: ${color}" ${dragAttrs} data-idx="${i}">
-        <div class="cp-index">${i+1}</div>
-        <div class="cp-controls">${reorderBtns}</div>
-        <div class="cp-name-bar" style="background: ${color}">
-          <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
-          <div class="cp-level">Lv.${escapeHtml(c.level || '-')}</div>
-        </div>
-        <div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>
-        <div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>
-        <div class="cp-skills">
-          <div class="cp-skill">
-            <div class="cp-skill-label">SKILL 1</div>
-            <div class="cp-skill-text">${escapeHtml(c.skill1 || '')}</div>
-          </div>
-          <div class="cp-skill">
-            <div class="cp-skill-label">SKILL 2</div>
-            <div class="cp-skill-text">${escapeHtml(c.skill2 || '')}</div>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function escapeHtml(s) {
-  if (s === undefined || s === null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-// ============ DRAG & DROP / REORDER ============
-function onDragStart(e, idx) {
-  dragSrcIdx = idx;
-  e.target.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-function onDrop(e, dstIdx) {
-  e.preventDefault();
-  if (dragSrcIdx === null || dragSrcIdx === dstIdx) return;
-  const [moved] = state.cards.splice(dragSrcIdx, 1);
-  state.cards.splice(dstIdx, 0, moved);
-  saveData();
-  render();
-}
-function onDragEnd(e) {
-  e.target.classList.remove('dragging');
-  dragSrcIdx = null;
-}
-function moveCard(idx, delta) {
-  const newIdx = idx + delta;
-  if (newIdx < 0 || newIdx >= state.cards.length) return;
-  const [moved] = state.cards.splice(idx, 1);
-  state.cards.splice(newIdx, 0, moved);
-  saveData();
-  render();
-}
-
-// ============ EDITOR ============
 function readForm() {
-  return {
-    name:   document.getElementById('f-name').value.trim(),
-    type:   document.getElementById('f-type').value,
-    level:  document.getElementById('f-level').value.trim(),
-    skill1: document.getElementById('f-skill1').value.trim(),
-    skill2: document.getElementById('f-skill2').value.trim(),
-    art:    document.getElementById('f-art').value.trim()
+  const type = document.getElementById('f-type').value;
+  const kind = getTypeKind(type);
+  const data = {
+    type,
+    name: document.getElementById('f-name').value.trim(),
+    art: document.getElementById('f-art').value.trim()
   };
+  if (kind === 'leveled' || kind === 'character') {
+    data.level = document.getElementById('f-level').value;
+    data.skill1 = document.getElementById('f-skill1').value.trim();
+    data.skill2 = document.getElementById('f-skill2').value.trim();
+  }
+  if (kind === 'character') {
+    data.subrole = document.getElementById('f-subrole').value.trim();
+    data.hp = document.getElementById('f-hp').value.trim();
+    data.ip = document.getElementById('f-ip').value.trim();
+    data.shinsaku = document.getElementById('f-shinsaku').checked;
+    data.other = document.getElementById('f-other').value.trim();
+  }
+  if (kind === 'effect') {
+    data.ip = document.getElementById('f-ip2').value.trim();
+    data.effect1 = document.getElementById('f-effect1').value.trim();
+    data.effect2 = document.getElementById('f-effect2').value.trim();
+    data.effect3 = document.getElementById('f-effect3').value.trim();
+  }
+  return data;
 }
+
 function writeForm(c) {
-  document.getElementById('f-name').value   = c.name || '';
-  document.getElementById('f-type').value   = c.type || (state.types[0]?.name || '');
-  document.getElementById('f-level').value  = c.level || '';
+  c = c || {};
+  // タイプ初期値: 既に何か設定されてれば優先、なければ最初のタイプ
+  document.getElementById('f-type').value = c.type || state.types[0]?.name || '主人公';
+  document.getElementById('f-name').value = c.name || '';
+  document.getElementById('f-art').value  = c.art || '';
+  document.getElementById('f-level').value = c.level || '1';
+  document.getElementById('f-subrole').value = c.subrole || '';
+  document.getElementById('f-hp').value = c.hp || '';
+  document.getElementById('f-ip').value = c.ip || '';
+  document.getElementById('f-shinsaku').checked = !!c.shinsaku;
+  document.getElementById('f-other').value = c.other || '';
+  document.getElementById('f-ip2').value = c.ip || '';
   document.getElementById('f-skill1').value = c.skill1 || '';
   document.getElementById('f-skill2').value = c.skill2 || '';
-  document.getElementById('f-art').value    = c.art || '';
+  document.getElementById('f-effect1').value = c.effect1 || '';
+  document.getElementById('f-effect2').value = c.effect2 || '';
+  document.getElementById('f-effect3').value = c.effect3 || '';
+  onTypeChange();
 }
+
 function resetEditor() {
   editingIdx = null;
   writeForm({});
@@ -1196,6 +1243,7 @@ function resetEditor() {
   document.getElementById('editingActions').style.display = 'none';
   render();
 }
+
 function editCard(i) {
   if (window.matchMedia('(max-width: 768px)').matches) {
     openCardZoom(i);
@@ -1209,6 +1257,7 @@ function editCard(i) {
   render();
   document.querySelector('.editor-panel').scrollIntoView({behavior:'smooth', block:'start'});
 }
+
 function saveCard() {
   const data = readForm();
   if (!data.name) { toast('カード名を入力してください'); return; }
@@ -1216,20 +1265,18 @@ function saveCard() {
     state.cards.push({id: cid(), ...data});
     toast(`「${data.name}」を追加`);
   } else {
-    state.cards[editingIdx] = {...state.cards[editingIdx], ...data};
+    state.cards[editingIdx] = {id: state.cards[editingIdx].id, ...data};
     toast(`「${data.name}」を更新`);
   }
   saveData();
   resetEditor();
 }
+
 function deleteCard() {
   if (editingIdx === null) return;
   const card = state.cards[editingIdx];
   showModal('カードを削除', `「${card.name}」を削除します。デッキにも含まれている場合は除外されます。`, () => {
-    // 全デッキからも削除
-    state.decks.forEach(d => {
-      d.cardIds = (d.cardIds || []).filter(cid => cid !== card.id);
-    });
+    state.decks.forEach(d => { d.cardIds = (d.cardIds || []).filter(cid => cid !== card.id); });
     state.cards.splice(editingIdx, 1);
     saveData();
     resetEditor();
@@ -1238,31 +1285,200 @@ function deleteCard() {
   });
 }
 
+// ============ FILTERING ============
+function getFilteredCards() {
+  const search = document.getElementById('filter-search').value.toLowerCase().trim();
+  const typeFilter = document.getElementById('filter-type').value;
+  const levelFilter = document.getElementById('filter-level').value;
+  const sortMode = document.getElementById('filter-sort').value;
+
+  let filtered = state.cards.map((c, originalIdx) => ({...c, originalIdx}));
+  if (search) {
+    filtered = filtered.filter(c =>
+      (c.name || '').toLowerCase().includes(search) ||
+      (c.skill1 || '').toLowerCase().includes(search) ||
+      (c.skill2 || '').toLowerCase().includes(search) ||
+      (c.effect1 || '').toLowerCase().includes(search) ||
+      (c.effect2 || '').toLowerCase().includes(search) ||
+      (c.effect3 || '').toLowerCase().includes(search) ||
+      (c.other || '').toLowerCase().includes(search) ||
+      (c.art || '').toLowerCase().includes(search) ||
+      (c.subrole || '').toLowerCase().includes(search)
+    );
+  }
+  if (typeFilter) filtered = filtered.filter(c => c.type === typeFilter);
+  if (levelFilter) {
+    if (levelFilter === '-') filtered = filtered.filter(c => !c.level);
+    else filtered = filtered.filter(c => String(c.level) === levelFilter);
+  }
+  switch(sortMode) {
+    case 'name':       filtered.sort((a,b)=>(a.name||'').localeCompare(b.name||'')); break;
+    case 'type':       filtered.sort((a,b)=>(a.type||'').localeCompare(b.type||'') || (a.name||'').localeCompare(b.name||'')); break;
+    case 'level-asc':  filtered.sort((a,b)=>(parseFloat(a.level)||0)-(parseFloat(b.level)||0)); break;
+    case 'level-desc': filtered.sort((a,b)=>(parseFloat(b.level)||0)-(parseFloat(a.level)||0)); break;
+  }
+  return filtered;
+}
+
+function resetFilters() {
+  document.getElementById('filter-search').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('filter-level').value = '';
+  document.getElementById('filter-sort').value = 'custom';
+  render();
+}
+
+// ============ RENDER (CARD HTML) ============
+function refreshTypeSelects() {
+  const editorSel = document.getElementById('f-type');
+  const filterSel = document.getElementById('filter-type');
+  const editorVal = editorSel.value;
+  const filterVal = filterSel.value;
+
+  editorSel.innerHTML = state.types.map(t =>
+    `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
+  filterSel.innerHTML = '<option value="">全タイプ</option>' +
+    state.types.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
+
+  if (state.types.find(t => t.name === editorVal)) editorSel.value = editorVal;
+  if (state.types.find(t => t.name === filterVal)) filterSel.value = filterVal;
+}
+
+function buildCardHTML(c, idx, opts) {
+  opts = opts || {};
+  const color = getTypeColor(c.type);
+  const kind = getTypeKind(c.type);
+  const lvNum = parseInt(c.level) || 0;
+
+  const classes = ['card-preview'];
+  if (lvNum === 2) classes.push('lv2');
+  if (lvNum === 3) classes.push('lv3');
+  if (c.shinsaku) classes.push('shinsaku');
+  if (opts.selected) classes.push('selected');
+  if (opts.inDeck) classes.push('in-deck');
+
+  let inner = '';
+
+  // 名前バー
+  const lvLabel = c.level ? `Lv.${c.level}${c.subrole ? '・'+c.subrole : ''}` : '';
+  inner += `<div class="cp-name-bar" style="background: ${color}">
+    <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
+    ${lvLabel ? `<div class="cp-level">${escapeHtml(lvLabel)}</div>` : ''}
+  </div>`;
+
+  // HP / IP バー (キャラクターのみ)
+  if (kind === 'character' && (c.hp || c.ip)) {
+    inner += `<div class="cp-stats-bar">
+      ${c.hp ? `<div class="cp-stat"><span class="cp-stat-label">HP</span><span class="cp-stat-val">${escapeHtml(c.hp)}</span></div>` : '<span></span>'}
+      ${c.ip ? `<div class="cp-stat"><span class="cp-stat-label">IP</span><span class="cp-stat-val">${escapeHtml(c.ip)}</span></div>` : ''}
+    </div>`;
+  }
+  // IP バー (展開・テコ入れ・どんでん返し)
+  if (kind === 'effect' && c.ip) {
+    inner += `<div class="cp-stats-bar">
+      <span></span>
+      <div class="cp-stat"><span class="cp-stat-label">IP</span><span class="cp-stat-val">${escapeHtml(c.ip)}</span></div>
+    </div>`;
+  }
+
+  // イラスト枠
+  inner += `<div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>`;
+
+  // タイプバー
+  inner += `<div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>`;
+
+  // 中身: 技 or 効果
+  if (kind === 'leveled' || kind === 'character') {
+    inner += '<div class="cp-skills">';
+    if (c.skill1) inner += `<div class="cp-skill"><div class="cp-skill-label">技 1</div><div class="cp-skill-text">${escapeHtml(c.skill1)}</div></div>`;
+    if (c.skill2) inner += `<div class="cp-skill"><div class="cp-skill-label">技 2</div><div class="cp-skill-text">${escapeHtml(c.skill2)}</div></div>`;
+    if (!c.skill1 && !c.skill2) inner += `<div class="cp-skill" style="opacity:0.4;font-style:italic;">技なし</div>`;
+    inner += '</div>';
+    if (c.other) inner += `<div class="cp-other-ability">${escapeHtml(c.other)}</div>`;
+  } else if (kind === 'effect') {
+    inner += '<div class="cp-effects">';
+    if (c.effect1) inner += `<div class="cp-effect"><div class="cp-effect-label">効果 1</div><div class="cp-effect-text">${escapeHtml(c.effect1)}</div></div>`;
+    if (c.effect2) inner += `<div class="cp-effect"><div class="cp-effect-label">効果 2</div><div class="cp-effect-text">${escapeHtml(c.effect2)}</div></div>`;
+    if (c.effect3) inner += `<div class="cp-effect"><div class="cp-effect-label">効果 3</div><div class="cp-effect-text">${escapeHtml(c.effect3)}</div></div>`;
+    if (!c.effect1 && !c.effect2 && !c.effect3) inner += `<div class="cp-effect" style="opacity:0.4;font-style:italic;">効果なし</div>`;
+    inner += '</div>';
+  }
+
+  return `<div class="${classes.join(' ')}" style="color: ${color}" ${opts.attrs || ''} data-idx="${idx}">
+    ${opts.showIndex !== false ? `<div class="cp-index">${idx+1}</div>` : ''}
+    ${opts.controls || ''}
+    ${inner}
+  </div>`;
+}
+
+function render() {
+  refreshTypeSelects();
+  const grid = document.getElementById('cardGrid');
+  const filtered = getFilteredCards();
+  const isCustomSort = document.getElementById('filter-sort').value === 'custom' &&
+                        !document.getElementById('filter-search').value &&
+                        !document.getElementById('filter-type').value &&
+                        !document.getElementById('filter-level').value;
+
+  document.getElementById('cardCount').textContent = `${filtered.length} / ${state.cards.length}枚`;
+
+  if (state.cards.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">
+      <h3>EMPTY LIBRARY</h3>
+      <p>「📊 Excel取込」からExcelファイルを読み込むか、左のフォームから新規作成してください</p></div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">
+      <h3>NO MATCH</h3><p>フィルタ条件に合うカードはありません</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((c) => {
+    const i = c.originalIdx;
+    const dragAttrs = isCustomSort ? `draggable="true" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)"` : '';
+    const reorderBtns = isCustomSort ? `
+      <div class="cp-controls">
+        <button class="cp-ctrl-btn" onclick="event.stopPropagation(); moveCard(${i}, -1)" title="上へ">▲</button>
+        <button class="cp-ctrl-btn" onclick="event.stopPropagation(); moveCard(${i}, 1)" title="下へ">▼</button>
+      </div>` : '';
+    return buildCardHTML(c, i, {
+      selected: editingIdx === i,
+      attrs: `onclick="editCard(${i})" ${dragAttrs}`,
+      controls: reorderBtns
+    });
+  }).join('');
+}
+
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============ DRAG & DROP ============
+function onDragStart(e, idx) { dragSrcIdx = idx; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+function onDrop(e, dstIdx) {
+  e.preventDefault();
+  if (dragSrcIdx === null || dragSrcIdx === dstIdx) return;
+  const [moved] = state.cards.splice(dragSrcIdx, 1);
+  state.cards.splice(dstIdx, 0, moved);
+  saveData(); render();
+}
+function onDragEnd(e) { e.target.classList.remove('dragging'); dragSrcIdx = null; }
+function moveCard(idx, delta) {
+  const newIdx = idx + delta;
+  if (newIdx < 0 || newIdx >= state.cards.length) return;
+  const [moved] = state.cards.splice(idx, 1);
+  state.cards.splice(newIdx, 0, moved);
+  saveData(); render();
+}
+
 // ============ CARD ZOOM ============
 function openCardZoom(idx) {
   const c = state.cards[idx];
   if (!c) return;
-  const color = getTypeColor(c.type);
-  const html = `
-    <div class="card-preview" style="color: ${color}; width: 100%; height: 100%;">
-      <div class="cp-name-bar" style="background: ${color}">
-        <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
-        <div class="cp-level">Lv.${escapeHtml(c.level || '-')}</div>
-      </div>
-      <div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>
-      <div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>
-      <div class="cp-skills">
-        <div class="cp-skill">
-          <div class="cp-skill-label">SKILL 1</div>
-          <div class="cp-skill-text">${escapeHtml(c.skill1 || '')}</div>
-        </div>
-        <div class="cp-skill">
-          <div class="cp-skill-label">SKILL 2</div>
-          <div class="cp-skill-text">${escapeHtml(c.skill2 || '')}</div>
-        </div>
-      </div>
-    </div>`;
-  document.getElementById('cardZoomCard').innerHTML = html;
+  document.getElementById('cardZoomCard').innerHTML = buildCardHTML(c, idx, {showIndex: false, attrs: ''});
   document.getElementById('cardZoomMeta').textContent = `№ ${idx + 1} / ${state.cards.length}`;
   document.getElementById('cardZoomBg').classList.add('show');
 }
@@ -1275,8 +1491,7 @@ function closeCardZoom(event) {
 function renderDeckList() {
   const list = document.getElementById('deckListItems');
   if (state.decks.length === 0) {
-    list.innerHTML = `<div class="empty-state" style="padding: 20px;">
-      <p>まだデッキがありません</p></div>`;
+    list.innerHTML = `<div class="empty-state" style="padding: 20px;"><p>まだデッキがありません</p></div>`;
     renderDeckDetail();
     return;
   }
@@ -1284,101 +1499,69 @@ function renderDeckList() {
     const cardCount = (d.cardIds || []).length;
     return `<div class="deck-item ${state.currentDeckId === d.id ? 'active' : ''}" onclick="selectDeck('${d.id}')">
       <div class="deck-item-name">${escapeHtml(d.name)}</div>
-      <div class="deck-item-meta">${cardCount}枚</div>
-    </div>`;
+      <div class="deck-item-meta">${cardCount}枚</div></div>`;
   }).join('');
   renderDeckDetail();
 }
-
-function selectDeck(id) {
-  state.currentDeckId = id;
-  saveData();
-  renderDeckList();
-}
-
+function selectDeck(id) { state.currentDeckId = id; saveData(); renderDeckList(); }
 function createDeck() {
   promptInput('新規デッキ', 'デッキ名を入力してください', '', (name) => {
     if (!name) return;
-    const newDeck = {
-      id: 'd' + Date.now(),
-      name: name,
-      description: '',
-      cardIds: []
-    };
+    const newDeck = { id: 'd' + Date.now(), name, description: '', cardIds: [] };
     state.decks.push(newDeck);
     state.currentDeckId = newDeck.id;
-    saveData();
-    renderDeckList();
+    saveData(); renderDeckList();
     toast(`「${name}」を作成`);
   });
 }
-
 function renameDeck() {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   promptInput('デッキ名を変更', '新しい名前', deck.name, (name) => {
     if (!name) return;
-    deck.name = name;
-    saveData();
-    renderDeckList();
+    deck.name = name; saveData(); renderDeckList();
   });
 }
-
 function editDeckDescription() {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   promptInput('デッキの説明', '説明文', deck.description || '', (desc) => {
-    deck.description = desc;
-    saveData();
-    renderDeckList();
+    deck.description = desc; saveData(); renderDeckList();
   });
 }
-
 function deleteDeck() {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   showModal('デッキを削除', `「${deck.name}」を削除します。カードは残ります。`, () => {
     state.decks = state.decks.filter(d => d.id !== state.currentDeckId);
     state.currentDeckId = null;
-    saveData();
-    renderDeckList();
+    saveData(); renderDeckList();
     toast('デッキを削除');
   });
 }
-
 function addCardToDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   if (!deck.cardIds) deck.cardIds = [];
-  if (deck.cardIds.includes(cardId)) {
-    toast('既にデッキに含まれています');
-    return;
-  }
+  if (deck.cardIds.includes(cardId)) { toast('既にデッキに含まれています'); return; }
   deck.cardIds.push(cardId);
-  saveData();
-  renderDeckList();
+  saveData(); renderDeckList();
   toast('カードを追加');
 }
-
 function removeCardFromDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   deck.cardIds = (deck.cardIds || []).filter(id => id !== cardId);
-  saveData();
-  renderDeckList();
+  saveData(); renderDeckList();
 }
-
 function renderDeckDetail() {
   const detail = document.getElementById('deckDetail');
   const deck = state.decks.find(d => d.id === state.currentDeckId);
-
   if (!deck) {
-    detail.innerHTML = `<div class="empty-state">
-      <h3>NO DECK SELECTED</h3>
+    detail.innerHTML = `<div class="empty-state"><h3>NO DECK SELECTED</h3>
       <p>左から選ぶか、新規デッキを作成してください</p></div>`;
     return;
   }
-
   const inDeckCards = (deck.cardIds || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
   const availableCards = state.cards.filter(c => !(deck.cardIds || []).includes(c.id));
 
@@ -1395,51 +1578,27 @@ function renderDeckDetail() {
         <button class="btn-small btn-danger" onclick="deleteDeck()">削除</button>
       </div>
     </div>
-
     <div class="deck-section">
       <div class="deck-section-title">デッキ内のカード (${inDeckCards.length}枚)</div>
-      ${inDeckCards.length === 0
-        ? `<div class="empty-state" style="padding: 30px;"><p>まだカードがありません。下から追加してください。</p></div>`
-        : `<div class="deck-cards" id="deckCards">${inDeckCards.map((c, idx) => renderDeckCard(c, idx)).join('')}</div>`
-      }
+      ${inDeckCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>まだカードがありません。下から追加してください。</p></div>`
+        : `<div class="deck-cards">${inDeckCards.map((c, idx) => {
+            const origIdx = state.cards.indexOf(c);
+            return buildCardHTML(c, origIdx, {
+              inDeck: true, showIndex: false,
+              attrs: `onclick="if(confirm('「${escapeHtml(c.name)}」をデッキから外しますか？')) removeCardFromDeck('${c.id}')"`
+            });
+          }).join('')}</div>`}
     </div>
-
     <div class="deck-section">
       <div class="deck-section-title">追加できるカード (${availableCards.length}枚)</div>
-      ${availableCards.length === 0
-        ? `<div class="empty-state" style="padding: 30px;"><p>追加できるカードがありません</p></div>`
+      ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>追加できるカードがありません</p></div>`
         : `<div class="add-card-list">${availableCards.map(c => `
             <div class="add-card-row" onclick="addCardToDeck('${c.id}')">
               <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
               <div class="add-card-name">${escapeHtml(c.name)}</div>
-              <div class="add-card-meta">${escapeHtml(c.type)} / Lv.${escapeHtml(c.level || '-')}</div>
+              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}</div>
               <button class="add-card-btn btn-primary">+ 追加</button>
-            </div>`).join('')}</div>`
-      }
-    </div>
-  `;
-}
-
-function renderDeckCard(c, idx) {
-  const color = getTypeColor(c.type);
-  return `
-    <div class="card-preview in-deck" style="color: ${color}; position: relative;" onclick="if(confirm('「${escapeHtml(c.name)}」をデッキから外しますか？')) removeCardFromDeck('${c.id}')">
-      <div class="cp-name-bar" style="background: ${color}">
-        <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
-        <div class="cp-level">Lv.${escapeHtml(c.level || '-')}</div>
-      </div>
-      <div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>
-      <div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>
-      <div class="cp-skills">
-        <div class="cp-skill">
-          <div class="cp-skill-label">SKILL 1</div>
-          <div class="cp-skill-text">${escapeHtml(c.skill1 || '')}</div>
-        </div>
-        <div class="cp-skill">
-          <div class="cp-skill-label">SKILL 2</div>
-          <div class="cp-skill-text">${escapeHtml(c.skill2 || '')}</div>
-        </div>
-      </div>
+            </div>`).join('')}</div>`}
     </div>`;
 }
 
@@ -1447,49 +1606,37 @@ function renderDeckCard(c, idx) {
 function renderStats() {
   const summary = document.getElementById('statSummary');
   const layout = document.getElementById('statsLayout');
-
   const total = state.cards.length;
   if (total === 0) {
     summary.innerHTML = '';
     layout.innerHTML = `<div class="empty-state"><h3>NO DATA</h3><p>カードがまだありません</p></div>`;
     return;
   }
-
-  // タイプ集計
   const typeCounts = {};
   state.types.forEach(t => typeCounts[t.name] = 0);
-  state.cards.forEach(c => {
-    typeCounts[c.type] = (typeCounts[c.type] || 0) + 1;
-  });
+  state.cards.forEach(c => { typeCounts[c.type] = (typeCounts[c.type] || 0) + 1; });
 
-  // レベル集計
   const levelCounts = {};
   state.cards.forEach(c => {
     const lv = c.level || '-';
     levelCounts[lv] = (levelCounts[lv] || 0) + 1;
   });
-
-  // 数値レベルの平均
   const numericLevels = state.cards.map(c => parseFloat(c.level)).filter(v => !isNaN(v));
-  const avgLevel = numericLevels.length ? (numericLevels.reduce((a,b)=>a+b,0) / numericLevels.length).toFixed(1) : '-';
+  const avgLevel = numericLevels.length ? (numericLevels.reduce((a,b)=>a+b,0)/numericLevels.length).toFixed(1) : '-';
+
+  // HP統計 (キャラクターのみ)
+  const hps = state.cards.filter(c => getTypeKind(c.type) === 'character').map(c => parseFloat(c.hp)).filter(v => !isNaN(v));
+  const avgHP = hps.length ? Math.round(hps.reduce((a,b)=>a+b,0)/hps.length) : '-';
+
+  // 自信作の数
+  const shinsakuCount = state.cards.filter(c => c.shinsaku).length;
 
   summary.innerHTML = `
-    <div class="stat-big">
-      <div class="stat-big-value">${total}</div>
-      <div class="stat-big-label">Total Cards</div>
-    </div>
-    <div class="stat-big">
-      <div class="stat-big-value">${state.types.length}</div>
-      <div class="stat-big-label">Card Types</div>
-    </div>
-    <div class="stat-big">
-      <div class="stat-big-value">${state.decks.length}</div>
-      <div class="stat-big-label">Decks</div>
-    </div>
-    <div class="stat-big">
-      <div class="stat-big-value">${avgLevel}</div>
-      <div class="stat-big-label">Avg. Level</div>
-    </div>
+    <div class="stat-big"><div class="stat-big-value">${total}</div><div class="stat-big-label">Total Cards</div></div>
+    <div class="stat-big"><div class="stat-big-value">${state.decks.length}</div><div class="stat-big-label">Decks</div></div>
+    <div class="stat-big"><div class="stat-big-value">${avgLevel}</div><div class="stat-big-label">Avg. Level</div></div>
+    <div class="stat-big"><div class="stat-big-value">${avgHP}</div><div class="stat-big-label">Avg. HP</div></div>
+    <div class="stat-big"><div class="stat-big-value">${shinsakuCount}</div><div class="stat-big-label">★ 自信作</div></div>
   `;
 
   const maxType = Math.max(...Object.values(typeCounts), 1);
@@ -1499,14 +1646,12 @@ function renderStats() {
     return `<div class="stat-row">
       <div class="stat-label">${escapeHtml(t.name)}</div>
       <div class="stat-bar"><div class="stat-bar-fill" style="width: ${pct}%; background: ${t.color};"></div></div>
-      <div class="stat-value">${count}</div>
-    </div>`;
+      <div class="stat-value">${count}</div></div>`;
   }).join('');
 
-  // レベルはキー順ソート
-  const sortedLevels = Object.keys(levelCounts).sort((a, b) => {
-    const na = parseFloat(a), nb = parseFloat(b);
-    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  const sortedLevels = Object.keys(levelCounts).sort((a,b) => {
+    const na=parseFloat(a), nb=parseFloat(b);
+    if (!isNaN(na)&&!isNaN(nb)) return na-nb;
     return a.localeCompare(b);
   });
   const maxLevel = Math.max(...Object.values(levelCounts), 1);
@@ -1516,20 +1661,12 @@ function renderStats() {
     return `<div class="stat-row">
       <div class="stat-label">Lv.${escapeHtml(lv)}</div>
       <div class="stat-bar"><div class="stat-bar-fill" style="width: ${pct}%;"></div></div>
-      <div class="stat-value">${count}</div>
-    </div>`;
+      <div class="stat-value">${count}</div></div>`;
   }).join('');
 
   layout.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-card-title">タイプ分布</div>
-      ${typeRows}
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-title">レベル分布</div>
-      ${levelRows}
-    </div>
-  `;
+    <div class="stat-card"><div class="stat-card-title">タイプ分布</div>${typeRows}</div>
+    <div class="stat-card"><div class="stat-card-title">レベル分布</div>${levelRows}</div>`;
 }
 
 // ============ SETTINGS ============
@@ -1537,87 +1674,59 @@ function renderSettings() {
   const list = document.getElementById('typeList');
   list.innerHTML = state.types.map((t, i) => `
     <div class="type-row">
-      <input type="text" value="${escapeHtml(t.name)}" onchange="updateTypeName(${i}, this.value)">
+      <input type="text" value="${escapeHtml(t.name)}" onchange="updateTypeName(${i}, this.value)" ${t.builtin ? 'disabled' : ''}>
       <input type="color" value="${t.color}" onchange="updateTypeColor(${i}, this.value)">
       <div class="color-preview" style="background:${t.color}"></div>
-      <button class="btn-danger btn-icon" onclick="removeType(${i})" ${state.types.length <= 1 ? 'disabled' : ''}>削除</button>
-    </div>
-  `).join('');
+      <span class="type-builtin">${t.builtin ? '基本' : 'カスタム'}</span>
+      <button class="btn-danger btn-icon" onclick="removeType(${i})" ${t.builtin ? 'disabled' : ''}>削除</button>
+    </div>`).join('');
 }
-
 function addType() {
-  promptInput('新しいタイプ', 'タイプ名', '', (name) => {
+  promptInput('新しいタイプ', 'タイプ名を入力(キャラクター仕様で作成されます)', '', (name) => {
     if (!name) return;
-    if (state.types.find(t => t.name === name)) {
-      toast('同じ名前のタイプがあります');
-      return;
-    }
-    // ランダムカラー
-    const palette = ['#8b2c1f', '#2c4f7c', '#6b4f2c', '#3d6b3a', '#5d3a6b', '#a06b1f', '#4a6b6b', '#7c2c5f'];
-    const color = palette[Math.floor(Math.random() * palette.length)];
-    state.types.push({name, color});
-    saveData();
-    renderSettings();
-    refreshTypeSelects();
+    if (state.types.find(t => t.name === name)) { toast('同じ名前のタイプがあります'); return; }
+    const palette = ['#a06b1f','#4a6b6b','#7c2c5f','#3d6b3a','#6b3d4a','#2c6b6b'];
+    const color = palette[Math.floor(Math.random()*palette.length)];
+    state.types.push({name, color, kind: 'character', builtin: false});
+    saveData(); renderSettings(); refreshTypeSelects();
     toast(`タイプ「${name}」を追加`);
   });
 }
-
 function updateTypeName(idx, newName) {
+  const t = state.types[idx];
+  if (t.builtin) return;
   newName = newName.trim();
   if (!newName) { renderSettings(); return; }
-  const oldName = state.types[idx].name;
-  if (oldName === newName) return;
-  if (state.types.find((t, i) => i !== idx && t.name === newName)) {
-    toast('同じ名前のタイプがあります');
-    renderSettings();
-    return;
-  }
-  state.types[idx].name = newName;
-  // 既存カードのタイプを更新
+  if (t.name === newName) return;
+  if (state.types.find((x,i)=>i!==idx && x.name===newName)) { toast('同じ名前のタイプがあります'); renderSettings(); return; }
+  const oldName = t.name;
+  t.name = newName;
   state.cards.forEach(c => { if (c.type === oldName) c.type = newName; });
-  saveData();
-  renderSettings();
-  refreshTypeSelects();
-  render();
+  saveData(); renderSettings(); refreshTypeSelects(); render();
 }
-
 function updateTypeColor(idx, color) {
   state.types[idx].color = color;
-  saveData();
-  renderSettings();
-  render();
+  saveData(); renderSettings(); render();
 }
-
 function removeType(idx) {
-  if (state.types.length <= 1) return;
   const t = state.types[idx];
+  if (t.builtin) return;
   const cardCount = state.cards.filter(c => c.type === t.name).length;
-  showModal('タイプを削除', `「${t.name}」を削除します。${cardCount > 0 ? `このタイプの${cardCount}枚のカードは「${state.types.find((_, i) => i !== idx).name}」に変更されます。` : ''}`, () => {
-    const fallback = state.types.find((_, i) => i !== idx).name;
-    state.cards.forEach(c => { if (c.type === t.name) c.type = fallback; });
+  showModal('タイプを削除', `「${t.name}」を削除します。${cardCount > 0 ? `このタイプの${cardCount}枚のカードは「キャラクター」に変更されます。` : ''}`, () => {
+    state.cards.forEach(c => { if (c.type === t.name) c.type = 'キャラクター'; });
     state.types.splice(idx, 1);
-    saveData();
-    renderSettings();
-    refreshTypeSelects();
-    render();
+    saveData(); renderSettings(); refreshTypeSelects(); render();
     toast('タイプを削除');
   });
 }
-
 function resetAllData() {
-  showModal('全データを削除', '本当に全てのデータ(カード・デッキ・タイプ設定)を削除しますか?この操作は取り消せません。', () => {
+  showModal('全データを削除', '本当に全てのデータ(カード・デッキ・タイプ設定)を削除しますか? この操作は取り消せません。', () => {
     localStorage.removeItem(STORAGE_KEY);
-    state.cards = [];
-    state.types = JSON.parse(JSON.stringify(DEFAULT_TYPES));
-    state.decks = [];
-    state.currentDeckId = null;
+    state.cards = []; state.types = []; state.decks = []; state.currentDeckId = null;
     cardIdCounter = 1;
-    loadData(); // サンプルが再ロードされる
-    refreshTypeSelects();
-    render();
-    renderDeckList();
-    renderSettings();
+    ensureBuiltinTypes();
+    saveData();
+    refreshTypeSelects(); render(); renderDeckList(); renderSettings();
     toast('全データを削除しました');
   });
 }
@@ -1630,17 +1739,9 @@ function showModal(title, text, onConfirm) {
   modalCallback = onConfirm;
   document.getElementById('confirmModal').classList.add('show');
 }
-function closeModal() {
-  document.getElementById('confirmModal').classList.remove('show');
-  modalCallback = null;
-}
-document.getElementById('modalConfirm').onclick = () => {
-  if (modalCallback) modalCallback();
-  closeModal();
-};
-document.getElementById('confirmModal').onclick = (e) => {
-  if (e.target.id === 'confirmModal') closeModal();
-};
+function closeModal() { document.getElementById('confirmModal').classList.remove('show'); modalCallback = null; }
+document.getElementById('modalConfirm').onclick = () => { if (modalCallback) modalCallback(); closeModal(); };
+document.getElementById('confirmModal').onclick = (e) => { if (e.target.id === 'confirmModal') closeModal(); };
 
 let promptCallback = null;
 function promptInput(title, text, defaultValue, onConfirm) {
@@ -1651,37 +1752,170 @@ function promptInput(title, text, defaultValue, onConfirm) {
   document.getElementById('promptModal').classList.add('show');
   setTimeout(() => document.getElementById('promptInput').focus(), 50);
 }
-function closePromptModal() {
-  document.getElementById('promptModal').classList.remove('show');
-  promptCallback = null;
-}
+function closePromptModal() { document.getElementById('promptModal').classList.remove('show'); promptCallback = null; }
 document.getElementById('promptConfirm').onclick = () => {
   const val = document.getElementById('promptInput').value.trim();
-  if (promptCallback) promptCallback(val);
-  closePromptModal();
+  if (promptCallback) promptCallback(val); closePromptModal();
 };
 document.getElementById('promptInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('promptConfirm').click();
 });
-document.getElementById('promptModal').onclick = (e) => {
-  if (e.target.id === 'promptModal') closePromptModal();
-};
+document.getElementById('promptModal').onclick = (e) => { if (e.target.id === 'promptModal') closePromptModal(); };
 
 function toast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-// ============ EXPORT/IMPORT ============
+// ============ EXCEL IMPORT ============
+function importXLSX(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type: 'array'});
+
+      // 各シートのカードを集める
+      const importedCards = [];
+
+      wb.SheetNames.forEach(sheetName => {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+        if (rows.length < 2) return;
+
+        const headers = rows[0].map(h => String(h || '').trim());
+        // 「世界観やルール」のような特殊シートはスキップ
+        if (!headers.some(h => h.includes('カード名') || h.includes('No.'))) return;
+
+        // ヘッダーのマッピングを作る
+        const colIdx = {};
+        headers.forEach((h, i) => {
+          if (h.includes('No')) colIdx.no = i;
+          else if (h.includes('カード名')) colIdx.name = i;
+          else if (h.includes('タイプ')) colIdx.type = i;
+          else if (h.includes('レベル')) colIdx.level = i;
+          else if (h === 'HP' || h.includes('HP')) colIdx.hp = i;
+          else if (h.includes('IP') && h.includes('得')) colIdx.ip = i;
+          else if (h === '技１' || h === '技1') colIdx.skill1 = i;
+          else if (h === '技２' || h === '技2') colIdx.skill2 = i;
+          else if (h.includes('スキル') && h.match(/[1１]/)) colIdx.skill1 = i;
+          else if (h.includes('スキル') && h.match(/[2２]/)) colIdx.skill2 = i;
+          else if (h.includes('効果') && h.match(/[1①]/)) colIdx.effect1 = i;
+          else if (h.includes('効果') && h.match(/[2②]/)) colIdx.effect2 = i;
+          else if (h.includes('効果') && h.match(/[3③]/)) colIdx.effect3 = i;
+          else if (h.includes('その他')) colIdx.other = i;
+          else if (h.includes('イラスト')) colIdx.art = i;
+        });
+
+        // シート名からカードタイプを推測
+        let detectedType = null;
+        if (sheetName.includes('主人公')) detectedType = '主人公';
+        else if (sheetName.includes('キャラクター')) detectedType = 'キャラクター';
+        else if (sheetName.includes('展開')) detectedType = '展開アイディア';
+        else if (sheetName.includes('テコ入れ') || sheetName.includes('テコ')) detectedType = 'テコ入れ';
+        else if (sheetName.includes('どんでん')) detectedType = 'どんでん返し';
+
+        // データ行を読む
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r];
+          const name = String(row[colIdx.name] || '').trim();
+          if (!name) continue;
+
+          // タイプ列の値を優先、なければシート名から推測
+          let cardType = detectedType;
+          const typeCellVal = String(row[colIdx.type] || '').trim();
+          if (typeCellVal === 'キャラアイディア' || typeCellVal === 'キャラクター') cardType = 'キャラクター';
+          else if (typeCellVal === '主人公') cardType = '主人公';
+          else if (typeCellVal === '展開アイディア') cardType = '展開アイディア';
+          else if (typeCellVal === 'テコ入れ') cardType = 'テコ入れ';
+          else if (typeCellVal === 'どんでん返し') cardType = 'どんでん返し';
+          if (!cardType) cardType = 'キャラクター';
+
+          // レベル列を解析: "１(脇役)" → level=1, subrole=脇役, shinsaku=自信作含むか
+          let level = '', subrole = '', shinsaku = false;
+          const lvRaw = String(row[colIdx.level] || '').trim();
+          if (lvRaw) {
+            const lvMatch = lvRaw.match(/[1１一]/);
+            if (lvMatch) level = '1';
+            else if (lvRaw.match(/[2２二]/)) level = '2';
+            else if (lvRaw.match(/[3３三]/)) level = '3';
+            const parenMatch = lvRaw.match(/[(（]([^)）]+)[)）]/);
+            if (parenMatch) {
+              const inner = parenMatch[1];
+              if (inner.includes('自信作')) shinsaku = true;
+              subrole = inner.replace('・自信作', '').replace('自信作', '').trim();
+            }
+          }
+
+          const card = {
+            id: cid(),
+            type: cardType,
+            name: name,
+            art: String(row[colIdx.art] || '').trim()
+          };
+
+          const kind = getTypeKind(cardType);
+          if (kind === 'leveled' || kind === 'character') {
+            if (level) card.level = level;
+            card.skill1 = String(row[colIdx.skill1] || '').trim();
+            card.skill2 = String(row[colIdx.skill2] || '').trim();
+          }
+          if (kind === 'character') {
+            card.subrole = subrole;
+            card.hp = normalizeNumStr(row[colIdx.hp]);
+            card.ip = normalizeNumStr(row[colIdx.ip]);
+            card.shinsaku = shinsaku;
+            card.other = String(row[colIdx.other] || '').trim();
+          }
+          if (kind === 'effect') {
+            card.ip = normalizeNumStr(row[colIdx.ip]);
+            card.effect1 = String(row[colIdx.effect1] || '').trim();
+            card.effect2 = String(row[colIdx.effect2] || '').trim();
+            card.effect3 = String(row[colIdx.effect3] || '').trim();
+          }
+          importedCards.push(card);
+        }
+      });
+
+      if (importedCards.length === 0) {
+        toast('読み込めるカードが見つかりませんでした');
+        return;
+      }
+
+      showModal('Excelインポート', `${importedCards.length}枚のカードを読み込みます。現在のカードは置き換えられます(デッキ・タイプ設定は保持)。`, () => {
+        state.cards = importedCards;
+        // デッキの参照をクリア (旧IDになっているため)
+        state.decks.forEach(d => d.cardIds = []);
+        saveData();
+        render(); renderDeckList();
+        toast(`${importedCards.length}枚をインポート完了`);
+      });
+    } catch(err) {
+      console.error(err);
+      toast('Excel読み込み失敗: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  ev.target.value = '';
+}
+
+// 全角数字を半角に正規化
+function normalizeNumStr(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v).trim();
+  if (!s) return '';
+  s = s.replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  return s;
+}
+
+// ============ JSON / CSV ============
 function exportJSON() {
   const data = {
-    cards: state.cards,
-    types: state.types,
-    decks: state.decks,
-    cardIdCounter: cardIdCounter,
-    exportedAt: new Date().toISOString()
+    cards: state.cards, types: state.types, decks: state.decks,
+    cardIdCounter, exportedAt: new Date().toISOString()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   download(blob, 'card-forge-data.json');
@@ -1694,45 +1928,35 @@ function importJSON(ev) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      // 旧形式(配列)対応
       if (Array.isArray(data)) {
-        showModal('JSONインポート', `${data.length}枚のカードを読み込みます。現在のデータは置き換えられます。`, () => {
+        showModal('JSONインポート', `${data.length}枚のカードを読み込みます。`, () => {
           state.cards = data.map(c => c.id ? c : {id: cid(), ...c});
-          saveData();
-          render();
+          saveData(); render(); renderDeckList();
           toast(`${data.length}枚を読み込みました`);
         });
       } else if (data.cards) {
-        showModal('JSONインポート', `カード${data.cards.length}枚、デッキ${(data.decks||[]).length}個を読み込みます。現在のデータは置き換えられます。`, () => {
+        showModal('JSONインポート', `カード${data.cards.length}枚、デッキ${(data.decks||[]).length}個を読み込みます。`, () => {
           state.cards = data.cards;
-          state.types = data.types || JSON.parse(JSON.stringify(DEFAULT_TYPES));
+          state.types = data.types || [];
           state.decks = data.decks || [];
+          ensureBuiltinTypes();
           cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
-          // IDがないカードに振る
           state.cards.forEach(c => { if (!c.id) c.id = cid(); });
           saveData();
-          refreshTypeSelects();
-          render();
-          renderDeckList();
+          refreshTypeSelects(); render(); renderDeckList(); renderSettings();
           toast('インポート完了');
         });
-      } else {
-        throw new Error('形式不明');
-      }
-    } catch(err) {
-      toast('JSON読み込み失敗');
-      console.error(err);
-    }
+      } else throw new Error('形式不明');
+    } catch(err) { toast('JSON読み込み失敗'); console.error(err); }
   };
   reader.readAsText(file);
   ev.target.value = '';
 }
 function exportCSV() {
-  const headers = ['name','type','level','skill1','skill2','art'];
-  const labels = ['カード名','タイプ','レベル','スキル1','スキル2','イラストメモ'];
-  const rows = [labels.map(csvEscape).join(',')];
+  const headers = ['type','name','level','subrole','hp','ip','shinsaku','skill1','skill2','effect1','effect2','effect3','other','art'];
+  const rows = [headers.join(',')];
   state.cards.forEach(c => {
-    rows.push(headers.map(h => csvEscape(c[h] || '')).join(','));
+    rows.push(headers.map(h => csvEscape(c[h] === true ? 'true' : (c[h] === false ? '' : (c[h] || '')))).join(','));
   });
   const blob = new Blob(['\uFEFF' + rows.join('\n')], {type:'text/csv'});
   download(blob, 'cards.csv');
@@ -1743,142 +1967,49 @@ function csvEscape(s) {
   if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
-function importCSV(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      let text = e.target.result;
-      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-      const parsed = parseCSV(text);
-      if (parsed.length < 2) throw new Error('データなし');
-      const headers = parsed[0].map(h => h.trim());
-      const data = parsed.slice(1).filter(r => r.some(v => v && v.trim())).map(row => {
-        const o = {};
-        headers.forEach((h, i) => { o[h] = (row[i] || '').trim(); });
-        return {
-          id: cid(),
-          name:   o.name   || o['カード名'] || '',
-          type:   o.type   || o['タイプ'] || (state.types[0]?.name || 'その他'),
-          level:  o.level  || o['レベル'] || '',
-          skill1: o.skill1 || o['スキル1'] || o['スキル１'] || '',
-          skill2: o.skill2 || o['スキル2'] || o['スキル２'] || '',
-          art:    o.art    || o['イラストメモ'] || ''
-        };
-      });
-      showModal('CSVインポート', `${data.length}枚のカードを読み込みます。現在のカードは置き換えられます(デッキ・タイプ設定は保持)。`, () => {
-        state.cards = data;
-        saveData();
-        render();
-        renderDeckList();
-        toast(`${data.length}枚を読み込みました`);
-      });
-    } catch(err) {
-      toast('CSV読み込み失敗');
-    }
-  };
-  reader.readAsText(file);
-  ev.target.value = '';
-}
-function parseCSV(text) {
-  const rows = [];
-  let row = [], cell = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"' && text[i+1] === '"') { cell += '"'; i++; }
-      else if (ch === '"') inQuotes = false;
-      else cell += ch;
-    } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === ',') { row.push(cell); cell = ''; }
-      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
-      else if (ch === '\r') {}
-      else cell += ch;
-    }
-  }
-  if (cell || row.length) { row.push(cell); rows.push(row); }
-  return rows;
-}
 function download(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
-// ============ PDF GENERATION ============
+// ============ PDF (画像方式) ============
 function createCardElementForPDF(card) {
-  const color = getTypeColor(card.type);
   const W = 756, H = 1056;
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = `
-    width: ${W}px; height: ${H}px;
-    background: #FAFAF7; color: #1a1410;
-    font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
-    box-sizing: border-box; padding: 24px;
-    display: flex; flex-direction: column;
-    position: relative;
-    border: 4px solid #888;
-  `;
-  const nameBar = document.createElement('div');
-  nameBar.style.cssText = `background: ${color}; color: white; padding: 18px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    font-weight: 700; font-size: 38px;`;
-  const nameEl = document.createElement('div');
-  nameEl.textContent = card.name || '無名';
-  nameEl.style.cssText = `flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
-  const lvEl = document.createElement('div');
-  lvEl.textContent = `Lv.${card.level || '-'}`;
-  lvEl.style.cssText = `font-size: 32px; margin-left: 16px;`;
-  nameBar.appendChild(nameEl); nameBar.appendChild(lvEl);
-  wrapper.appendChild(nameBar);
+  wrapper.style.cssText = `width: ${W}px; height: ${H}px; background: white;`;
+  // カードプレビューのHTMLを生成して、印刷用にスタイル拡大して入れる
+  const inner = document.createElement('div');
+  inner.innerHTML = buildCardHTML(card, 0, {showIndex: false, attrs: ''});
+  const cardEl = inner.querySelector('.card-preview');
+  cardEl.style.cssText = `width: ${W}px; height: ${H}px; padding: 24px; box-shadow: none; cursor: default; transform: none;`;
 
-  const artBox = document.createElement('div');
-  artBox.style.cssText = `background: #EFEFEF; border: 2px solid ${color};
-    margin: 12px 4px 0; height: 240px;
-    display: flex; align-items: center; justify-content: center;
-    text-align: center; color: #888; font-size: 22px;
-    font-style: italic; padding: 16px; line-height: 1.4; overflow: hidden;`;
-  artBox.textContent = card.art || '[ イラスト ]';
-  wrapper.appendChild(artBox);
-
-  const typeBar = document.createElement('div');
-  typeBar.style.cssText = `background: ${color}; color: white;
-    padding: 10px 24px; margin-top: 12px;
-    font-weight: 700; font-size: 28px;`;
-  typeBar.textContent = card.type || '—';
-  wrapper.appendChild(typeBar);
-
-  const skillsArea = document.createElement('div');
-  skillsArea.style.cssText = `flex: 1; display: flex; flex-direction: column;
-    gap: 10px; padding: 12px 4px 4px; overflow: hidden;`;
-  function makeSkill(label, text) {
-    const box = document.createElement('div');
-    box.style.cssText = `flex: 1; background: white; border: 1px solid #ddd;
-      display: flex; flex-direction: column; overflow: hidden;`;
-    const lbl = document.createElement('div');
-    lbl.textContent = label;
-    lbl.style.cssText = `background: ${color}; color: white;
-      font-weight: 700; font-size: 18px; padding: 6px 14px; letter-spacing: 0.05em;`;
-    const txt = document.createElement('div');
-    txt.textContent = text || '';
-    txt.style.cssText = `flex: 1; padding: 12px 14px; color: #222;
-      font-size: 22px; line-height: 1.5; overflow: hidden;`;
-    box.appendChild(lbl); box.appendChild(txt);
-    return box;
+  // フォントサイズを印刷用に大きく
+  cardEl.querySelectorAll('.cp-name-bar').forEach(e => { e.style.height = '70px'; e.style.fontSize = '34px'; e.style.padding = '0 24px'; });
+  cardEl.querySelectorAll('.cp-level').forEach(e => { e.style.fontSize = '24px'; });
+  cardEl.querySelectorAll('.cp-stats-bar').forEach(e => { e.style.fontSize = '24px'; e.style.padding = '8px 20px'; });
+  cardEl.querySelectorAll('.cp-stat-label').forEach(e => { e.style.fontSize = '20px'; e.style.padding = '3px 10px'; });
+  cardEl.querySelectorAll('.cp-art').forEach(e => { e.style.height = '150px'; e.style.fontSize = '20px'; e.style.padding = '12px'; e.style.margin = '10px 8px 0'; });
+  cardEl.querySelectorAll('.cp-type-bar').forEach(e => { e.style.height = '40px'; e.style.fontSize = '24px'; e.style.padding = '0 24px'; e.style.marginTop = '10px'; });
+  cardEl.querySelectorAll('.cp-skills, .cp-effects').forEach(e => { e.style.padding = '12px 16px'; e.style.gap = '8px'; });
+  cardEl.querySelectorAll('.cp-skill, .cp-effect').forEach(e => { e.style.padding = '10px 14px'; e.style.fontSize = '17px'; });
+  cardEl.querySelectorAll('.cp-skill-label, .cp-effect-label').forEach(e => { e.style.fontSize = '14px'; e.style.marginBottom = '4px'; });
+  cardEl.querySelectorAll('.cp-other-ability').forEach(e => { e.style.fontSize = '15px'; e.style.padding = '8px 14px'; e.style.maxHeight = 'none'; });
+  if (cardEl.classList.contains('shinsaku')) {
+    const before = document.createElement('div');
+    before.textContent = '★ 自信作 ★';
+    before.style.cssText = `position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: #d4af37; color: white; font-size: 18px; padding: 4px 16px; font-weight: 700; letter-spacing: 0.05em; z-index: 3; border-radius: 3px;`;
+    cardEl.style.position = 'relative';
+    cardEl.insertBefore(before, cardEl.firstChild);
   }
-  skillsArea.appendChild(makeSkill('SKILL 1', card.skill1));
-  skillsArea.appendChild(makeSkill('SKILL 2', card.skill2));
-  wrapper.appendChild(skillsArea);
+
+  wrapper.appendChild(cardEl);
   return wrapper;
 }
 
 async function generatePDF(mode) {
-  let cardsToPrint;
-  let filename;
+  let cardsToPrint, filename;
   if (mode === 'deck') {
     const deck = state.decks.find(d => d.id === state.currentDeckId);
     if (!deck) { toast('デッキが選択されていません'); return; }
@@ -1899,8 +2030,7 @@ async function generatePDF(mode) {
     const cardImages = [];
     for (let i = 0; i < cardsToPrint.length; i++) {
       const el = createCardElementForPDF(cardsToPrint[i]);
-      offscreen.innerHTML = '';
-      offscreen.appendChild(el);
+      offscreen.innerHTML = ''; offscreen.appendChild(el);
       const canvas = await html2canvas(el, {scale: 1, useCORS: true, backgroundColor: '#FAFAF7', logging: false});
       cardImages.push(canvas.toDataURL('image/png'));
       if ((i + 1) % 3 === 0) toast(`画像生成中... ${i+1}/${cardsToPrint.length}`);
@@ -1935,10 +2065,8 @@ async function generatePDF(mode) {
     document.body.removeChild(offscreen);
   }
 }
-
 function drawCropMarks(doc, A4_W, A4_H, mX, mY, CW, CH, cols, rows) {
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.15);
+  doc.setDrawColor(0); doc.setLineWidth(0.15);
   for (let i = 0; i <= cols; i++) {
     const x = mX + i * CW;
     doc.line(x, 0, x, mY - 1);
@@ -1954,6 +2082,7 @@ function drawCropMarks(doc, A4_W, A4_H, mX, mY, CW, CH, cols, rows) {
 // ============ INIT ============
 loadData();
 refreshTypeSelects();
+writeForm({});  // 初期状態をフォームに反映 (動的フィールド表示)
 render();
 </script>
 </body>
