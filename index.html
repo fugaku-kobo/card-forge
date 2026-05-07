@@ -350,6 +350,26 @@ main {
   text-align: center; font-size: 7.5px; color: #888;
   padding: 4px; font-style: italic;
   line-height: 1.2; overflow: hidden;
+  position: relative;
+}
+.cp-art-icon {
+  font-size: 28px;
+  line-height: 1;
+  font-style: normal;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+.cp-art-memo {
+  font-size: 6.5px;
+  color: #666;
+  font-style: italic;
+  position: absolute;
+  bottom: 2px;
+  left: 4px; right: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
 }
 .cp-type-bar {
   height: 13px;
@@ -427,6 +447,39 @@ main {
   cursor: pointer;
 }
 .cp-ctrl-btn:hover { background: var(--gold); color: var(--ink); }
+
+/* デッキ内カードの枚数バッジ */
+.deck-count-badge {
+  position: absolute;
+  top: -10px; right: -10px;
+  background: #d4af37;
+  color: #1a1410;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 2px solid var(--bg-deep);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  z-index: 5;
+  letter-spacing: 0.05em;
+}
+.deck-card-controls {
+  position: absolute;
+  bottom: -12px; right: 50%;
+  transform: translateX(50%);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+.card-preview:hover .deck-card-controls { opacity: 1; }
+.deck-card-controls .cp-ctrl-btn {
+  width: 28px; height: 28px;
+  font-size: 14px;
+  font-weight: 700;
+}
 
 .empty-state {
   text-align: center;
@@ -661,6 +714,8 @@ main {
   .cp-name-bar { height: 22px; padding: 0 6px; font-size: 9.5px; }
   .cp-stats-bar { font-size: 8px; padding: 2px 4px; }
   .cp-art { height: 40px; margin: 2px 2px 0; font-size: 6.5px; padding: 3px; }
+  .cp-art-icon { font-size: 22px; }
+  .cp-art-memo { font-size: 5.5px; bottom: 1px; }
   .cp-type-bar { height: 11px; padding: 0 6px; font-size: 7.5px; margin-top: 2px; }
   .cp-skills, .cp-effects { padding: 2px 3px; gap: 2px; }
   .cp-skill, .cp-effect { padding: 2px 3px; font-size: 6px; }
@@ -668,6 +723,8 @@ main {
   .cp-other-ability { font-size: 5.5px; padding: 2px 3px; }
   .cp-index { width: 22px; height: 22px; font-size: 10px; top: -6px; left: -6px; }
   .cp-controls { display: none; }
+  .deck-count-badge { font-size: 11px; padding: 3px 7px; top: -8px; right: -8px; }
+  .deck-card-controls { display: none; }
   .card-preview.shinsaku::before { font-size: 6.5px; padding: 1px 5px; top: 5px; }
   .deck-cards { grid-template-columns: repeat(2, 1fr); }
   .deck-header h2 { font-size: 1.2rem; }
@@ -747,6 +804,8 @@ main {
 .card-zoom-card .cp-stats-bar { font-size: 12px; padding: 4px 10px; }
 .card-zoom-card .cp-stat-label { font-size: 11px; padding: 2px 6px; }
 .card-zoom-card .cp-art { height: 80px; margin: 5px 5px 0; font-size: 11px; padding: 6px; }
+.card-zoom-card .cp-art-icon { font-size: 50px; }
+.card-zoom-card .cp-art-memo { font-size: 9px; bottom: 4px; }
 .card-zoom-card .cp-type-bar { height: 18px; padding: 0 12px; font-size: 11px; margin-top: 5px; }
 .card-zoom-card .cp-skills, .card-zoom-card .cp-effects { padding: 6px 8px; gap: 5px; }
 .card-zoom-card .cp-skill, .card-zoom-card .cp-effect { padding: 5px 7px; font-size: 10px; }
@@ -870,6 +929,10 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
             <input type="checkbox" id="f-shinsaku">
             <label for="f-shinsaku">★ 自信作カード</label>
           </div>
+          <div class="field-checkbox">
+            <input type="checkbox" id="f-unlimited">
+            <label for="f-unlimited">∞ デッキに何枚でも入れられる</label>
+          </div>
         </div>
 
         <!-- IP のみ (展開・テコ入れ・どんでん返し) -->
@@ -877,6 +940,10 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
           <div class="field">
             <label>没で得るIP</label>
             <input type="text" id="f-ip2" placeholder="例: 2">
+          </div>
+          <div class="field-checkbox">
+            <input type="checkbox" id="f-unlimited2">
+            <label for="f-unlimited2">∞ デッキに何枚でも入れられる</label>
           </div>
         </div>
 
@@ -916,6 +983,11 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
               <textarea id="f-effect3" placeholder="例: このカードは1ターンに1度しか使えない"></textarea>
             </div>
           </div>
+        </div>
+
+        <div class="field">
+          <label>アイコン絵文字 (空欄なら自動推測)</label>
+          <input type="text" id="f-icon" placeholder="例: ⚔️🔥 (絵文字を1〜3個)">
         </div>
 
         <div class="field">
@@ -1108,6 +1180,10 @@ function loadData() {
 
   // 基本タイプは常に存在を保証
   ensureBuiltinTypes();
+  // デッキ形式の移行
+  migrateDecks();
+  // カードのunlimitedフラグを必要なら推測
+  autoDetectUnlimited();
 }
 
 function ensureBuiltinTypes() {
@@ -1123,6 +1199,36 @@ function ensureBuiltinTypes() {
   });
 }
 
+// デッキ形式を新形式へマイグレーション
+// 旧: deck.cardIds = ['c1', 'c2']
+// 新: deck.cards = [{cardId: 'c1', count: 1}, {cardId: 'c2', count: 1}]
+function migrateDecks() {
+  state.decks.forEach(d => {
+    if (d.cardIds && !d.cards) {
+      // cardIdsから集計してcardsに変換
+      const counts = {};
+      d.cardIds.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+      d.cards = Object.entries(counts).map(([cardId, count]) => ({cardId, count}));
+      delete d.cardIds;
+    }
+    if (!d.cards) d.cards = [];
+  });
+}
+
+// カードの「何枚でも入れられる」フラグの初期化(自動推測)
+function autoDetectUnlimited() {
+  state.cards.forEach(c => {
+    if (c.unlimited === undefined) {
+      // その他能力欄に「何枚でも」が入っていたら自動でフラグON
+      if ((c.other || '').match(/何枚でも|枚数制限なし|無制限/)) {
+        c.unlimited = true;
+      } else {
+        c.unlimited = false;
+      }
+    }
+  });
+}
+
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     cards: state.cards,
@@ -1130,6 +1236,8 @@ function saveData() {
     decks: state.decks,
     cardIdCounter: cardIdCounter
   }));
+  // データ変更があった可能性があるのでアイコンキャッシュをクリア
+  invalidateIconCache();
 }
 
 function getType(name) {
@@ -1140,6 +1248,189 @@ function getTypeColor(name) {
 }
 function getTypeKind(name) {
   return getType(name)?.kind || 'character';
+}
+
+// ============ 絵文字推測 ============
+// カード名・タイプ・スキル等のキーワードから絵文字を推測
+const EMOJI_KEYWORDS = [
+  // 手塚作品の固有名詞 (優先度高)
+  ['ブラック・ジャック|ブラックジャック|間黒男', '🩺'],
+  ['ピノコ', '👧'],
+  ['ドクター・キリコ|キリコ', '💀'],
+  ['鉄腕アトム|アトム$|アトム　', '🤖'],
+  ['お茶の水博士', '🔬'],
+  ['ウラン', '👧'],
+  ['コバルト', '🤖'],
+  ['天馬|天馬博士', '🔬'],
+  ['アトラス', '🤖'],
+  // 人物・職業系
+  ['医者|医師|外科|ドクター|手術|病院|看護', '🩺'],
+  ['博士|学者|教授|研究', '🔬'],
+  ['探偵|刑事', '🕵️'],
+  ['忍者|くノ一', '🥷'],
+  ['騎士|戦士|侍|武士', '⚔️'],
+  ['弓|アーチャー', '🏹'],
+  ['暗殺者|殺し屋|アサシン', '🗡️'],
+  ['魔法使い|魔導|魔女|呪術', '🧙'],
+  ['妖精|フェアリー|精霊', '🧚'],
+  ['天使|神官|シスター|司祭', '👼'],
+  ['吸血鬼|ヴァンパイア', '🧛'],
+  ['ゾンビ|アンデッド', '🧟'],
+  ['王|プリンス|王子|姫|王女', '👑'],
+  ['少女|女の子|娘', '👧'],
+  ['少年|男の子|子ども', '👦'],
+  ['ロボット|機械|アンドロイド|サイボーグ', '🤖'],
+  ['編集|担当', '✏️'],
+  ['漫画家|作家|画家', '🎨'],
+  // 属性・素材
+  ['炎|火|焔|燃|フレイム|バーン', '🔥'],
+  ['水|海|川|波', '💧'],
+  ['氷|凍|雪|フロスト', '❄️'],
+  ['雷|電|稲妻|サンダー', '⚡'],
+  ['風|嵐|疾風', '💨'],
+  ['土|岩|石|大地', '🪨'],
+  ['毒|スネーク|蛇', '🐍'],
+  ['光|聖|神|輝', '✨'],
+  ['闇|影|シャドウ|ダーク', '🌑'],
+  ['森|樹|木|草', '🌳'],
+  ['花', '🌸'],
+  ['月|ムーン', '🌙'],
+  ['星|スター', '⭐'],
+  ['太陽|サン', '☀️'],
+  // モノ・道具
+  ['剣|刀|ソード|ブレード', '⚔️'],
+  ['盾|シールド', '🛡️'],
+  ['弓矢', '🏹'],
+  ['鎧|甲冑', '🛡️'],
+  ['本|書|ブック', '📕'],
+  ['鍵|キー', '🔑'],
+  ['薬|ポーション', '🧪'],
+  ['宝石|クリスタル', '💎'],
+  ['鏡', '🪞'],
+  ['爆弾|ボム', '💣'],
+  ['お金|金貨|宝', '💰'],
+  // 動物・生物
+  ['竜|ドラゴン', '🐉'],
+  ['虎|タイガー', '🐯'],
+  ['狼|オオカミ', '🐺'],
+  ['熊|ベア', '🐻'],
+  ['鷲|鷹|鳥', '🦅'],
+  ['猫|ネコ', '🐱'],
+  ['犬|イヌ', '🐶'],
+  ['鮫|サメ', '🦈'],
+  // 場所・建物
+  ['城|キャッスル', '🏰'],
+  ['塔|タワー', '🗼'],
+  ['泉|噴水', '⛲'],
+  ['壁|要塞', '🧱'],
+  ['神殿|寺|教会', '⛩️'],
+  // 行動・状態
+  ['治癒|癒し|回復|ヒール', '💚'],
+  ['攻撃|アタック', '💥'],
+  ['防御|ガード', '🛡️'],
+  ['ドロー|引く|手札', '🃏'],
+  ['探索|発見', '🔍'],
+  // 漫画用語
+  ['原稿|原案|ネーム|清書', '📝'],
+  ['アイディア|アイデア|閃|ひらめき', '💡'],
+  ['ペン|筆', '🖊️'],
+  ['締切|デッドライン', '⏰'],
+  ['人気|名作|傑作', '🏆'],
+  ['修正|赤入れ', '✏️'],
+];
+
+// タイプ別のフォールバック絵文字
+const TYPE_DEFAULT_EMOJI = {
+  '主人公': '⭐',
+  'キャラクター': '👤',
+  '展開アイディア': '💡',
+  'テコ入れ': '🔧',
+  'どんでん返し': '🎲'
+};
+
+function guessEmoji(card) {
+  // 検索対象テキスト: カード名・サブ役割・イラストメモのみ
+  // (スキルや効果の文中にゲーム用語が頻出するため、それらは検索対象外)
+  const searchText = [
+    card.name || '',
+    card.subrole || '',
+    card.art || ''
+  ].join(' ');
+
+  const found = [];
+  for (const [pattern, emoji] of EMOJI_KEYWORDS) {
+    const re = new RegExp(pattern);
+    if (re.test(searchText)) {
+      if (!found.includes(emoji)) found.push(emoji);
+      if (found.length >= 2) break;
+    }
+  }
+
+  if (found.length > 0) return found.join('');
+  return TYPE_DEFAULT_EMOJI[card.type] || '🃏';
+}
+
+function getCardIcon(card) {
+  const manual = (card.icon || '').trim();
+  if (manual) return manual;
+  return guessEmoji(card);
+}
+
+// 全カードに一意なアイコンを割り当てる(被りを防ぐ)
+// カードごとに「ベースの絵文字」を取り、被ったら丸数字や記号で区別
+let _iconCacheVersion = 0;
+let _iconCache = new Map(); // cardId -> 表示用アイコン文字列
+
+function rebuildIconCache() {
+  _iconCache.clear();
+
+  // 「ベース絵文字 + カード名」でグループ化
+  // → 同名なら同じグループ、別名なら別グループ
+  // → 同名カードは同じ絵文字＋連番(①②③)で区別
+  // → 別名で偶然同じ絵文字なら、別グループとしてそれぞれ連番開始
+  const groups = new Map();
+  state.cards.forEach(c => {
+    const base = getCardIcon(c);
+    const key = base + '|||' + (c.name || '');
+    if (!groups.has(key)) groups.set(key, {base, cards: []});
+    groups.get(key).cards.push(c);
+  });
+
+  // 識別子の候補リスト
+  const SUFFIXES = [
+    '①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
+    '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳',
+    'ⓐ','ⓑ','ⓒ','ⓓ','ⓔ','ⓕ','ⓖ','ⓗ','ⓘ','ⓙ',
+    'ⓚ','ⓛ','ⓜ','ⓝ','ⓞ','ⓟ','ⓠ','ⓡ','ⓢ','ⓣ',
+    'ⓤ','ⓥ','ⓦ','ⓧ','ⓨ','ⓩ'
+  ];
+
+  // 各「ベース絵文字 + カード名」グループ内で、複数枚あれば連番付与
+  groups.forEach(({base, cards: cardsInGroup}) => {
+    if (cardsInGroup.length === 1) {
+      _iconCache.set(cardsInGroup[0].id, base);
+    } else {
+      cardsInGroup.forEach((c, idx) => {
+        const suffix = SUFFIXES[idx] || `(${idx + 1})`;
+        _iconCache.set(c.id, base + suffix);
+      });
+    }
+  });
+
+  _iconCacheVersion++;
+}
+
+// 表示用アイコン取得 (キャッシュ経由)
+function getDisplayIcon(card) {
+  if (!_iconCache.has(card.id)) {
+    rebuildIconCache();
+  }
+  return _iconCache.get(card.id) || getCardIcon(card);
+}
+
+// データ変更時にキャッシュを破棄
+function invalidateIconCache() {
+  _iconCache.clear();
 }
 
 // ============ TABS ============
@@ -1191,6 +1482,7 @@ function readForm() {
   const data = {
     type,
     name: document.getElementById('f-name').value.trim(),
+    icon: document.getElementById('f-icon').value.trim(),
     art: document.getElementById('f-art').value.trim()
   };
   if (kind === 'leveled' || kind === 'character') {
@@ -1203,10 +1495,12 @@ function readForm() {
     data.hp = document.getElementById('f-hp').value.trim();
     data.ip = document.getElementById('f-ip').value.trim();
     data.shinsaku = document.getElementById('f-shinsaku').checked;
+    data.unlimited = document.getElementById('f-unlimited').checked;
     data.other = document.getElementById('f-other').value.trim();
   }
   if (kind === 'effect') {
     data.ip = document.getElementById('f-ip2').value.trim();
+    data.unlimited = document.getElementById('f-unlimited2').checked;
     data.effect1 = document.getElementById('f-effect1').value.trim();
     data.effect2 = document.getElementById('f-effect2').value.trim();
     data.effect3 = document.getElementById('f-effect3').value.trim();
@@ -1219,12 +1513,15 @@ function writeForm(c) {
   // タイプ初期値: 既に何か設定されてれば優先、なければ最初のタイプ
   document.getElementById('f-type').value = c.type || state.types[0]?.name || '主人公';
   document.getElementById('f-name').value = c.name || '';
+  document.getElementById('f-icon').value = c.icon || '';
   document.getElementById('f-art').value  = c.art || '';
   document.getElementById('f-level').value = c.level || '1';
   document.getElementById('f-subrole').value = c.subrole || '';
   document.getElementById('f-hp').value = c.hp || '';
   document.getElementById('f-ip').value = c.ip || '';
   document.getElementById('f-shinsaku').checked = !!c.shinsaku;
+  document.getElementById('f-unlimited').checked = !!c.unlimited;
+  document.getElementById('f-unlimited2').checked = !!c.unlimited;
   document.getElementById('f-other').value = c.other || '';
   document.getElementById('f-ip2').value = c.ip || '';
   document.getElementById('f-skill1').value = c.skill1 || '';
@@ -1276,7 +1573,9 @@ function deleteCard() {
   if (editingIdx === null) return;
   const card = state.cards[editingIdx];
   showModal('カードを削除', `「${card.name}」を削除します。デッキにも含まれている場合は除外されます。`, () => {
-    state.decks.forEach(d => { d.cardIds = (d.cardIds || []).filter(cid => cid !== card.id); });
+    state.decks.forEach(d => {
+      d.cards = (d.cards || []).filter(x => x.cardId !== card.id);
+    });
     state.cards.splice(editingIdx, 1);
     saveData();
     resetEditor();
@@ -1361,8 +1660,9 @@ function buildCardHTML(c, idx, opts) {
 
   // 名前バー
   const lvLabel = c.level ? `Lv.${c.level}${c.subrole ? '・'+c.subrole : ''}` : '';
+  const unlimitedMark = c.unlimited ? ' <span style="opacity:0.9;font-size:0.85em;">∞</span>' : '';
   inner += `<div class="cp-name-bar" style="background: ${color}">
-    <div class="cp-name">${escapeHtml(c.name || '無名')}</div>
+    <div class="cp-name">${escapeHtml(c.name || '無名')}${unlimitedMark}</div>
     ${lvLabel ? `<div class="cp-level">${escapeHtml(lvLabel)}</div>` : ''}
   </div>`;
 
@@ -1381,8 +1681,13 @@ function buildCardHTML(c, idx, opts) {
     </div>`;
   }
 
-  // イラスト枠
-  inner += `<div class="cp-art">${escapeHtml(c.art || '[ イラスト ]')}</div>`;
+  // イラスト枠 (絵文字を大きく表示、下に小さくメモ)
+  const icon = getDisplayIcon(c);
+  const memo = c.art || '';
+  inner += `<div class="cp-art">
+    <span class="cp-art-icon">${escapeHtml(icon)}</span>
+    ${memo ? `<span class="cp-art-memo">${escapeHtml(memo)}</span>` : ''}
+  </div>`;
 
   // タイプバー
   inner += `<div class="cp-type-bar" style="background: ${color}">${escapeHtml(c.type || '—')}</div>`;
@@ -1407,6 +1712,7 @@ function buildCardHTML(c, idx, opts) {
   return `<div class="${classes.join(' ')}" style="color: ${color}" ${opts.attrs || ''} data-idx="${idx}">
     ${opts.showIndex !== false ? `<div class="cp-index">${idx+1}</div>` : ''}
     ${opts.controls || ''}
+    ${opts.extraInner || ''}
     ${inner}
   </div>`;
 }
@@ -1496,10 +1802,11 @@ function renderDeckList() {
     return;
   }
   list.innerHTML = state.decks.map(d => {
-    const cardCount = (d.cardIds || []).length;
+    const cardCount = getDeckTotalCount(d);
+    const uniqueCount = (d.cards || []).length;
     return `<div class="deck-item ${state.currentDeckId === d.id ? 'active' : ''}" onclick="selectDeck('${d.id}')">
       <div class="deck-item-name">${escapeHtml(d.name)}</div>
-      <div class="deck-item-meta">${cardCount}枚</div></div>`;
+      <div class="deck-item-meta">${cardCount}枚 (${uniqueCount}種類)</div></div>`;
   }).join('');
   renderDeckDetail();
 }
@@ -1507,7 +1814,7 @@ function selectDeck(id) { state.currentDeckId = id; saveData(); renderDeckList()
 function createDeck() {
   promptInput('新規デッキ', 'デッキ名を入力してください', '', (name) => {
     if (!name) return;
-    const newDeck = { id: 'd' + Date.now(), name, description: '', cardIds: [] };
+    const newDeck = { id: 'd' + Date.now(), name, description: '', cards: [] };
     state.decks.push(newDeck);
     state.currentDeckId = newDeck.id;
     saveData(); renderDeckList();
@@ -1542,17 +1849,49 @@ function deleteDeck() {
 function addCardToDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
-  if (!deck.cardIds) deck.cardIds = [];
-  if (deck.cardIds.includes(cardId)) { toast('既にデッキに含まれています'); return; }
-  deck.cardIds.push(cardId);
+  if (!deck.cards) deck.cards = [];
+
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const existing = deck.cards.find(x => x.cardId === cardId);
+  const maxCount = card.unlimited ? Infinity : 4;
+
+  if (existing) {
+    if (existing.count >= maxCount) {
+      toast(card.unlimited ? '上限なし(エラー)' : 'デッキに同じカードは4枚までです');
+      return;
+    }
+    existing.count++;
+  } else {
+    deck.cards.push({cardId, count: 1});
+  }
   saveData(); renderDeckList();
-  toast('カードを追加');
+  toast(`「${card.name}」を追加 (${(existing ? existing.count : 1)}枚目)`);
 }
+
+function decrementCardInDeck(cardId) {
+  const deck = state.decks.find(d => d.id === state.currentDeckId);
+  if (!deck) return;
+  const entry = (deck.cards || []).find(x => x.cardId === cardId);
+  if (!entry) return;
+  entry.count--;
+  if (entry.count <= 0) {
+    deck.cards = deck.cards.filter(x => x.cardId !== cardId);
+  }
+  saveData(); renderDeckList();
+}
+
 function removeCardFromDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
-  deck.cardIds = (deck.cardIds || []).filter(id => id !== cardId);
+  deck.cards = (deck.cards || []).filter(x => x.cardId !== cardId);
   saveData(); renderDeckList();
+}
+
+// デッキの合計枚数(枚数バッジ含む)
+function getDeckTotalCount(deck) {
+  return (deck.cards || []).reduce((sum, x) => sum + (x.count || 0), 0);
 }
 function renderDeckDetail() {
   const detail = document.getElementById('deckDetail');
@@ -1562,8 +1901,23 @@ function renderDeckDetail() {
       <p>左から選ぶか、新規デッキを作成してください</p></div>`;
     return;
   }
-  const inDeckCards = (deck.cardIds || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
-  const availableCards = state.cards.filter(c => !(deck.cardIds || []).includes(c.id));
+
+  // デッキ内カードを {card, count} のペアで取得
+  const inDeckEntries = (deck.cards || []).map(entry => ({
+    card: state.cards.find(c => c.id === entry.cardId),
+    count: entry.count
+  })).filter(e => e.card);
+
+  // 追加可能カード: デッキ内にあっても、枚数が上限未満なら追加可
+  const availableCards = state.cards.filter(c => {
+    const entry = (deck.cards || []).find(x => x.cardId === c.id);
+    const currentCount = entry ? entry.count : 0;
+    const maxCount = c.unlimited ? Infinity : 4;
+    return currentCount < maxCount;
+  });
+
+  const totalCount = getDeckTotalCount(deck);
+  const uniqueCount = inDeckEntries.length;
 
   detail.innerHTML = `
     <div class="deck-header">
@@ -1579,26 +1933,41 @@ function renderDeckDetail() {
       </div>
     </div>
     <div class="deck-section">
-      <div class="deck-section-title">デッキ内のカード (${inDeckCards.length}枚)</div>
-      ${inDeckCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>まだカードがありません。下から追加してください。</p></div>`
-        : `<div class="deck-cards">${inDeckCards.map((c, idx) => {
+      <div class="deck-section-title">デッキ内のカード — 計${totalCount}枚 (${uniqueCount}種類)</div>
+      ${inDeckEntries.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>まだカードがありません。下から追加してください。</p></div>`
+        : `<div class="deck-cards">${inDeckEntries.map(e => {
+            const c = e.card;
             const origIdx = state.cards.indexOf(c);
+            const maxCount = c.unlimited ? Infinity : 4;
+            const canAdd = e.count < maxCount;
+            const countBadge = `<div class="deck-count-badge">×${e.count}</div>`;
+            const counterCtrls = `
+              <div class="deck-card-controls" onclick="event.stopPropagation()">
+                <button class="cp-ctrl-btn" onclick="event.stopPropagation(); decrementCardInDeck('${c.id}')" title="1枚減らす">−</button>
+                <button class="cp-ctrl-btn" onclick="event.stopPropagation(); addCardToDeck('${c.id}')" title="1枚増やす" ${!canAdd ? 'disabled' : ''}>＋</button>
+              </div>`;
             return buildCardHTML(c, origIdx, {
               inDeck: true, showIndex: false,
-              attrs: `onclick="if(confirm('「${escapeHtml(c.name)}」をデッキから外しますか？')) removeCardFromDeck('${c.id}')"`
+              attrs: `onclick="openCardZoom(${origIdx})"`,
+              extraInner: countBadge + counterCtrls
             });
           }).join('')}</div>`}
     </div>
     <div class="deck-section">
-      <div class="deck-section-title">追加できるカード (${availableCards.length}枚)</div>
+      <div class="deck-section-title">追加できるカード (${availableCards.length}種類)</div>
       ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>追加できるカードがありません</p></div>`
-        : `<div class="add-card-list">${availableCards.map(c => `
+        : `<div class="add-card-list">${availableCards.map(c => {
+            const entry = (deck.cards || []).find(x => x.cardId === c.id);
+            const currentCount = entry ? entry.count : 0;
+            const limitText = c.unlimited ? '∞' : `${currentCount}/4`;
+            return `
             <div class="add-card-row" onclick="addCardToDeck('${c.id}')">
               <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
-              <div class="add-card-name">${escapeHtml(c.name)}</div>
-              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}</div>
+              <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}</div>
+              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''} <span style="color: #c9a961;">[${limitText}]</span></div>
               <button class="add-card-btn btn-primary">+ 追加</button>
-            </div>`).join('')}</div>`}
+            </div>`;
+          }).join('')}</div>`}
     </div>`;
 }
 
@@ -1807,7 +2176,8 @@ function importXLSX(ev) {
           else if (h.includes('効果') && h.match(/[2②]/)) colIdx.effect2 = i;
           else if (h.includes('効果') && h.match(/[3③]/)) colIdx.effect3 = i;
           else if (h.includes('その他')) colIdx.other = i;
-          else if (h.includes('イラスト')) colIdx.art = i;
+          else if (h.includes('アイコン') || h.includes('絵文字')) colIdx.icon = i;
+          else if (h.includes('イラスト') || h.includes('メモ')) colIdx.art = i;
         });
 
         // シート名からカードタイプを推測
@@ -1854,6 +2224,7 @@ function importXLSX(ev) {
             id: cid(),
             type: cardType,
             name: name,
+            icon: String(row[colIdx.icon] || '').trim(),
             art: String(row[colIdx.art] || '').trim()
           };
 
@@ -1888,7 +2259,7 @@ function importXLSX(ev) {
       showModal('Excelインポート', `${importedCards.length}枚のカードを読み込みます。現在のカードは置き換えられます(デッキ・タイプ設定は保持)。`, () => {
         state.cards = importedCards;
         // デッキの参照をクリア (旧IDになっているため)
-        state.decks.forEach(d => d.cardIds = []);
+        state.decks.forEach(d => d.cards = []);
         saveData();
         render(); renderDeckList();
         toast(`${importedCards.length}枚をインポート完了`);
@@ -1953,7 +2324,7 @@ function importJSON(ev) {
   ev.target.value = '';
 }
 function exportCSV() {
-  const headers = ['type','name','level','subrole','hp','ip','shinsaku','skill1','skill2','effect1','effect2','effect3','other','art'];
+  const headers = ['type','name','icon','level','subrole','hp','ip','shinsaku','unlimited','skill1','skill2','effect1','effect2','effect3','other','art'];
   const rows = [headers.join(',')];
   state.cards.forEach(c => {
     rows.push(headers.map(h => csvEscape(c[h] === true ? 'true' : (c[h] === false ? '' : (c[h] || '')))).join(','));
@@ -1991,6 +2362,8 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-stats-bar').forEach(e => { e.style.fontSize = '24px'; e.style.padding = '8px 20px'; });
   cardEl.querySelectorAll('.cp-stat-label').forEach(e => { e.style.fontSize = '20px'; e.style.padding = '3px 10px'; });
   cardEl.querySelectorAll('.cp-art').forEach(e => { e.style.height = '150px'; e.style.fontSize = '20px'; e.style.padding = '12px'; e.style.margin = '10px 8px 0'; });
+  cardEl.querySelectorAll('.cp-art-icon').forEach(e => { e.style.fontSize = '90px'; });
+  cardEl.querySelectorAll('.cp-art-memo').forEach(e => { e.style.fontSize = '15px'; e.style.bottom = '6px'; });
   cardEl.querySelectorAll('.cp-type-bar').forEach(e => { e.style.height = '40px'; e.style.fontSize = '24px'; e.style.padding = '0 24px'; e.style.marginTop = '10px'; });
   cardEl.querySelectorAll('.cp-skills, .cp-effects').forEach(e => { e.style.padding = '12px 16px'; e.style.gap = '8px'; });
   cardEl.querySelectorAll('.cp-skill, .cp-effect').forEach(e => { e.style.padding = '10px 14px'; e.style.fontSize = '17px'; });
@@ -2013,7 +2386,16 @@ async function generatePDF(mode) {
   if (mode === 'deck') {
     const deck = state.decks.find(d => d.id === state.currentDeckId);
     if (!deck) { toast('デッキが選択されていません'); return; }
-    cardsToPrint = (deck.cardIds || []).map(id => state.cards.find(c => c.id === id)).filter(Boolean);
+    // 枚数分カードを複製して展開
+    cardsToPrint = [];
+    (deck.cards || []).forEach(entry => {
+      const card = state.cards.find(c => c.id === entry.cardId);
+      if (card) {
+        for (let i = 0; i < entry.count; i++) {
+          cardsToPrint.push(card);
+        }
+      }
+    });
     filename = `${deck.name}.pdf`;
   } else {
     cardsToPrint = state.cards;
