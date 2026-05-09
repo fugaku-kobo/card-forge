@@ -967,7 +967,13 @@ main {
   pointer-events: none;
 }
 .card-zoom-card .cp-index, .card-zoom-card .cp-controls { display: none; }
-.card-zoom-card .card-preview { padding: 8px; }
+.card-zoom-card .card-preview {
+  width: 100%; height: 100%;
+  padding: 10px;
+  cursor: default;
+  transform: none;
+}
+.card-zoom-card .card-preview:hover { transform: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .card-zoom-card .cp-header { height: 36px; gap: 5px; }
 .card-zoom-card .cp-badge { width: 30px; height: 30px; font-size: 16px; }
 .card-zoom-card .cp-badge-hp { width: 40px; height: 30px; border-radius: 15px; font-size: 16px; }
@@ -1580,19 +1586,15 @@ let _iconCache = new Map(); // cardId -> 表示用アイコン文字列
 function rebuildIconCache() {
   _iconCache.clear();
 
-  // 「ベース絵文字 + カード名」でグループ化
-  // → 同名なら同じグループ、別名なら別グループ
-  // → 同名カードは同じ絵文字＋連番(①②③)で区別
-  // → 別名で偶然同じ絵文字なら、別グループとしてそれぞれ連番開始
-  const groups = new Map();
+  // ベース絵文字単位でグループ化し、複数枚あれば1枚ごとに連番付与
+  // 同名(レベル違い)・別名どちらも個別に①②③で区別する
+  const byBase = new Map(); // base -> [cards]
   state.cards.forEach(c => {
     const base = getCardIcon(c);
-    const key = base + '|||' + (c.name || '');
-    if (!groups.has(key)) groups.set(key, {base, cards: []});
-    groups.get(key).cards.push(c);
+    if (!byBase.has(base)) byBase.set(base, []);
+    byBase.get(base).push(c);
   });
 
-  // 識別子の候補リスト
   const SUFFIXES = [
     '①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
     '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳',
@@ -1601,12 +1603,11 @@ function rebuildIconCache() {
     'ⓤ','ⓥ','ⓦ','ⓧ','ⓨ','ⓩ'
   ];
 
-  // 各「ベース絵文字 + カード名」グループ内で、複数枚あれば連番付与
-  groups.forEach(({base, cards: cardsInGroup}) => {
-    if (cardsInGroup.length === 1) {
-      _iconCache.set(cardsInGroup[0].id, base);
+  byBase.forEach((cards, base) => {
+    if (cards.length === 1) {
+      _iconCache.set(cards[0].id, base);
     } else {
-      cardsInGroup.forEach((c, idx) => {
+      cards.forEach((c, idx) => {
         const suffix = SUFFIXES[idx] || `(${idx + 1})`;
         _iconCache.set(c.id, base + suffix);
       });
@@ -2043,16 +2044,21 @@ function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move';
 function onDrop(e, dstIdx) {
   e.preventDefault();
   if (dragSrcIdx === null || dragSrcIdx === dstIdx) return;
+  // 編集中カードのidを覚えておき、並び替え後に新indexへ追従させる
+  const editingId = editingIdx !== null ? state.cards[editingIdx]?.id : null;
   const [moved] = state.cards.splice(dragSrcIdx, 1);
   state.cards.splice(dstIdx, 0, moved);
+  if (editingId) editingIdx = state.cards.findIndex(c => c.id === editingId);
   saveData(); render();
 }
 function onDragEnd(e) { e.target.classList.remove('dragging'); dragSrcIdx = null; }
 function moveCard(idx, delta) {
   const newIdx = idx + delta;
   if (newIdx < 0 || newIdx >= state.cards.length) return;
+  const editingId = editingIdx !== null ? state.cards[editingIdx]?.id : null;
   const [moved] = state.cards.splice(idx, 1);
   state.cards.splice(newIdx, 0, moved);
+  if (editingId) editingIdx = state.cards.findIndex(c => c.id === editingId);
   saveData(); render();
 }
 
