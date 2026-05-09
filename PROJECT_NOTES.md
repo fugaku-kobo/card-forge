@@ -7,7 +7,7 @@
 - **公開URL:** https://fugaku-kobo.github.io/card-forge/
 - **GitHub:** https://github.com/fugaku-kobo/card-forge
 - **メインファイル:** `index.html` (1ファイルで完結)
-- **使用技術:** HTML + CSS + JavaScript (バニラ)、jsPDF、html2canvas、SheetJS(xlsx)
+- **使用技術:** HTML + CSS + JavaScript (バニラ)、jsPDF、html2canvas、SheetJS(xlsx)、PeerJS(二台対戦のWebRTC)
 
 ## 主要機能
 
@@ -23,13 +23,15 @@
 7. **デッキ構築**: 同IDは最大4枚、無制限フラグあり、追加カードリストは作品名/タイプ/全文検索でフィルタ可
 8. **PDF印刷**: A4に9枚配置、トンボ付き
 9. **ローカル保存**: localStorage(`card_forge_data_v4_tezuka`)
-10. **テストプレイ(PLAYタブ)**: ソロ用プレイマット
-    - 2デッキ選択→自動シャッフル→初手7枚ドロー
-    - 4ゾーン×2サイド: 手札・場・没案・山(山top3は伏せプレビュー)
+10. **テストプレイ(PLAYタブ)**: プレイマット(3モード)
+    - **🧍 ソロ**: 2デッキ選択して両陣営を自分で操作
+    - **🌐 ホスト/ゲスト (PeerJS二台対戦)**: ルームID(`cf-XXXXXX`)で別PC同士を接続、自サイドのみ操作可、相手の手札は伏せ枚数のみ表示
+    - 自動シャッフル→初手7枚ドロー
+    - 4ゾーン×2サイド: 手札・場・没案・山(自分の山top3は伏せプレビュー)
     - カードクリック→ポップオーバーでゾーン間移動・HP±・没にする
     - ホバーで原寸プレビュー(スキル/効果文を読める)
     - ターン進行(交代/フェーズ)、IP・原稿カウンタ(勝利10達成でトースト)
-    - ターンログ(最大200件、A/B色分け)、リスタート、途中保存
+    - ターンログ(最大200件、A/B色分け)、リスタート、途中保存(ソロのみ)
 
 ## ゲームルール仕様(初稿)
 
@@ -100,6 +102,9 @@
 - 並び替え時(ドラッグ・▲▼)は編集中カードのidを保持して新indexを再計算 — `state.cards[editingIdx]` のズレ防止
 - PLAYのカードは `instanceId` で個別管理(同じcardIdの複数枚を区別)。場のキャラの現HPは `inst.hp` に保持
 - PLAYのポップオーバー・ホバープレビューは `<body>` 直下に配置(renderPlay再描画で消えないように)
+- PLAY二台対戦: PeerJS公開ブローカ(`0.peerjs.com`)+ Google公開STUNを使用、TURNなし。NAT越え失敗時はFirebase移行検討
+- ネットワーク対戦中の操作はイベント送信(`netSendOp`)、受信側は `_isApplyingRemoteOp` フラグで再ブロードキャスト防止
+- ネットワークsessionはリロードで復元しない(`loadData`で `network.mode !== 'solo'` ならクリア)
 
 ### カラーパレット
 - 主人公: `#8b2c1f` (深紅)

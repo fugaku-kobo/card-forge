@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root {
   --bg-deep: #1a1410;
@@ -874,6 +875,44 @@ main {
 }
 
 /* ============ PLAY (テストプレイ用プレイマット) ============ */
+.play-mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+  flex-wrap: wrap;
+}
+.play-mode-tab {
+  background: transparent;
+  border: 1px solid rgba(201, 169, 97, 0.2);
+  border-bottom: none;
+  color: var(--parchment-dim);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 0;
+}
+.play-mode-tab:hover { color: var(--gold); background: rgba(201, 169, 97, 0.05); }
+.play-mode-tab.active {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--bg-deep);
+  font-weight: 600;
+}
+.play-net-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--gold);
+  background: var(--bg-deep);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+}
+.play-net-badge.guest { color: #c87f4a; border-color: #c87f4a; }
+.play-side.opponent { opacity: 0.92; }
+.play-side.opponent .card-chip { cursor: default; }
 .play-setup {
   max-width: 640px;
   margin: 40px auto;
@@ -1792,6 +1831,10 @@ function loadData() {
       state.types = data.types || [];
       state.decks = data.decks || [];
       state.playSession = data.playSession || null;
+      // ネットワークプレイは再ロード時に復元できないのでクリア(ソロのみ復元)
+      if (state.playSession?.network && state.playSession.network.mode !== 'solo') {
+        state.playSession = null;
+      }
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
       loaded = true;
     }
@@ -3218,7 +3261,7 @@ function shuffleArray(arr) {
   return arr;
 }
 
-// プレイ開始
+// プレイ開始 (ソロ)
 function startPlaySession() {
   const deckIdA = document.getElementById('play-deckA').value;
   const deckIdB = document.getElementById('play-deckB').value;
@@ -3242,7 +3285,8 @@ function startPlaySession() {
     activeSide: 'A',
     phase: 'メイン',
     sides: { A: sideA, B: sideB },
-    log: []
+    log: [],
+    network: { mode: 'solo' }
   };
   playLog(null, `ゲーム開始 (${nameA} vs ${nameB})`);
   playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
@@ -3253,6 +3297,11 @@ function startPlaySession() {
 
 function endPlaySession() {
   showModal('プレイ終了', '現在のセッションを終了します。記録は失われます。', () => {
+    // ネット対戦中なら相手にも通知
+    if (netConn && netConn.open) {
+      try { netConn.send({ type: 'BYE' }); } catch(e) {}
+    }
+    netCleanup();
     state.playSession = null;
     saveData();
     renderPlay();
@@ -3308,12 +3357,14 @@ function endTurn() {
   if (ps.activeSide === 'A') ps.turn++; // BからAに戻ったらターン++
   playLog(oldSide, `ターン終了 → ${ps.activeSide}のターン (${ps.turn})`);
   saveData(); renderPlay();
+  netSendOp({ type: 'endTurn' });
 }
 
 function changePhase(phase) {
   if (!state.playSession) return;
   state.playSession.phase = phase;
   saveData(); renderPlay();
+  netSendOp({ type: 'phase', phase });
 }
 
 // ============ カウンタ ============
@@ -3332,6 +3383,7 @@ function adjustCounter(side, key, delta) {
     }
   }
   saveData(); renderPlay();
+  netSendOp({ type: 'counter', side, key, delta });
 }
 
 function adjustFieldHP(side, instanceId, delta) {
@@ -3344,6 +3396,7 @@ function adjustFieldHP(side, instanceId, delta) {
   const card = state.cards.find(c => c.id === inst.cardId);
   playLog(side, `${card?.name || '?'} HP ${oldHp} → ${inst.hp}`);
   saveData(); renderPlay();
+  netSendOp({ type: 'hp', side, instanceId, delta });
   // ポップオーバーが開いていれば最新のHP値で再描画
   if (document.getElementById('playPopoverBg').classList.contains('show')) {
     openPlayPopover(side, instanceId, 'field');
@@ -3379,6 +3432,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
   playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
   saveData(); renderPlay();
+  netSendOp({ type: 'move', side, instanceId, fromZone, toZone, toTop: !!toTop });
   closePlayPopover();
 }
 
@@ -3395,6 +3449,7 @@ function drawCard(side, n) {
   if (drew > 0) playLog(side, `${drew}枚ドロー (山残${s.deck.length})`);
   else playLog(side, '山が空でドローできません');
   saveData(); renderPlay();
+  netSendOp({ type: 'draw', side, n });
 }
 
 function shuffleDeck(side) {
@@ -3403,6 +3458,8 @@ function shuffleDeck(side) {
   shuffleArray(s.deck);
   playLog(side, `山をシャッフル (${s.deck.length}枚)`);
   saveData(); renderPlay();
+  // shuffle結果(順序)を送信。受信側は netApplyRemoteOp で並び替えのみ実行(shuffleDeckは呼ばない)
+  netSendOp({ type: 'shuffle', side, deckOrder: s.deck.map(x => x.instanceId) });
 }
 
 // ============ ポップオーバー (カードクリック時) ============
@@ -3417,6 +3474,20 @@ function openPlayPopover(side, instanceId, fromZone) {
   const actions = [];
   // 拡大表示
   actions.push({ label: `🔍 拡大表示`, fn: `openCardZoomById('${inst.cardId}')` });
+
+  // ネット対戦時、自分のサイドでなければ操作はさせない(閲覧のみ)
+  const canControl = myCanControl(side);
+  if (!canControl) {
+    const html = `
+      <div class="play-popover-title">${escapeHtml(cardName)}${inst.hp !== undefined ? ` (HP ${inst.hp})` : ''}<br><span style="font-size:0.78rem; color:var(--parchment-dim);">相手のカードは操作できません</span></div>
+      <div class="play-popover-actions">
+        ${actions.map(a => `<button onclick="${a.fn}; closePlayPopover();">${a.label}</button>`).join('')}
+        <button onclick="closePlayPopover()" style="margin-top: 8px;">閉じる</button>
+      </div>`;
+    document.getElementById('playPopover').innerHTML = html;
+    document.getElementById('playPopoverBg').classList.add('show');
+    return;
+  }
 
   // ゾーン移動候補
   if (fromZone === 'hand') {
@@ -3518,6 +3589,13 @@ function buildCardChip(inst, side, fromZone, faceDown) {
 }
 
 // ============ プレイ画面描画 ============
+// セットアップ画面のモード状態(solo / host / guest)
+let _playSetupMode = 'solo';
+function switchPlaySetupMode(mode) {
+  _playSetupMode = mode;
+  renderPlay();
+}
+
 function renderPlay() {
   const root = document.getElementById('playRoot');
   if (!state.playSession || !state.playSession.active) {
@@ -3530,32 +3608,69 @@ function renderPlay() {
         <p>プレイにはデッキが必要です。「🃏 DECKS」タブで作成してください。</p></div>`;
       return;
     }
-    root.innerHTML = `
-      <div class="play-setup">
-        <h2>テストプレイ — セットアップ</h2>
-        <p>2つのデッキを選んで、初手7枚ドローでスタートします。両陣営を自分で操作するソロモードです。</p>
+    const tabs = `
+      <div class="play-mode-tabs">
+        <button class="play-mode-tab ${_playSetupMode==='solo'?'active':''}" onclick="switchPlaySetupMode('solo')">🧍 ソロ(両陣営を自分で操作)</button>
+        <button class="play-mode-tab ${_playSetupMode==='host'?'active':''}" onclick="switchPlaySetupMode('host')">🌐 ホスト(対戦相手を待つ)</button>
+        <button class="play-mode-tab ${_playSetupMode==='guest'?'active':''}" onclick="switchPlaySetupMode('guest')">🌐 ゲスト(ルームに参加)</button>
+      </div>`;
+
+    let body = '';
+    if (_playSetupMode === 'solo') {
+      body = `
+        <h2>テストプレイ — ソロモード</h2>
+        <p>2デッキを選んで、初手7枚ドローでスタート。両陣営を自分で操作します。</p>
         <div class="play-setup-row">
-          <div class="field">
-            <label>プレイヤー A</label>
-            <input type="text" id="play-nameA" placeholder="プレイヤーA" value="プレイヤーA">
-          </div>
-          <div class="field">
-            <label>プレイヤー B</label>
-            <input type="text" id="play-nameB" placeholder="プレイヤーB" value="プレイヤーB">
-          </div>
+          <div class="field"><label>プレイヤー A</label><input type="text" id="play-nameA" value="プレイヤーA"></div>
+          <div class="field"><label>プレイヤー B</label><input type="text" id="play-nameB" value="プレイヤーB"></div>
         </div>
         <div class="play-setup-row">
-          <div class="field">
-            <label>A のデッキ</label>
-            <select id="play-deckA"><option value="">選択してください</option>${deckOptions}</select>
-          </div>
-          <div class="field">
-            <label>B のデッキ</label>
-            <select id="play-deckB"><option value="">選択してください</option>${deckOptions}</select>
-          </div>
+          <div class="field"><label>A のデッキ</label><select id="play-deckA"><option value="">選択してください</option>${deckOptions}</select></div>
+          <div class="field"><label>B のデッキ</label><select id="play-deckB"><option value="">選択してください</option>${deckOptions}</select></div>
         </div>
         <div class="play-setup-actions">
           <button class="btn-primary" onclick="startPlaySession()">▶ プレイ開始</button>
+        </div>`;
+    } else if (_playSetupMode === 'host') {
+      body = `
+        <h2>テストプレイ — ホスト</h2>
+        <p>あなたがA側として開始します。「ルーム作成」を押すとルームIDが発行され、相手の参加を待ちます。</p>
+        <div class="play-setup-row">
+          <div class="field"><label>あなたの名前</label><input type="text" id="play-nameHost" value="ホスト"></div>
+          <div class="field"><label>使うデッキ</label><select id="play-deckHost"><option value="">選択してください</option>${deckOptions}</select></div>
+        </div>
+        <div class="play-setup-actions">
+          <button class="btn-primary" onclick="netHostRoom()">🌐 ルーム作成</button>
+        </div>`;
+    } else if (_playSetupMode === 'guest') {
+      body = `
+        <h2>テストプレイ — ゲスト</h2>
+        <p>ホストから受け取ったルームIDを入力して参加します。あなたはB側になります。</p>
+        <div class="field" style="margin-bottom:14px;">
+          <label>ルームID</label>
+          <input type="text" id="play-roomId" placeholder="cf-XXXXXX" style="font-family:'Cinzel',serif; letter-spacing:0.1em;">
+        </div>
+        <div class="play-setup-row">
+          <div class="field"><label>あなたの名前</label><input type="text" id="play-nameGuest" value="ゲスト"></div>
+          <div class="field"><label>使うデッキ</label><select id="play-deckGuest"><option value="">選択してください</option>${deckOptions}</select></div>
+        </div>
+        <div class="play-setup-actions">
+          <button class="btn-primary" onclick="netJoinRoom()">🌐 参加する</button>
+        </div>`;
+    }
+    root.innerHTML = `<div class="play-setup">${tabs}${body}</div>`;
+    return;
+  }
+
+  // 切断状態
+  if (state.playSession.network?.disconnected) {
+    root.innerHTML = `
+      <div class="play-setup">
+        <h2>⚠ 接続が切れました</h2>
+        <p>相手との接続が失われました。セッションを終了するか、ソロモードで継続してください。</p>
+        <div class="play-setup-actions">
+          <button onclick="state.playSession.network={mode:'solo'}; saveData(); renderPlay();">🧍 ソロで継続</button>
+          <button class="btn-danger" onclick="state.playSession=null; saveData(); renderPlay();">セッション終了</button>
         </div>
       </div>`;
     return;
@@ -3589,38 +3704,44 @@ function renderPlaySide(sideKey) {
   const ps = state.playSession;
   const s = ps.sides[sideKey];
   const isActive = ps.activeSide === sideKey;
+  const canControl = myCanControl(sideKey);
+  const dis = canControl ? '' : 'disabled';
+  // ネット対戦中、相手の手札は内容を伏せて枚数のみ
+  const hideOppHand = !canControl;
 
   const handHtml = s.hand.length === 0
     ? '<div class="play-zone-empty">手札なし</div>'
-    : s.hand.map(inst => buildCardChip(inst, sideKey, 'hand', false)).join('');
+    : s.hand.map(inst => buildCardChip(inst, sideKey, 'hand', hideOppHand)).join('');
   const fieldHtml = s.field.length === 0
     ? '<div class="play-zone-empty">場にカードなし</div>'
     : s.field.map(inst => buildCardChip(inst, sideKey, 'field', false)).join('');
   const discardHtml = s.discard.length === 0
     ? '<div class="play-zone-empty">没案なし</div>'
     : s.discard.slice().reverse().map(inst => buildCardChip(inst, sideKey, 'discard', false)).join('');
-  // 山は伏せ表示 (上3枚だけチップ、それ以下は枚数のみ)
-  const deckPreview = s.deck.slice(0, 3).map(inst => buildCardChip(inst, sideKey, 'deck', true)).join('');
+  // 山: 自分側は上3枚伏せプレビュー、相手側は枚数だけ表示(内容を覗き見できないように)
+  const deckPreview = canControl
+    ? s.deck.slice(0, 3).map(inst => buildCardChip(inst, sideKey, 'deck', true)).join('')
+    : '';
 
   return `
-    <div class="play-side ${isActive ? 'active' : ''}">
+    <div class="play-side ${isActive ? 'active' : ''} ${canControl?'mine':'opponent'}">
       <div class="play-side-header">
-        <div class="play-side-name">${escapeHtml(s.name)}${isActive ? ' ◆' : ''}</div>
+        <div class="play-side-name">${escapeHtml(s.name)}${isActive ? ' ◆' : ''}${canControl?'':' (相手)'}</div>
         <div class="play-counter">
           <span class="play-counter-label">原稿</span>
-          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',-1)">−</button>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',-1)" ${dis}>−</button>
           <span class="play-counter-value">${s.manuscript}</span>
-          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',1)">＋</button>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',1)" ${dis}>＋</button>
           <span class="play-counter-label">/ ${PLAY_VICTORY_MANUSCRIPT}</span>
         </div>
         <div class="play-counter">
           <span class="play-counter-label">IP</span>
-          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',-1)">−</button>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',-1)" ${dis}>−</button>
           <span class="play-counter-value">${s.ip}</span>
-          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',1)">＋</button>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',1)" ${dis}>＋</button>
         </div>
-        <button class="btn-small" onclick="drawCard('${sideKey}',1)">山からドロー</button>
-        <button class="btn-small" onclick="shuffleDeck('${sideKey}')">山シャッフル</button>
+        ${canControl ? `<button class="btn-small" onclick="drawCard('${sideKey}',1)">山からドロー</button>
+        <button class="btn-small" onclick="shuffleDeck('${sideKey}')">山シャッフル</button>` : ''}
       </div>
 
       <div class="play-zones">
@@ -3647,25 +3768,251 @@ function renderPlaySide(sideKey) {
 function renderTurnBar() {
   const ps = state.playSession;
   const activeName = ps.sides[ps.activeSide].name;
+  const net = ps.network || { mode: 'solo' };
+  const netBadge = net.mode === 'host' ? `<span class="play-net-badge host" title="ルームID: ${escapeHtml(net.roomId||'')}">🌐 HOST (${escapeHtml(net.mySide)}側) [${escapeHtml(net.roomId||'')}]</span>`
+                  : net.mode === 'guest' ? `<span class="play-net-badge guest">🌐 GUEST (${escapeHtml(net.mySide)}側)</span>`
+                  : '';
+  const myTurn = net.mode === 'solo' || net.mySide === ps.activeSide;
   return `
     <div class="play-turnbar">
       <div class="play-turn-info">
         <div class="play-turn-num">ターン ${ps.turn}</div>
-        <div class="play-active-side">アクティブ: <strong>${escapeHtml(activeName)}</strong></div>
+        <div class="play-active-side">アクティブ: <strong>${escapeHtml(activeName)}</strong>${myTurn?'':' (相手ターン)'}</div>
+        ${netBadge}
         <div>フェーズ:
-          <select onchange="changePhase(this.value)">
+          <select onchange="changePhase(this.value)" ${myTurn?'':'disabled'}>
             ${['ドロー','メイン','バトル','エンド','相手ターン'].map(p =>
               `<option value="${p}" ${ps.phase===p?'selected':''}>${p}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="play-turnbar-actions">
-        <button class="btn-primary" onclick="endTurn()">ターン終了</button>
+        <button class="btn-primary" onclick="endTurn()" ${myTurn?'':'disabled'}>ターン終了</button>
         <button class="btn-small" onclick="togglePlayLog()">📜 ログ (${ps.log.length})</button>
-        <button class="btn-small" onclick="restartPlaySession()">↺ リスタート</button>
+        ${net.mode === 'solo' ? `<button class="btn-small" onclick="restartPlaySession()">↺ リスタート</button>` : ''}
         <button class="btn-small btn-danger" onclick="endPlaySession()">✕ 終了</button>
       </div>
     </div>`;
+}
+
+// ============ PLAY NETWORK (PeerJS二台対戦) ============
+let netPeer = null;
+let netConn = null;
+let _isApplyingRemoteOp = false;
+
+function netGenerateRoomId() {
+  // 6文字の英数(混同しやすい0/O/1/Iは除外)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = 'cf-';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function netCleanup() {
+  if (netConn) { try { netConn.close(); } catch(e){} netConn = null; }
+  if (netPeer) { try { netPeer.destroy(); } catch(e){} netPeer = null; }
+}
+
+function myCanControl(side) {
+  const net = state.playSession?.network;
+  if (!net || net.mode === 'solo') return true;
+  return net.mySide === side;
+}
+
+// ホストとして部屋を作成
+function netHostRoom() {
+  const deckIdHost = document.getElementById('play-deckHost').value;
+  const nameHost = document.getElementById('play-nameHost').value.trim() || 'プレイヤー(ホスト)';
+  if (!deckIdHost) { toast('デッキを選んでください'); return; }
+  if (typeof Peer === 'undefined') { toast('PeerJS が読み込まれていません'); return; }
+
+  netCleanup();
+  const roomId = netGenerateRoomId();
+  const root = document.getElementById('playRoot');
+  root.innerHTML = `
+    <div class="play-setup">
+      <h2>🌐 ホスト中 — 接続待機</h2>
+      <p>このルームIDを相手に伝えてください。相手が「参加」で入力すると接続成立します。</p>
+      <div style="background: var(--bg-deep); border:1px solid var(--gold); padding: 18px; text-align:center; margin: 16px 0;">
+        <div style="font-family:'Cinzel',serif; color:var(--parchment-dim); font-size:0.78rem; letter-spacing:0.15em;">ROOM ID</div>
+        <div style="font-family:'Cinzel',serif; color:var(--gold-bright); font-size:1.8rem; font-weight:700; letter-spacing:0.1em; margin: 8px 0;">${roomId}</div>
+        <button class="btn-small" onclick="navigator.clipboard?.writeText('${roomId}'); toast('コピーしました');">📋 コピー</button>
+      </div>
+      <div id="netStatus" style="color: var(--parchment-dim); font-style: italic; text-align: center;">接続待ち...</div>
+      <div class="play-setup-actions">
+        <button onclick="netHostCancel()">キャンセル</button>
+      </div>
+    </div>`;
+
+  netPeer = new Peer(roomId);
+  netPeer.on('open', () => {
+    document.getElementById('netStatus').textContent = '相手の接続を待っています...';
+  });
+  netPeer.on('error', (err) => {
+    console.error('Peer error:', err);
+    const statusEl = document.getElementById('netStatus');
+    if (statusEl) statusEl.textContent = `エラー: ${err.type || err.message}`;
+    toast('PeerJS エラー: ' + (err.type || err.message));
+  });
+  netPeer.on('connection', (conn) => {
+    netConn = conn;
+    conn.on('open', () => {
+      // ゲストから挨拶を待ってからINITを送る
+      document.getElementById('netStatus').textContent = '接続成立。初期化中...';
+    });
+    conn.on('data', (msg) => netHandleMessage(msg, 'host', { deckIdHost, nameHost }));
+    conn.on('close', () => netOnDisconnect());
+    conn.on('error', (e) => { console.error(e); toast('通信エラー'); });
+  });
+}
+
+function netHostCancel() {
+  netCleanup();
+  renderPlay();
+}
+
+// ゲストとして部屋に参加
+function netJoinRoom() {
+  const roomId = (document.getElementById('play-roomId')?.value || '').trim();
+  const deckIdGuest = document.getElementById('play-deckGuest').value;
+  const nameGuest = document.getElementById('play-nameGuest').value.trim() || 'プレイヤー(ゲスト)';
+  if (!roomId) { toast('ルームIDを入力してください'); return; }
+  if (!deckIdGuest) { toast('デッキを選んでください'); return; }
+  if (typeof Peer === 'undefined') { toast('PeerJS が読み込まれていません'); return; }
+
+  netCleanup();
+  const root = document.getElementById('playRoot');
+  root.innerHTML = `
+    <div class="play-setup">
+      <h2>🌐 接続中...</h2>
+      <p>ルーム <strong>${escapeHtml(roomId)}</strong> に参加中</p>
+      <div id="netStatus" style="color: var(--parchment-dim); font-style: italic; text-align: center; margin: 16px 0;">接続待ち...</div>
+      <div class="play-setup-actions">
+        <button onclick="netJoinCancel()">キャンセル</button>
+      </div>
+    </div>`;
+
+  netPeer = new Peer();
+  netPeer.on('open', (myId) => {
+    document.getElementById('netStatus').textContent = 'ホストに接続中...';
+    netConn = netPeer.connect(roomId, { reliable: true });
+    netConn.on('open', () => {
+      document.getElementById('netStatus').textContent = '接続成立。挨拶を送信...';
+      netConn.send({ type: 'HELLO', deckIdGuest, nameGuest });
+    });
+    netConn.on('data', (msg) => netHandleMessage(msg, 'guest', { deckIdGuest, nameGuest }));
+    netConn.on('close', () => netOnDisconnect());
+    netConn.on('error', (e) => { console.error(e); toast('通信エラー'); });
+  });
+  netPeer.on('error', (err) => {
+    console.error('Peer error:', err);
+    const statusEl = document.getElementById('netStatus');
+    if (statusEl) statusEl.textContent = `エラー: ${err.type || err.message}`;
+    if (err.type === 'peer-unavailable') {
+      toast('そのルームIDは見つかりません');
+    } else {
+      toast('PeerJS エラー: ' + (err.type || err.message));
+    }
+  });
+}
+
+function netJoinCancel() {
+  netCleanup();
+  renderPlay();
+}
+
+// メッセージ受信ハンドラ
+function netHandleMessage(msg, role, ctx) {
+  if (!msg || !msg.type) return;
+  if (msg.type === 'HELLO' && role === 'host') {
+    // ホスト: ゲストから情報を受け取った → INIT送信
+    const deckIdHost = ctx.deckIdHost, nameHost = ctx.nameHost;
+    const deckIdGuest = msg.deckIdGuest, nameGuest = msg.nameGuest;
+    // ホスト=A, ゲスト=B として開始
+    const sideA = makePlaySide(deckIdHost, nameHost);
+    const sideB = makePlaySide(deckIdGuest, nameGuest);
+    sideA.deck = shuffleArray(buildDeckInstances(deckIdHost));
+    sideB.deck = shuffleArray(buildDeckInstances(deckIdGuest));
+    for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
+      if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
+      if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
+    }
+    state.playSession = {
+      active: true, turn: 1, activeSide: 'A', phase: 'メイン',
+      sides: { A: sideA, B: sideB }, log: [],
+      network: { mode: 'host', mySide: 'A', roomId: netPeer.id }
+    };
+    playLog(null, `ゲーム開始 (${nameHost} vs ${nameGuest})`);
+    playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
+    playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
+    saveData();
+    netConn.send({ type: 'INIT', playSession: serializableSession(state.playSession), guestSide: 'B' });
+    renderPlay();
+    toast('対戦相手と接続しました');
+  } else if (msg.type === 'INIT' && role === 'guest') {
+    // ゲスト: ホストから初期stateを受け取った
+    state.playSession = msg.playSession;
+    state.playSession.network = { mode: 'guest', mySide: msg.guestSide, roomId: '' };
+    saveData();
+    renderPlay();
+    toast('対戦が開始しました');
+  } else if (msg.type === 'OP') {
+    netApplyRemoteOp(msg.op);
+  } else if (msg.type === 'BYE') {
+    toast('相手がプレイを終了しました');
+    netOnDisconnect();
+  }
+}
+
+// シリアライズ用に network/conn を除外したコピーを作る
+function serializableSession(ps) {
+  if (!ps) return null;
+  const copy = JSON.parse(JSON.stringify(ps));
+  if (copy.network) copy.network = null; // ゲスト側で再設定するためクリア
+  return copy;
+}
+
+// 操作を相手に送信
+function netSendOp(op) {
+  if (_isApplyingRemoteOp) return;
+  const net = state.playSession?.network;
+  if (!net || net.mode === 'solo') return;
+  if (!netConn || !netConn.open) return;
+  netConn.send({ type: 'OP', op });
+}
+
+// 受信した操作を適用
+function netApplyRemoteOp(op) {
+  _isApplyingRemoteOp = true;
+  try {
+    if (op.type === 'draw') drawCard(op.side, op.n);
+    else if (op.type === 'move') moveInstance(op.side, op.instanceId, op.fromZone, op.toZone, op.toTop);
+    else if (op.type === 'counter') adjustCounter(op.side, op.key, op.delta);
+    else if (op.type === 'hp') adjustFieldHP(op.side, op.instanceId, op.delta);
+    else if (op.type === 'shuffle') {
+      // 受信した順序にデッキを並べ直す
+      const s = state.playSession.sides[op.side];
+      const map = {};
+      s.deck.forEach(x => { map[x.instanceId] = x; });
+      s.deck = op.deckOrder.map(id => map[id]).filter(Boolean);
+      playLog(op.side, `山をシャッフル (${s.deck.length}枚)`);
+      saveData(); renderPlay();
+    }
+    else if (op.type === 'endTurn') endTurn();
+    else if (op.type === 'phase') changePhase(op.phase);
+  } finally {
+    _isApplyingRemoteOp = false;
+  }
+}
+
+function netOnDisconnect() {
+  if (state.playSession?.network && state.playSession.network.mode !== 'solo') {
+    state.playSession.network.disconnected = true;
+    saveData();
+    renderPlay();
+    toast('接続が切れました');
+  }
+  netCleanup();
 }
 
 // ============ PDF (画像方式) ============
