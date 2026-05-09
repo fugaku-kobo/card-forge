@@ -727,6 +727,28 @@ main {
   width: 100%; height: auto;
   aspect-ratio: 63 / 88;
 }
+.deck-add-filter {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.15);
+}
+.deck-add-filter input[type="text"], .deck-add-filter select {
+  background: var(--bg-mid);
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  color: var(--parchment);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+@media (max-width: 768px) {
+  .deck-add-filter { grid-template-columns: 1fr 1fr; }
+  .deck-add-filter input[type="text"] { grid-column: 1 / -1; }
+  .deck-add-filter button { grid-column: 1 / -1; }
+}
 .add-card-list {
   max-height: 380px;
   overflow-y: auto;
@@ -850,6 +872,377 @@ main {
   width: 100%; height: 32px;
   border: 1px solid rgba(201, 169, 97, 0.3);
 }
+
+/* ============ PLAY (テストプレイ用プレイマット) ============ */
+.play-setup {
+  max-width: 640px;
+  margin: 40px auto;
+  background: var(--bg-mid);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  padding: 28px;
+}
+.play-setup h2 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+}
+.play-setup p {
+  color: var(--parchment-dim);
+  font-family: 'Noto Serif JP', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.play-setup .field { margin-bottom: 14px; }
+.play-setup label {
+  display: block;
+  color: var(--gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.play-setup input[type="text"], .play-setup select {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  padding: 9px 12px;
+  font-family: inherit; font-size: 0.92rem;
+}
+.play-setup-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.play-setup-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(201, 169, 97, 0.15);
+}
+
+/* プレイ中のレイアウト */
+.play-board {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 14px;
+  min-height: calc(100vh - 200px);
+}
+.play-side {
+  background: var(--bg-mid);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  padding: 14px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.play-side.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(201, 169, 97, 0.25);
+}
+.play-side-header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.15);
+}
+.play-side-name {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  font-size: 1rem;
+}
+.play-counter {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-deep);
+  padding: 4px 8px;
+  border: 1px solid rgba(201, 169, 97, 0.2);
+}
+.play-counter-label { color: var(--parchment-dim); font-size: 0.75rem; letter-spacing: 0.05em; }
+.play-counter-value {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-bright);
+  font-weight: 700;
+  min-width: 24px; text-align: center;
+}
+.play-counter-btn {
+  width: 22px; height: 22px;
+  padding: 0;
+  font-size: 0.85rem;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.play-counter-btn:hover { background: var(--gold); color: var(--ink); }
+
+/* ゾーン (手札・場・没案・山) */
+.play-zones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+}
+.play-zone {
+  background: var(--bg-deep);
+  border: 1px dashed rgba(201, 169, 97, 0.25);
+  padding: 8px;
+  min-height: 110px;
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+.play-zone-title {
+  display: flex; justify-content: space-between; align-items: center;
+  color: var(--parchment-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.play-zone-count { color: var(--gold); font-family: 'Cinzel', serif; }
+.play-zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: flex-start;
+}
+.play-zone-empty {
+  color: var(--parchment-dim);
+  font-style: italic;
+  font-size: 0.78rem;
+  opacity: 0.5;
+  align-self: center;
+  margin: 0 auto;
+}
+
+/* カードチップ (プレイマット用、63x88px) */
+.card-chip {
+  width: 63px; height: 88px;
+  background: #FAFAF7;
+  color: #1a1410;
+  border: 1.5px solid rgba(0,0,0,0.2);
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+  display: flex; flex-direction: column;
+  padding: 3px;
+  font-family: 'Noto Sans JP', sans-serif;
+  overflow: hidden;
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.card-chip:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.5);
+  z-index: 5;
+}
+.card-chip.lv2 { background: var(--lv2-bg); border-color: var(--lv2-frame); }
+.card-chip.lv3 { background: var(--lv3-bg); border: 2px solid var(--lv3-frame); }
+.card-chip.face-down {
+  background: linear-gradient(135deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.card-chip.face-down::before {
+  content: "❦";
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  color: var(--gold);
+  opacity: 0.7;
+}
+.card-chip-head {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 7px;
+}
+.card-chip-badge {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 7px;
+}
+.card-chip-name {
+  flex: 1;
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-chip-icon {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+}
+.card-chip-foot {
+  display: flex; justify-content: space-between;
+  font-size: 6.5px;
+  color: rgba(0,0,0,0.6);
+}
+.card-chip-hp {
+  position: absolute;
+  bottom: 1px; right: 1px;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 6px;
+}
+
+/* ホバープレビュー (カードチップにマウスを置くと右上に原寸表示) */
+.play-hover-preview {
+  position: fixed;
+  top: 86px; right: 18px;
+  width: 240px;
+  z-index: 240;
+  pointer-events: none;
+  display: none;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.7));
+}
+.play-hover-preview.show { display: block; }
+.play-hover-preview .card-preview {
+  width: 100%; height: auto;
+  aspect-ratio: 63 / 88;
+  padding: 10px;
+  cursor: default;
+  transform: none !important;
+}
+.play-hover-preview .cp-index, .play-hover-preview .cp-controls { display: none; }
+.play-hover-preview .cp-header { height: 24px; gap: 4px; }
+.play-hover-preview .cp-badge { width: 20px; height: 20px; font-size: 11px; }
+.play-hover-preview .cp-badge-hp { width: 28px; height: 20px; border-radius: 10px; font-size: 11px; }
+.play-hover-preview .cp-title-bar { padding: 0 7px; gap: 4px; }
+.play-hover-preview .cp-title { font-size: 12px; }
+.play-hover-preview .cp-subrole { font-size: 9px; }
+.play-hover-preview .kind-leveled .cp-illust { height: 90px; }
+.play-hover-preview .kind-character .cp-illust { height: 70px; }
+.play-hover-preview .kind-effect .cp-illust { height: 60px; }
+.play-hover-preview .kind-leveled .cp-illust-icon { font-size: 56px; }
+.play-hover-preview .kind-character .cp-illust-icon { font-size: 42px; }
+.play-hover-preview .kind-effect .cp-illust-icon { font-size: 36px; }
+.play-hover-preview .cp-illust-memo { font-size: 7px; }
+.play-hover-preview .cp-skill-area { padding: 4px 2px; gap: 4px; }
+.play-hover-preview .cp-skill { padding: 4px 6px; }
+.play-hover-preview .cp-skill-name { font-size: 9px; }
+.play-hover-preview .cp-skill-cost { font-size: 7.5px; padding: 1px 5px; }
+.play-hover-preview .cp-skill-effect { font-size: 8.5px; line-height: 1.4; }
+.play-hover-preview .cp-effect-area { padding: 6px 9px; gap: 5px; }
+.play-hover-preview .cp-cost-line { font-size: 9px; padding: 2px 6px; }
+.play-hover-preview .cp-effect-text { font-size: 9px; line-height: 1.5; }
+.play-hover-preview .cp-footer { font-size: 7px; min-height: 14px; max-height: 28px; }
+.play-hover-preview .cp-footer-work { font-size: 7px; padding: 1px 5px; }
+.play-hover-preview .cp-footer-rule { font-size: 6.5px; }
+.play-hover-preview .cp-card-code { font-size: 8.5px; bottom: -14px; }
+
+/* ターンバー (中央) */
+.play-turnbar {
+  background: linear-gradient(90deg, var(--bg-mid) 0%, var(--bg-light) 50%, var(--bg-mid) 100%);
+  border: 1px solid var(--gold);
+  padding: 12px 18px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.play-turn-info {
+  display: flex; align-items: center; gap: 14px;
+  flex: 1;
+}
+.play-turn-num {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-bright);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.play-active-side {
+  color: var(--parchment);
+  font-size: 0.92rem;
+}
+.play-active-side strong { color: var(--gold-bright); }
+.play-turnbar select {
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  padding: 4px 8px;
+  font-family: inherit;
+}
+.play-turnbar-actions { display: flex; gap: 8px; }
+
+/* アクションポップオーバー */
+.play-popover-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none; align-items: center; justify-content: center;
+  z-index: 230;
+}
+.play-popover-bg.show { display: flex; }
+.play-popover {
+  background: var(--bg-mid);
+  border: 1px solid var(--gold);
+  padding: 18px;
+  min-width: 240px;
+  max-width: 90vw;
+}
+.play-popover-title {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+}
+.play-popover-actions {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.play-popover-actions button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+}
+
+/* ログサイドバー */
+.play-log {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 320px;
+  background: var(--bg-mid);
+  border-left: 1px solid var(--gold);
+  padding: 18px;
+  z-index: 220;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.25s;
+}
+.play-log.show { transform: translateX(0); }
+.play-log-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+}
+.play-log-title { font-family: 'Cinzel', serif; color: var(--gold); letter-spacing: 0.1em; }
+.play-log-list {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  font-size: 0.83rem;
+}
+.play-log-entry {
+  padding: 5px 8px;
+  border-left: 2px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  font-family: 'Noto Serif JP', serif;
+}
+.play-log-entry-meta {
+  color: var(--parchment-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+.play-log-entry.side-A { border-left-color: #4a90c8; }
+.play-log-entry.side-B { border-left-color: #c87f4a; }
 
 /* ============ MOBILE ============ */
 @media (max-width: 768px) {
@@ -1061,6 +1454,7 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
 <nav class="tabs">
   <button class="tab-btn active" data-tab="library" onclick="switchTab('library', this)">📚 LIBRARY</button>
   <button class="tab-btn" data-tab="decks" onclick="switchTab('decks', this)">🃏 DECKS</button>
+  <button class="tab-btn" data-tab="play" onclick="switchTab('play', this)">🎮 PLAY</button>
   <button class="tab-btn" data-tab="stats" onclick="switchTab('stats', this)">📊 STATS</button>
   <button class="tab-btn" data-tab="settings" onclick="switchTab('settings', this)">⚙ SETTINGS</button>
 </nav>
@@ -1268,6 +1662,11 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     </div>
   </section>
 
+  <!-- ============ PLAY (テストプレイ用プレイマット) ============ -->
+  <section class="tab-panel" id="tab-play">
+    <div id="playRoot"></div>
+  </section>
+
   <!-- ============ STATS ============ -->
   <section class="tab-panel" id="tab-stats">
     <div class="stat-summary" id="statSummary"></div>
@@ -1329,6 +1728,20 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     <div class="card-zoom-meta" id="cardZoomMeta"></div>
   </div>
 </div>
+<!-- プレイ用ホバープレビュー (チップにマウスを置くと原寸表示) -->
+<div class="play-hover-preview" id="playHoverPreview"></div>
+<!-- プレイ用ポップオーバー (Body直下、renderPlayで再生成されない) -->
+<div class="play-popover-bg" id="playPopoverBg" onclick="if(event.target.id==='playPopoverBg')closePlayPopover()">
+  <div class="play-popover" id="playPopover"></div>
+</div>
+<!-- プレイ用ログサイドバー -->
+<div class="play-log" id="playLogPanel">
+  <div class="play-log-header">
+    <div class="play-log-title">LOG</div>
+    <button class="btn-small" onclick="togglePlayLog()">閉じる</button>
+  </div>
+  <div class="play-log-list" id="playLogList"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <footer>
@@ -1358,11 +1771,14 @@ let state = {
   cards: [],
   types: [],
   decks: [],
-  currentDeckId: null
+  currentDeckId: null,
+  playSession: null  // { active, turn, activeSide, phase, sides:{A,B}, log:[] }
 };
 let editingIdx = null;
 let dragSrcIdx = null;
 let cardIdCounter = 1;
+// デッキ編集画面の追加カードリスト用フィルタ状態
+let deckAddFilter = { search: '', work: '', type: '' };
 
 function cid() { return 'c' + (cardIdCounter++); }
 
@@ -1375,6 +1791,7 @@ function loadData() {
       state.cards = data.cards || [];
       state.types = data.types || [];
       state.decks = data.decks || [];
+      state.playSession = data.playSession || null;
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
       loaded = true;
     }
@@ -1436,6 +1853,7 @@ function saveData() {
     cards: state.cards,
     types: state.types,
     decks: state.decks,
+    playSession: state.playSession,
     cardIdCounter: cardIdCounter
   }));
   // データ変更があった可能性があるのでアイコンキャッシュをクリア
@@ -1639,6 +2057,7 @@ function switchTab(tabName, btn) {
   if (tabName === 'stats') renderStats();
   if (tabName === 'settings') renderSettings();
   if (tabName === 'decks') renderDeckList();
+  if (tabName === 'play') renderPlay();
 }
 
 // ============ EDITOR (動的フィールド) ============
@@ -2191,11 +2610,28 @@ function renderDeckDetail() {
   })).filter(e => e.card);
 
   // 追加可能カード: デッキ内にあっても、枚数が上限未満なら追加可
-  const availableCards = state.cards.filter(c => {
+  const availableAll = state.cards.filter(c => {
     const entry = (deck.cards || []).find(x => x.cardId === c.id);
     const currentCount = entry ? entry.count : 0;
     const maxCount = c.unlimited ? Infinity : 4;
     return currentCount < maxCount;
+  });
+
+  // 作品名一覧 (重複排除、空文字除外、ソート)
+  const allWorks = [...new Set(state.cards.map(c => (c.work || '').trim()).filter(w => w))].sort();
+
+  // フィルタ適用
+  const f = deckAddFilter;
+  const searchLower = (f.search || '').toLowerCase();
+  const availableCards = availableAll.filter(c => {
+    if (f.work && (c.work || '').trim() !== f.work) return false;
+    if (f.type && c.type !== f.type) return false;
+    if (searchLower) {
+      const hay = [c.name, c.skill1, c.skill2, c.effect1, c.effect2, c.effect3, c.subrole, c.work, c.rule, c.other]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(searchLower)) return false;
+    }
+    return true;
   });
 
   const totalCount = getDeckTotalCount(deck);
@@ -2236,8 +2672,22 @@ function renderDeckDetail() {
           }).join('')}</div>`}
     </div>
     <div class="deck-section">
-      <div class="deck-section-title">追加できるカード (${availableCards.length}種類)</div>
-      ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>追加できるカードがありません</p></div>`
+      <div class="deck-section-title">追加できるカード (${availableCards.length} / ${availableAll.length}種類)</div>
+      <div class="deck-add-filter">
+        <input type="text" id="deck-filter-search" value="${escapeHtml(f.search)}"
+               placeholder="🔍 名前・スキル・効果で検索"
+               oninput="updateDeckAddFilter('search', this.value)">
+        <select id="deck-filter-work" onchange="updateDeckAddFilter('work', this.value)">
+          <option value="">すべての作品</option>
+          ${allWorks.map(w => `<option value="${escapeHtml(w)}" ${w===f.work?'selected':''}>${escapeHtml(w)}</option>`).join('')}
+        </select>
+        <select id="deck-filter-type" onchange="updateDeckAddFilter('type', this.value)">
+          <option value="">すべてのタイプ</option>
+          ${state.types.map(t => `<option value="${escapeHtml(t.name)}" ${t.name===f.type?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}
+        </select>
+        <button class="btn-small" onclick="resetDeckAddFilter()">クリア</button>
+      </div>
+      ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>条件に合うカードがありません</p></div>`
         : `<div class="add-card-list">${availableCards.map(c => {
             const entry = (deck.cards || []).find(x => x.cardId === c.id);
             const currentCount = entry ? entry.count : 0;
@@ -2246,11 +2696,30 @@ function renderDeckDetail() {
             <div class="add-card-row" onclick="addCardToDeck('${c.id}')">
               <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
               <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}</div>
-              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''} <span style="color: #c9a961;">[${limitText}]</span></div>
+              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}${c.work?' / '+escapeHtml(c.work):''} <span style="color: #c9a961;">[${limitText}]</span></div>
               <button class="add-card-btn btn-primary">+ 追加</button>
             </div>`;
           }).join('')}</div>`}
     </div>`;
+
+  // 検索入力のフォーカスを保持 (oninputでrenderDeckDetail()するためフォーカス復元が必要)
+  if (deckAddFilter._focused === 'search') {
+    const el = document.getElementById('deck-filter-search');
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }
+}
+
+function updateDeckAddFilter(key, value) {
+  deckAddFilter[key] = value;
+  if (key === 'search') deckAddFilter._focused = 'search';
+  else deckAddFilter._focused = null;
+  renderDeckDetail();
+  deckAddFilter._focused = null;
+}
+
+function resetDeckAddFilter() {
+  deckAddFilter = { search: '', work: '', type: '' };
+  renderDeckDetail();
 }
 
 // ============ STATS ============
@@ -2701,6 +3170,502 @@ function download(blob, filename) {
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============ PLAY (テストプレイ用プレイマット) ============
+const PLAY_INITIAL_HAND = 7;
+const PLAY_VICTORY_MANUSCRIPT = 10;
+let playInstanceCounter = 1;
+function pInst() { return 'pi' + (playInstanceCounter++); }
+
+// 1サイドの初期state
+function makePlaySide(deckId, name) {
+  return {
+    name: name || '',
+    deckId: deckId,
+    manuscript: 0,
+    ip: 0,
+    hand: [],     // [{instanceId, cardId, hp?}]
+    deck: [],     // 山札 (上から取る)
+    field: [],    // 場 (キャラ・継続効果)
+    discard: []   // 没案ゾーン
+  };
+}
+
+// デッキIDからインスタンス配列を構築
+function buildDeckInstances(deckId) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck) return [];
+  const instances = [];
+  (deck.cards || []).forEach(entry => {
+    for (let i = 0; i < entry.count; i++) {
+      const card = state.cards.find(c => c.id === entry.cardId);
+      const inst = { instanceId: pInst(), cardId: entry.cardId };
+      // キャラの初期HPを格納
+      if (card && card.hp) inst.hp = parseInt(card.hp) || 0;
+      instances.push(inst);
+    }
+  });
+  return instances;
+}
+
+// Fisher-Yates シャッフル
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// プレイ開始
+function startPlaySession() {
+  const deckIdA = document.getElementById('play-deckA').value;
+  const deckIdB = document.getElementById('play-deckB').value;
+  const nameA = document.getElementById('play-nameA').value.trim() || 'プレイヤーA';
+  const nameB = document.getElementById('play-nameB').value.trim() || 'プレイヤーB';
+  if (!deckIdA || !deckIdB) { toast('両方のデッキを選んでください'); return; }
+
+  const sideA = makePlaySide(deckIdA, nameA);
+  const sideB = makePlaySide(deckIdB, nameB);
+  sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
+  sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
+  // 初手ドロー
+  for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
+    if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
+    if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
+  }
+
+  state.playSession = {
+    active: true,
+    turn: 1,
+    activeSide: 'A',
+    phase: 'メイン',
+    sides: { A: sideA, B: sideB },
+    log: []
+  };
+  playLog(null, `ゲーム開始 (${nameA} vs ${nameB})`);
+  playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
+  playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
+  saveData();
+  renderPlay();
+}
+
+function endPlaySession() {
+  showModal('プレイ終了', '現在のセッションを終了します。記録は失われます。', () => {
+    state.playSession = null;
+    saveData();
+    renderPlay();
+    toast('プレイセッションを終了');
+  });
+}
+
+function restartPlaySession() {
+  if (!state.playSession) return;
+  showModal('リスタート', '現在のセッションをリセットして、同じデッキで再開します。', () => {
+    const ps = state.playSession;
+    const nameA = ps.sides.A.name, nameB = ps.sides.B.name;
+    const deckIdA = ps.sides.A.deckId, deckIdB = ps.sides.B.deckId;
+    const sideA = makePlaySide(deckIdA, nameA);
+    const sideB = makePlaySide(deckIdB, nameB);
+    sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
+    sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
+    for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
+      if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
+      if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
+    }
+    state.playSession = {
+      active: true, turn: 1, activeSide: 'A', phase: 'メイン',
+      sides: { A: sideA, B: sideB }, log: []
+    };
+    playLog(null, 'リスタート');
+    saveData(); renderPlay();
+  });
+}
+
+// ============ ログ ============
+function playLog(side, text) {
+  if (!state.playSession) return;
+  state.playSession.log.unshift({
+    turn: state.playSession.turn,
+    side: side,
+    text: text,
+    ts: Date.now()
+  });
+  if (state.playSession.log.length > 200) state.playSession.log.length = 200;
+}
+
+function togglePlayLog() {
+  document.getElementById('playLogPanel').classList.toggle('show');
+}
+
+// ============ ターン進行 ============
+function endTurn() {
+  if (!state.playSession) return;
+  const ps = state.playSession;
+  const oldSide = ps.activeSide;
+  ps.activeSide = ps.activeSide === 'A' ? 'B' : 'A';
+  if (ps.activeSide === 'A') ps.turn++; // BからAに戻ったらターン++
+  playLog(oldSide, `ターン終了 → ${ps.activeSide}のターン (${ps.turn})`);
+  saveData(); renderPlay();
+}
+
+function changePhase(phase) {
+  if (!state.playSession) return;
+  state.playSession.phase = phase;
+  saveData(); renderPlay();
+}
+
+// ============ カウンタ ============
+function adjustCounter(side, key, delta) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  if (!s) return;
+  const oldVal = s[key];
+  s[key] = Math.max(0, (s[key] || 0) + delta);
+  if (s[key] !== oldVal) {
+    const labels = { manuscript: '原稿', ip: 'IP' };
+    playLog(side, `${labels[key]} ${oldVal} → ${s[key]}`);
+    if (key === 'manuscript' && s[key] >= PLAY_VICTORY_MANUSCRIPT && oldVal < PLAY_VICTORY_MANUSCRIPT) {
+      toast(`🏆 ${s.name} の作品が完成しました! (原稿${PLAY_VICTORY_MANUSCRIPT}枚)`);
+      playLog(side, `🏆 勝利条件達成 (原稿${PLAY_VICTORY_MANUSCRIPT}枚)`);
+    }
+  }
+  saveData(); renderPlay();
+}
+
+function adjustFieldHP(side, instanceId, delta) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  const inst = s.field.find(x => x.instanceId === instanceId);
+  if (!inst) return;
+  const oldHp = inst.hp || 0;
+  inst.hp = Math.max(0, oldHp + delta);
+  const card = state.cards.find(c => c.id === inst.cardId);
+  playLog(side, `${card?.name || '?'} HP ${oldHp} → ${inst.hp}`);
+  saveData(); renderPlay();
+  // ポップオーバーが開いていれば最新のHP値で再描画
+  if (document.getElementById('playPopoverBg').classList.contains('show')) {
+    openPlayPopover(side, instanceId, 'field');
+  }
+}
+
+// ============ ゾーン移動 ============
+function moveInstance(side, instanceId, fromZone, toZone, toTop) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  const fromArr = s[fromZone];
+  if (!fromArr) return;
+  const idx = fromArr.findIndex(x => x.instanceId === instanceId);
+  if (idx < 0) return;
+  const [inst] = fromArr.splice(idx, 1);
+
+  // 場に出すときはHPをリセット
+  if (toZone === 'field') {
+    const card = state.cards.find(c => c.id === inst.cardId);
+    if (card && card.hp && (inst.hp === undefined || inst.hp === 0)) {
+      inst.hp = parseInt(card.hp) || 0;
+    }
+  }
+
+  const toArr = s[toZone];
+  if (!toArr) return;
+  if (toZone === 'deck' && !toTop) toArr.push(inst); // 山の底
+  else if (toZone === 'deck' && toTop) toArr.unshift(inst); // 山の上
+  else toArr.push(inst);
+
+  const card = state.cards.find(c => c.id === inst.cardId);
+  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山' };
+  const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
+  playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
+  saveData(); renderPlay();
+  closePlayPopover();
+}
+
+function drawCard(side, n) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  n = n || 1;
+  let drew = 0;
+  for (let i = 0; i < n; i++) {
+    if (s.deck.length === 0) break;
+    s.hand.push(s.deck.shift());
+    drew++;
+  }
+  if (drew > 0) playLog(side, `${drew}枚ドロー (山残${s.deck.length})`);
+  else playLog(side, '山が空でドローできません');
+  saveData(); renderPlay();
+}
+
+function shuffleDeck(side) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  shuffleArray(s.deck);
+  playLog(side, `山をシャッフル (${s.deck.length}枚)`);
+  saveData(); renderPlay();
+}
+
+// ============ ポップオーバー (カードクリック時) ============
+function openPlayPopover(side, instanceId, fromZone) {
+  const s = state.playSession?.sides[side];
+  if (!s) return;
+  const inst = s[fromZone].find(x => x.instanceId === instanceId);
+  if (!inst) return;
+  const card = state.cards.find(c => c.id === inst.cardId);
+  const cardName = card?.name || '(削除されたカード)';
+
+  const actions = [];
+  // 拡大表示
+  actions.push({ label: `🔍 拡大表示`, fn: `openCardZoomById('${inst.cardId}')` });
+
+  // ゾーン移動候補
+  if (fromZone === 'hand') {
+    actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
+    actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','hand','discard')` });
+    actions.push({ label: '➡ 山の上へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',true)` });
+    actions.push({ label: '➡ 山の底へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',false)` });
+  } else if (fromZone === 'field') {
+    if (inst.hp !== undefined) {
+      actions.push({ label: `❤ HP −1 (現${inst.hp})`, fn: `adjustFieldHP('${side}','${instanceId}',-1)`, keep: true });
+      actions.push({ label: '❤ HP +1', fn: `adjustFieldHP('${side}','${instanceId}',1)`, keep: true });
+      actions.push({ label: '❤ HP −10', fn: `adjustFieldHP('${side}','${instanceId}',-10)`, keep: true });
+      actions.push({ label: '❤ HP +10', fn: `adjustFieldHP('${side}','${instanceId}',10)`, keep: true });
+    }
+    actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','field','discard')` });
+    actions.push({ label: '➡ 手札に戻す', fn: `moveInstance('${side}','${instanceId}','field','hand')` });
+  } else if (fromZone === 'discard') {
+    actions.push({ label: '➡ 手札に戻す', fn: `moveInstance('${side}','${instanceId}','discard','hand')` });
+    actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','discard','field')` });
+    actions.push({ label: '➡ 山の上へ', fn: `moveInstance('${side}','${instanceId}','discard','deck',true)` });
+    actions.push({ label: '➡ 山の底へ', fn: `moveInstance('${side}','${instanceId}','discard','deck',false)` });
+  } else if (fromZone === 'deck') {
+    // 山のカードはドロー操作で対応するため、ここは「上を見る」だけ
+    actions.push({ label: '➡ 手札に加える', fn: `moveInstance('${side}','${instanceId}','deck','hand')` });
+    actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','deck','discard')` });
+  }
+
+  const html = `
+    <div class="play-popover-title">${escapeHtml(cardName)}${inst.hp !== undefined ? ` (HP ${inst.hp})` : ''}</div>
+    <div class="play-popover-actions">
+      ${actions.map(a => `<button onclick="${a.fn}; ${a.keep ? '' : 'closePlayPopover();'}">${a.label}</button>`).join('')}
+      <button onclick="closePlayPopover()" style="margin-top: 8px;">キャンセル</button>
+    </div>`;
+  document.getElementById('playPopover').innerHTML = html;
+  document.getElementById('playPopoverBg').classList.add('show');
+}
+
+function closePlayPopover() {
+  document.getElementById('playPopoverBg').classList.remove('show');
+}
+
+// ホバーで原寸プレビュー表示 (テキストが小さくて読めないチップを補完)
+function showPlayHoverPreview(cardId) {
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) return;
+  const idx = state.cards.indexOf(card);
+  const el = document.getElementById('playHoverPreview');
+  el.innerHTML = buildCardHTML(card, idx, {showIndex: false, attrs: ''});
+  el.classList.add('show');
+}
+function hidePlayHoverPreview() {
+  document.getElementById('playHoverPreview').classList.remove('show');
+}
+
+function openCardZoomById(cardId) {
+  const idx = state.cards.findIndex(c => c.id === cardId);
+  if (idx >= 0) openCardZoom(idx);
+  closePlayPopover();
+}
+
+// ============ カードチップ描画 ============
+function buildCardChip(inst, side, fromZone, faceDown) {
+  const card = state.cards.find(c => c.id === inst.cardId);
+  if (!card) {
+    return `<div class="card-chip" title="(削除されたカード)" style="opacity:0.4;">
+      <div class="card-chip-name">削除済</div></div>`;
+  }
+  const lvNum = parseInt(card.level) || 0;
+  const classes = ['card-chip'];
+  if (lvNum === 2) classes.push('lv2');
+  if (lvNum === 3) classes.push('lv3');
+  if (faceDown) classes.push('face-down');
+
+  if (faceDown) {
+    return `<div class="${classes.join(' ')}" title="伏せられたカード"></div>`;
+  }
+
+  const color = getTypeColor(card.type);
+  const icon = getDisplayIcon(card);
+  const lvBadge = card.level ? `<span class="card-chip-badge" style="background:${color}">${escapeHtml(card.level)}</span>` : '';
+  const hpBadge = (inst.hp !== undefined && inst.hp !== null && inst.hp > 0)
+    ? `<div class="card-chip-hp" title="現HP">${inst.hp}</div>` : '';
+  const ipMark = card.ip ? `<span title="IP ${escapeHtml(card.ip)}">💎${escapeHtml(card.ip)}</span>` : '';
+  const costMark = card.cost ? `<span title="コスト ${escapeHtml(card.cost)}">⚡${escapeHtml(card.cost)}</span>` : '';
+
+  return `<div class="${classes.join(' ')}"
+    onclick="openPlayPopover('${side}','${inst.instanceId}','${fromZone}')"
+    onmouseenter="showPlayHoverPreview('${card.id}')"
+    onmouseleave="hidePlayHoverPreview()"
+    title="${escapeHtml(card.name || '')}">
+    <div class="card-chip-head">
+      ${lvBadge}
+      <div class="card-chip-name">${escapeHtml(card.name || '無名')}</div>
+    </div>
+    <div class="card-chip-icon">${escapeHtml(icon)}</div>
+    <div class="card-chip-foot">${ipMark}${costMark}</div>
+    ${hpBadge}
+  </div>`;
+}
+
+// ============ プレイ画面描画 ============
+function renderPlay() {
+  const root = document.getElementById('playRoot');
+  if (!state.playSession || !state.playSession.active) {
+    // セットアップ画面
+    const deckOptions = state.decks.map(d =>
+      `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)} (${getDeckTotalCount(d)}枚)</option>`
+    ).join('');
+    if (state.decks.length === 0) {
+      root.innerHTML = `<div class="empty-state"><h3>NO DECKS</h3>
+        <p>プレイにはデッキが必要です。「🃏 DECKS」タブで作成してください。</p></div>`;
+      return;
+    }
+    root.innerHTML = `
+      <div class="play-setup">
+        <h2>テストプレイ — セットアップ</h2>
+        <p>2つのデッキを選んで、初手7枚ドローでスタートします。両陣営を自分で操作するソロモードです。</p>
+        <div class="play-setup-row">
+          <div class="field">
+            <label>プレイヤー A</label>
+            <input type="text" id="play-nameA" placeholder="プレイヤーA" value="プレイヤーA">
+          </div>
+          <div class="field">
+            <label>プレイヤー B</label>
+            <input type="text" id="play-nameB" placeholder="プレイヤーB" value="プレイヤーB">
+          </div>
+        </div>
+        <div class="play-setup-row">
+          <div class="field">
+            <label>A のデッキ</label>
+            <select id="play-deckA"><option value="">選択してください</option>${deckOptions}</select>
+          </div>
+          <div class="field">
+            <label>B のデッキ</label>
+            <select id="play-deckB"><option value="">選択してください</option>${deckOptions}</select>
+          </div>
+        </div>
+        <div class="play-setup-actions">
+          <button class="btn-primary" onclick="startPlaySession()">▶ プレイ開始</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const ps = state.playSession;
+  root.innerHTML = `
+    <div class="play-board">
+      ${renderPlaySide('B')}
+      ${renderTurnBar()}
+      ${renderPlaySide('A')}
+    </div>`;
+  // ログパネルの中身も毎回更新
+  renderPlayLogList();
+}
+
+function renderPlayLogList() {
+  const list = document.getElementById('playLogList');
+  if (!list) return;
+  const ps = state.playSession;
+  if (!ps) { list.innerHTML = ''; return; }
+  list.innerHTML = ps.log.map(e => `
+    <div class="play-log-entry side-${e.side || 'sys'}">
+      <span class="play-log-entry-meta">T${e.turn}${e.side ? ' '+e.side : ''}</span>
+      ${escapeHtml(e.text)}
+    </div>`).join('') ||
+    '<div class="play-zone-empty">まだログはありません</div>';
+}
+
+function renderPlaySide(sideKey) {
+  const ps = state.playSession;
+  const s = ps.sides[sideKey];
+  const isActive = ps.activeSide === sideKey;
+
+  const handHtml = s.hand.length === 0
+    ? '<div class="play-zone-empty">手札なし</div>'
+    : s.hand.map(inst => buildCardChip(inst, sideKey, 'hand', false)).join('');
+  const fieldHtml = s.field.length === 0
+    ? '<div class="play-zone-empty">場にカードなし</div>'
+    : s.field.map(inst => buildCardChip(inst, sideKey, 'field', false)).join('');
+  const discardHtml = s.discard.length === 0
+    ? '<div class="play-zone-empty">没案なし</div>'
+    : s.discard.slice().reverse().map(inst => buildCardChip(inst, sideKey, 'discard', false)).join('');
+  // 山は伏せ表示 (上3枚だけチップ、それ以下は枚数のみ)
+  const deckPreview = s.deck.slice(0, 3).map(inst => buildCardChip(inst, sideKey, 'deck', true)).join('');
+
+  return `
+    <div class="play-side ${isActive ? 'active' : ''}">
+      <div class="play-side-header">
+        <div class="play-side-name">${escapeHtml(s.name)}${isActive ? ' ◆' : ''}</div>
+        <div class="play-counter">
+          <span class="play-counter-label">原稿</span>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',-1)">−</button>
+          <span class="play-counter-value">${s.manuscript}</span>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','manuscript',1)">＋</button>
+          <span class="play-counter-label">/ ${PLAY_VICTORY_MANUSCRIPT}</span>
+        </div>
+        <div class="play-counter">
+          <span class="play-counter-label">IP</span>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',-1)">−</button>
+          <span class="play-counter-value">${s.ip}</span>
+          <button class="play-counter-btn" onclick="adjustCounter('${sideKey}','ip',1)">＋</button>
+        </div>
+        <button class="btn-small" onclick="drawCard('${sideKey}',1)">山からドロー</button>
+        <button class="btn-small" onclick="shuffleDeck('${sideKey}')">山シャッフル</button>
+      </div>
+
+      <div class="play-zones">
+        <div class="play-zone">
+          <div class="play-zone-title"><span>手札</span><span class="play-zone-count">${s.hand.length}</span></div>
+          <div class="play-zone-cards">${handHtml}</div>
+        </div>
+        <div class="play-zone">
+          <div class="play-zone-title"><span>場</span><span class="play-zone-count">${s.field.length}</span></div>
+          <div class="play-zone-cards">${fieldHtml}</div>
+        </div>
+        <div class="play-zone">
+          <div class="play-zone-title"><span>没案ゾーン</span><span class="play-zone-count">${s.discard.length}</span></div>
+          <div class="play-zone-cards">${discardHtml}</div>
+        </div>
+        <div class="play-zone">
+          <div class="play-zone-title"><span>山 (デッキ)</span><span class="play-zone-count">${s.deck.length}</span></div>
+          <div class="play-zone-cards">${deckPreview}${s.deck.length > 3 ? `<div style="align-self:center; color:var(--parchment-dim); font-size:0.8rem; padding:0 6px;">他${s.deck.length - 3}枚</div>` : ''}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderTurnBar() {
+  const ps = state.playSession;
+  const activeName = ps.sides[ps.activeSide].name;
+  return `
+    <div class="play-turnbar">
+      <div class="play-turn-info">
+        <div class="play-turn-num">ターン ${ps.turn}</div>
+        <div class="play-active-side">アクティブ: <strong>${escapeHtml(activeName)}</strong></div>
+        <div>フェーズ:
+          <select onchange="changePhase(this.value)">
+            ${['ドロー','メイン','バトル','エンド','相手ターン'].map(p =>
+              `<option value="${p}" ${ps.phase===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="play-turnbar-actions">
+        <button class="btn-primary" onclick="endTurn()">ターン終了</button>
+        <button class="btn-small" onclick="togglePlayLog()">📜 ログ (${ps.log.length})</button>
+        <button class="btn-small" onclick="restartPlaySession()">↺ リスタート</button>
+        <button class="btn-small btn-danger" onclick="endPlaySession()">✕ 終了</button>
+      </div>
+    </div>`;
 }
 
 // ============ PDF (画像方式) ============

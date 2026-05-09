@@ -20,9 +20,16 @@
 4. **レベル別装飾**: Lv2は薄金背景、Lv3は金枠+発光
 5. **自信作バッジ**: HP高いがリスクありのキャラ
 6. **絵文字アイコン**: 自動推測+手動指定、被り解消で連番(①②③)
-7. **デッキ構築**: 同IDは最大4枚、無制限フラグあり
+7. **デッキ構築**: 同IDは最大4枚、無制限フラグあり、追加カードリストは作品名/タイプ/全文検索でフィルタ可
 8. **PDF印刷**: A4に9枚配置、トンボ付き
 9. **ローカル保存**: localStorage(`card_forge_data_v4_tezuka`)
+10. **テストプレイ(PLAYタブ)**: ソロ用プレイマット
+    - 2デッキ選択→自動シャッフル→初手7枚ドロー
+    - 4ゾーン×2サイド: 手札・場・没案・山(山top3は伏せプレビュー)
+    - カードクリック→ポップオーバーでゾーン間移動・HP±・没にする
+    - ホバーで原寸プレビュー(スキル/効果文を読める)
+    - ターン進行(交代/フェーズ)、IP・原稿カウンタ(勝利10達成でトースト)
+    - ターンログ(最大200件、A/B色分け)、リスタート、途中保存
 
 ## ゲームルール仕様(初稿)
 
@@ -70,22 +77,29 @@
 - ハードリロード: `Ctrl+Shift+R`
 
 ### コード構造(index.html単一ファイル内)
-- CSS: `<style>` タグ内 (約700行)
-- JavaScript: `<script>` タグ内 (約1500行)
+- CSS: `<style>` タグ内 (約1000行)
+- JavaScript: `<script>` タグ内 (約2300行)
+- 全体: 約3800行
 - 主要関数:
   - `buildCardHTML(c, idx, opts)` - カード描画(kind別に3レイアウト分岐)
+  - `buildCardChip(inst, side, fromZone, faceDown)` - プレイマット用63×88pxチップ
   - `renderSkill(text, label)` - 技を「技名/コスト/効果」に分解表示
   - `importXLSX(ev)` - Excel読み込み(新旧両形式対応)
   - `generatePDF(mode)` - PDF生成(html2canvas経由で日本語対応)
-  - `rebuildIconCache()` - 絵文字の被り解消(同名は同絵文字+連番)
+  - `rebuildIconCache()` - 絵文字の被り解消(ベース絵文字単位で個別連番)
   - `migrateDecks()` - デッキ形式の自動移行(cardIds → cards[{cardId,count}])
+  - `renderPlay()` / `renderPlaySide()` / `renderTurnBar()` - PLAYタブ描画
+  - `startPlaySession()` / `endTurn()` / `moveInstance()` - プレイ進行
+  - `showPlayHoverPreview()` - チップホバー時の原寸プレビュー
 
 ### 注意事項
 - 日本語フォント問題はhtml2canvas経由で解決済み(jsPDFのテキスト埋込は不使用)
-- localStorageのキー: `card_forge_data_v4_tezuka`
+- localStorageのキー: `card_forge_data_v4_tezuka`(`state.playSession` も同キーに格納)
 - 絵文字キャッシュ: ベース絵文字単位でグループ化、複数枚あれば1枚ごとに①②③連番(同名・別名問わず個別)
 - BUILTIN_TYPES = [主人公(leveled), キャラクター(character), 展開アイディア(effect), テコ入れ(effect), どんでん返し(effect)]
 - 並び替え時(ドラッグ・▲▼)は編集中カードのidを保持して新indexを再計算 — `state.cards[editingIdx]` のズレ防止
+- PLAYのカードは `instanceId` で個別管理(同じcardIdの複数枚を区別)。場のキャラの現HPは `inst.hp` に保持
+- PLAYのポップオーバー・ホバープレビューは `<body>` 直下に配置(renderPlay再描画で消えないように)
 
 ### カラーパレット
 - 主人公: `#8b2c1f` (深紅)
@@ -98,7 +112,9 @@
 ## 今後の予定
 
 ### 短期
+- ✅ サイト上でのテストプレイ機能(PLAYタブ)実装済
 - テストプレイで設計図レイアウトを実際に印刷して試す
+- PLAYタブで実際に1ゲーム回してルール検証
 - カードバランス調整(HP・コスト・ダメージの比率)
 - 「かばう」「自信作」「テコ入れ」を段階的に有効化
 
