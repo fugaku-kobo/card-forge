@@ -1134,10 +1134,10 @@ main {
   border-radius: 6px;
 }
 
-/* ホバープレビュー (カードチップにマウスを置くと右上に原寸表示) */
+/* ホバープレビュー (カードチップにマウスを置くと近接位置に原寸表示) */
 .play-hover-preview {
   position: fixed;
-  top: 86px; right: 18px;
+  top: 86px; left: auto;
   width: 240px;
   z-index: 240;
   pointer-events: none;
@@ -3646,13 +3646,35 @@ function closePlayPopover() {
 }
 
 // ホバーで原寸プレビュー表示 (テキストが小さくて読めないチップを補完)
-function showPlayHoverPreview(cardId) {
+function showPlayHoverPreview(cardId, event) {
   const card = findPlayCard(cardId);
   if (!card) return;
   const idx = state.cards.indexOf(card); // poolのカードは -1 になる(問題なし)
   const el = document.getElementById('playHoverPreview');
   el.innerHTML = buildCardHTML(card, Math.max(0, idx), {showIndex: false, attrs: ''});
   el.classList.add('show');
+
+  // ホバーされたチップの近くに位置調整
+  const chip = event?.currentTarget;
+  if (chip) {
+    const rect = chip.getBoundingClientRect();
+    const previewW = 240;
+    const previewH = Math.round(previewW * 88 / 63); // ≈ 336
+    const margin = 10;
+    // 横: チップの右に表示、画面外なら左、それでも入らなければ右端に貼り付け
+    let left = rect.right + margin;
+    if (left + previewW > window.innerWidth - margin) {
+      left = rect.left - previewW - margin;
+    }
+    if (left < margin) left = window.innerWidth - previewW - margin;
+    // 縦: チップ中央に合わせるが、画面の上下端を超えないようクランプ
+    let top = rect.top + rect.height / 2 - previewH / 2;
+    if (top < margin) top = margin;
+    if (top + previewH > window.innerHeight - margin) top = window.innerHeight - previewH - margin;
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.right = 'auto';
+  }
 }
 function hidePlayHoverPreview() {
   document.getElementById('playHoverPreview').classList.remove('show');
@@ -3702,7 +3724,7 @@ function buildCardChip(inst, side, fromZone, faceDown) {
 
   return `<div class="${classes.join(' ')}"
     onclick="openPlayPopover('${side}','${inst.instanceId}','${fromZone}')"
-    onmouseenter="showPlayHoverPreview('${card.id}')"
+    onmouseenter="showPlayHoverPreview('${card.id}', event)"
     onmouseleave="hidePlayHoverPreview()"
     title="${escapeHtml(card.name || '')}">
     <div class="card-chip-head">
