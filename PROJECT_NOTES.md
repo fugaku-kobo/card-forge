@@ -20,7 +20,7 @@
 4. **レベル別装飾**: Lv2は薄金背景、Lv3は金枠+発光
 5. **自信作バッジ**: HP高いがリスクありのキャラ
 6. **絵文字アイコン**: 自動推測+手動指定、被り解消で連番(①②③)
-7. **デッキ構築**: 同IDは最大4枚、無制限フラグあり、追加カードリストは作品名/タイプ/全文検索でフィルタ可
+7. **デッキ構築**: 同IDは最大4枚、無制限フラグあり、追加カードリストは作品名/タイプ/全文検索でフィルタ可、共有コード(base64エンコード)で他人にデッキを送れる
 8. **PDF印刷**: A4に9枚配置、トンボ付き
 9. **ローカル保存**: localStorage(`card_forge_data_v4_tezuka`)
 10. **テストプレイ(PLAYタブ)**: プレイマット(3モード)
@@ -105,6 +105,9 @@
 - PLAY二台対戦: PeerJS公開ブローカ(`0.peerjs.com`)+ Google公開STUNを使用、TURNなし。NAT越え失敗時はFirebase移行検討
 - ネットワーク対戦中の操作はイベント送信(`netSendOp`)、受信側は `_isApplyingRemoteOp` フラグで再ブロードキャスト防止
 - ネットワークsessionはリロードで復元しない(`loadData`で `network.mode !== 'solo'` ならクリア)
+- ネット対戦時は `state.playSession.cardPool` に両者のカードを統合(相手のカードもここから検索)。`findPlayCard(cardId)` でプール優先、`state.cards` フォールバック
+- HELLOで guest が deck instances + cards を送る、ホストが INIT で完全 playSession + cardPool を返す
+- デッキ共有コード: `btoa(JSON({v:1, deck, cards}))`、取込時は cardId を全て新規発行して ID 衝突を回避
 
 ### カラーパレット
 - 主人公: `#8b2c1f` (深紅)

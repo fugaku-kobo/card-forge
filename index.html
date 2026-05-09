@@ -1689,7 +1689,8 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     <div class="deck-layout">
       <aside class="deck-list-side">
         <div class="panel-title">デッキ一覧</div>
-        <button class="btn-primary" style="width:100%; margin-bottom: 12px;" onclick="createDeck()">+ 新規デッキ</button>
+        <button class="btn-primary" style="width:100%; margin-bottom: 8px;" onclick="createDeck()">+ 新規デッキ</button>
+        <button class="btn-small" style="width:100%; margin-bottom: 12px;" onclick="openImportDeckCode()">📥 コードから取込</button>
         <div id="deckListItems"></div>
       </aside>
       <section class="deck-detail" id="deckDetail">
@@ -1758,6 +1759,14 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
       <button onclick="closePromptModal()">キャンセル</button>
       <button class="btn-primary" id="promptConfirm">OK</button>
     </div>
+  </div>
+</div>
+<div class="modal-bg" id="deckCodeModal">
+  <div class="modal" style="max-width: 600px;">
+    <h3 id="deckCodeTitle">デッキ共有コード</h3>
+    <p id="deckCodeDesc"></p>
+    <textarea id="deckCodeText" style="width:100%; height:160px; padding:10px; background:var(--bg-deep); border:1px solid rgba(201,169,97,0.3); color:var(--parchment); font-family:'Courier New',monospace; font-size:0.78rem; resize:vertical;"></textarea>
+    <div class="modal-actions" id="deckCodeActions"></div>
   </div>
 </div>
 <div class="card-zoom-bg" id="cardZoomBg" onclick="closeCardZoom(event)">
@@ -2050,7 +2059,13 @@ function rebuildIconCache() {
   // ベース絵文字単位でグループ化し、複数枚あれば1枚ごとに連番付与
   // 同名(レベル違い)・別名どちらも個別に①②③で区別する
   const byBase = new Map(); // base -> [cards]
-  state.cards.forEach(c => {
+  // ネット対戦中は相手のカードもプールから取り込んで連番対象にする
+  const allCards = state.cards.slice();
+  const pool = state.playSession?.cardPool || [];
+  pool.forEach(c => {
+    if (!allCards.find(x => x.id === c.id)) allCards.push(c);
+  });
+  allCards.forEach(c => {
     const base = getCardIcon(c);
     if (!byBase.has(base)) byBase.set(base, []);
     byBase.get(base).push(c);
@@ -2590,6 +2605,106 @@ function deleteDeck() {
     toast('デッキを削除');
   });
 }
+
+// ============ デッキ共有コード ============
+function utf8ToB64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+function exportDeckCode(deckId) {
+  const deck = state.decks.find(d => d.id === (deckId || state.currentDeckId));
+  if (!deck) return;
+  const cardIds = new Set((deck.cards || []).map(e => e.cardId));
+  const cards = state.cards.filter(c => cardIds.has(c.id));
+  const payload = {
+    v: 1,
+    deck: { name: deck.name, description: deck.description || '', cards: deck.cards || [] },
+    cards
+  };
+  const code = utf8ToB64(JSON.stringify(payload));
+  // モーダル表示
+  document.getElementById('deckCodeTitle').textContent = `📋 「${deck.name}」の共有コード`;
+  document.getElementById('deckCodeDesc').textContent = `このコードを相手に渡してください。相手は「📥 コードから取込」で読み込むとデッキとカードが追加されます。`;
+  const ta = document.getElementById('deckCodeText');
+  ta.value = code;
+  ta.readOnly = true;
+  document.getElementById('deckCodeActions').innerHTML = `
+    <button onclick="closeDeckCodeModal()">閉じる</button>
+    <button class="btn-primary" onclick="copyDeckCode()">📋 コピー</button>`;
+  document.getElementById('deckCodeModal').classList.add('show');
+  setTimeout(() => { ta.select(); }, 50);
+}
+
+function copyDeckCode() {
+  const ta = document.getElementById('deckCodeText');
+  ta.select();
+  navigator.clipboard?.writeText(ta.value).then(() => toast('コピーしました'))
+    .catch(() => { document.execCommand('copy'); toast('コピーしました'); });
+}
+
+function openImportDeckCode() {
+  document.getElementById('deckCodeTitle').textContent = '📥 デッキコードから取込';
+  document.getElementById('deckCodeDesc').textContent = '相手から受け取ったコードを貼り付けてください。デッキと使用カードが追加されます。';
+  const ta = document.getElementById('deckCodeText');
+  ta.value = '';
+  ta.readOnly = false;
+  document.getElementById('deckCodeActions').innerHTML = `
+    <button onclick="closeDeckCodeModal()">キャンセル</button>
+    <button class="btn-primary" onclick="importDeckCode()">読込</button>`;
+  document.getElementById('deckCodeModal').classList.add('show');
+  setTimeout(() => { ta.focus(); }, 50);
+}
+
+function closeDeckCodeModal() {
+  document.getElementById('deckCodeModal').classList.remove('show');
+}
+
+function importDeckCode() {
+  const code = document.getElementById('deckCodeText').value.trim();
+  if (!code) { toast('コードを貼り付けてください'); return; }
+  let payload;
+  try {
+    payload = JSON.parse(b64ToUtf8(code));
+  } catch (e) {
+    toast('コードが不正です');
+    console.error(e);
+    return;
+  }
+  if (!payload || payload.v !== 1 || !payload.deck || !Array.isArray(payload.cards)) {
+    toast('対応していない形式です');
+    return;
+  }
+  // 衝突を避けるため、取り込むカードには常に新IDを発行
+  // (同じID `c5` が両者で別カードを指す危険を回避)
+  const idMap = {};
+  let addedCards = 0;
+  payload.cards.forEach(c => {
+    if (!c.id) return;
+    const newId = cid();
+    idMap[c.id] = newId;
+    state.cards.push({...c, id: newId});
+    addedCards++;
+  });
+  // デッキの cardId 参照も新IDに置き換える
+  const newDeckCards = (payload.deck.cards || [])
+    .map(e => ({cardId: idMap[e.cardId], count: e.count}))
+    .filter(e => e.cardId);
+  const newDeck = {
+    id: 'd' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    name: payload.deck.name + ' (取込)',
+    description: payload.deck.description || '',
+    cards: newDeckCards
+  };
+  state.decks.push(newDeck);
+  state.currentDeckId = newDeck.id;
+  saveData();
+  refreshTypeSelects(); render(); renderDeckList();
+  closeDeckCodeModal();
+  toast(`「${newDeck.name}」を取込(カード${addedCards}枚追加)`);
+}
 function addCardToDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
@@ -2689,6 +2804,7 @@ function renderDeckDetail() {
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn-small" onclick="renameDeck()">名前変更</button>
         <button class="btn-small" onclick="editDeckDescription()">説明編集</button>
+        <button class="btn-small" onclick="exportDeckCode()">📋 共有コード</button>
         <button class="btn-small btn-primary" onclick="generatePDF('deck')">⚔ デッキPDF</button>
         <button class="btn-small btn-danger" onclick="deleteDeck()">削除</button>
       </div>
@@ -3393,7 +3509,7 @@ function adjustFieldHP(side, instanceId, delta) {
   if (!inst) return;
   const oldHp = inst.hp || 0;
   inst.hp = Math.max(0, oldHp + delta);
-  const card = state.cards.find(c => c.id === inst.cardId);
+  const card = findPlayCard(inst.cardId);
   playLog(side, `${card?.name || '?'} HP ${oldHp} → ${inst.hp}`);
   saveData(); renderPlay();
   netSendOp({ type: 'hp', side, instanceId, delta });
@@ -3415,7 +3531,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
 
   // 場に出すときはHPをリセット
   if (toZone === 'field') {
-    const card = state.cards.find(c => c.id === inst.cardId);
+    const card = findPlayCard(inst.cardId);
     if (card && card.hp && (inst.hp === undefined || inst.hp === 0)) {
       inst.hp = parseInt(card.hp) || 0;
     }
@@ -3427,7 +3543,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   else if (toZone === 'deck' && toTop) toArr.unshift(inst); // 山の上
   else toArr.push(inst);
 
-  const card = state.cards.find(c => c.id === inst.cardId);
+  const card = findPlayCard(inst.cardId);
   const labels = { hand: '手札', field: '場', discard: '没案', deck: '山' };
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
   playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
@@ -3468,7 +3584,7 @@ function openPlayPopover(side, instanceId, fromZone) {
   if (!s) return;
   const inst = s[fromZone].find(x => x.instanceId === instanceId);
   if (!inst) return;
-  const card = state.cards.find(c => c.id === inst.cardId);
+  const card = findPlayCard(inst.cardId);
   const cardName = card?.name || '(削除されたカード)';
 
   const actions = [];
@@ -3531,11 +3647,11 @@ function closePlayPopover() {
 
 // ホバーで原寸プレビュー表示 (テキストが小さくて読めないチップを補完)
 function showPlayHoverPreview(cardId) {
-  const card = state.cards.find(c => c.id === cardId);
+  const card = findPlayCard(cardId);
   if (!card) return;
-  const idx = state.cards.indexOf(card);
+  const idx = state.cards.indexOf(card); // poolのカードは -1 になる(問題なし)
   const el = document.getElementById('playHoverPreview');
-  el.innerHTML = buildCardHTML(card, idx, {showIndex: false, attrs: ''});
+  el.innerHTML = buildCardHTML(card, Math.max(0, idx), {showIndex: false, attrs: ''});
   el.classList.add('show');
 }
 function hidePlayHoverPreview() {
@@ -3543,14 +3659,25 @@ function hidePlayHoverPreview() {
 }
 
 function openCardZoomById(cardId) {
+  // 自カードならstate.cards、相手カードはplaySession.cardPool から拾う
   const idx = state.cards.findIndex(c => c.id === cardId);
-  if (idx >= 0) openCardZoom(idx);
+  if (idx >= 0) {
+    openCardZoom(idx);
+  } else {
+    const card = findPlayCard(cardId);
+    if (card) {
+      // pool専用の表示(state.cardsのindexがないのでメタは「相手のカード」表記)
+      document.getElementById('cardZoomCard').innerHTML = buildCardHTML(card, 0, {showIndex: false, attrs: ''});
+      document.getElementById('cardZoomMeta').textContent = '相手のカード';
+      document.getElementById('cardZoomBg').classList.add('show');
+    }
+  }
   closePlayPopover();
 }
 
 // ============ カードチップ描画 ============
 function buildCardChip(inst, side, fromZone, faceDown) {
-  const card = state.cards.find(c => c.id === inst.cardId);
+  const card = findPlayCard(inst.cardId);
   if (!card) {
     return `<div class="card-chip" title="(削除されたカード)" style="opacity:0.4;">
       <div class="card-chip-name">削除済</div></div>`;
@@ -3897,8 +4024,17 @@ function netJoinRoom() {
     document.getElementById('netStatus').textContent = 'ホストに接続中...';
     netConn = netPeer.connect(roomId, { reliable: true });
     netConn.on('open', () => {
-      document.getElementById('netStatus').textContent = '接続成立。挨拶を送信...';
-      netConn.send({ type: 'HELLO', deckIdGuest, nameGuest });
+      document.getElementById('netStatus').textContent = '接続成立。デッキ情報を送信...';
+      // ゲスト側のデッキ instances を構築 (シャッフル済) し、参照される全カードと一緒に送る
+      const guestDeckInstances = shuffleArray(buildDeckInstances(deckIdGuest));
+      const guestCardPool = collectCardsForInstances(guestDeckInstances);
+      netConn.send({
+        type: 'HELLO',
+        deckIdGuest,
+        nameGuest,
+        deckInstances: guestDeckInstances,
+        cardPool: guestCardPool
+      });
     });
     netConn.on('data', (msg) => netHandleMessage(msg, 'guest', { deckIdGuest, nameGuest }));
     netConn.on('close', () => netOnDisconnect());
@@ -3927,20 +4063,32 @@ function netHandleMessage(msg, role, ctx) {
   if (msg.type === 'HELLO' && role === 'host') {
     // ホスト: ゲストから情報を受け取った → INIT送信
     const deckIdHost = ctx.deckIdHost, nameHost = ctx.nameHost;
-    const deckIdGuest = msg.deckIdGuest, nameGuest = msg.nameGuest;
+    const nameGuest = msg.nameGuest;
     // ホスト=A, ゲスト=B として開始
     const sideA = makePlaySide(deckIdHost, nameHost);
-    const sideB = makePlaySide(deckIdGuest, nameGuest);
+    const sideB = makePlaySide(msg.deckIdGuest, nameGuest);
+    // ホスト側: 自分のデッキを構築
     sideA.deck = shuffleArray(buildDeckInstances(deckIdHost));
-    sideB.deck = shuffleArray(buildDeckInstances(deckIdGuest));
+    // ゲスト側: HELLOで受け取った既にシャッフル済のinstancesをそのまま使う
+    sideB.deck = (msg.deckInstances || []).slice();
+    if (sideB.deck.length === 0) {
+      toast('ゲストのデッキが空です(エラー)');
+      return;
+    }
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
       if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
     }
+    // 両者のカードを統合したプールを作る
+    const cardPool = mergeCardPools(
+      collectCardsForInstances([...sideA.deck, ...sideA.hand]),
+      msg.cardPool || []
+    );
     state.playSession = {
       active: true, turn: 1, activeSide: 'A', phase: 'メイン',
       sides: { A: sideA, B: sideB }, log: [],
-      network: { mode: 'host', mySide: 'A', roomId: netPeer.id }
+      network: { mode: 'host', mySide: 'A', roomId: netPeer.id },
+      cardPool: cardPool
     };
     playLog(null, `ゲーム開始 (${nameHost} vs ${nameGuest})`);
     playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
@@ -3954,6 +4102,7 @@ function netHandleMessage(msg, role, ctx) {
     state.playSession = msg.playSession;
     state.playSession.network = { mode: 'guest', mySide: msg.guestSide, roomId: '' };
     saveData();
+    invalidateIconCache();
     renderPlay();
     toast('対戦が開始しました');
   } else if (msg.type === 'OP') {
@@ -3962,6 +4111,45 @@ function netHandleMessage(msg, role, ctx) {
     toast('相手がプレイを終了しました');
     netOnDisconnect();
   }
+}
+
+// インスタンス配列に含まれる cardId のカードを state.cards から拾う
+function collectCardsForInstances(instances) {
+  const seen = new Set();
+  const result = [];
+  instances.forEach(inst => {
+    if (seen.has(inst.cardId)) return;
+    const card = state.cards.find(c => c.id === inst.cardId);
+    if (card) {
+      result.push(card);
+      seen.add(inst.cardId);
+    }
+  });
+  return result;
+}
+
+// カードプールを結合(IDで重複排除)
+function mergeCardPools(...pools) {
+  const seen = new Set();
+  const result = [];
+  pools.forEach(pool => {
+    pool.forEach(c => {
+      if (!seen.has(c.id)) {
+        result.push(c);
+        seen.add(c.id);
+      }
+    });
+  });
+  return result;
+}
+
+// プレイ中はカードプール優先で検索(相手のカードもここに含まれる)
+function findPlayCard(cardId) {
+  if (state.playSession?.cardPool) {
+    const fromPool = state.playSession.cardPool.find(c => c.id === cardId);
+    if (fromPool) return fromPool;
+  }
+  return state.cards.find(c => c.id === cardId);
 }
 
 // シリアライズ用に network/conn を除外したコピーを作る
