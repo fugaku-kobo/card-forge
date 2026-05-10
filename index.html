@@ -3500,6 +3500,27 @@ function shuffleArray(arr) {
   return arr;
 }
 
+// 主人公(リーダー)カードを山札から抜いて場へ移動 (ゲーム開始時に呼ぶ)
+// cardPool: カード参照を解決するためのプール(state.cards + 必要なら相手のカード)
+function extractLeadersToField(side, cardPool) {
+  const heroInstIds = new Set();
+  side.deck.forEach(inst => {
+    const card = (cardPool || state.cards).find(c => c.id === inst.cardId);
+    if (card && isLeaderCard(card)) heroInstIds.add(inst.instanceId);
+  });
+  const heroes = side.deck.filter(inst => heroInstIds.has(inst.instanceId));
+  side.deck = side.deck.filter(inst => !heroInstIds.has(inst.instanceId));
+  // レベル順(1→2→3)でソートして場に並べる(同名内でレベル順、別ヒーローはまとめて)
+  heroes.sort((a, b) => {
+    const ca = (cardPool || state.cards).find(c => c.id === a.cardId) || {};
+    const cb = (cardPool || state.cards).find(c => c.id === b.cardId) || {};
+    if ((ca.name || '') !== (cb.name || '')) return (ca.name || '').localeCompare(cb.name || '');
+    return (parseInt(ca.level) || 0) - (parseInt(cb.level) || 0);
+  });
+  side.field = [...heroes, ...side.field];
+  return heroes.length;
+}
+
 // プレイ開始 (ソロ)
 function startPlaySession() {
   const deckIdA = document.getElementById('play-deckA').value;
@@ -3512,7 +3533,10 @@ function startPlaySession() {
   const sideB = makePlaySide(deckIdB, nameB);
   sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
   sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
-  // 初手ドロー
+  // リーダー(主人公)カードは山札から抜いて場へ
+  const heroesA = extractLeadersToField(sideA, state.cards);
+  const heroesB = extractLeadersToField(sideB, state.cards);
+  // 初手ドロー(リーダーを除いた山から)
   for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
     if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
     if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
@@ -3528,6 +3552,8 @@ function startPlaySession() {
     network: { mode: 'solo' }
   };
   playLog(null, `ゲーム開始 (${nameA} vs ${nameB})`);
+  if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚を場に配置`);
+  if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚を場に配置`);
   playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
   playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
   saveData();
@@ -3558,13 +3584,16 @@ function restartPlaySession() {
     const sideB = makePlaySide(deckIdB, nameB);
     sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
     sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
+    extractLeadersToField(sideA, state.cards);
+    extractLeadersToField(sideB, state.cards);
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
       if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
     }
     state.playSession = {
       active: true, turn: 1, activeSide: 'A', phase: 'メイン',
-      sides: { A: sideA, B: sideB }, log: []
+      sides: { A: sideA, B: sideB }, log: [],
+      network: { mode: 'solo' }
     };
     playLog(null, 'リスタート');
     saveData(); renderPlay();
@@ -4220,15 +4249,19 @@ function netHandleMessage(msg, role, ctx) {
       toast('ゲストのデッキが空です(エラー)');
       return;
     }
+    // 両者のカードを統合したプール(リーダー抽出と表示の両方で使う)
+    const cardPool = mergeCardPools(
+      collectCardsForInstances([...sideA.deck]),
+      msg.cardPool || []
+    );
+    // リーダー(主人公)カードを場へ
+    const heroesA = extractLeadersToField(sideA, cardPool);
+    const heroesB = extractLeadersToField(sideB, cardPool);
+    // 初手ドロー(リーダーを除いた山から)
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
       if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
     }
-    // 両者のカードを統合したプールを作る
-    const cardPool = mergeCardPools(
-      collectCardsForInstances([...sideA.deck, ...sideA.hand]),
-      msg.cardPool || []
-    );
     state.playSession = {
       active: true, turn: 1, activeSide: 'A', phase: 'メイン',
       sides: { A: sideA, B: sideB }, log: [],
@@ -4236,6 +4269,8 @@ function netHandleMessage(msg, role, ctx) {
       cardPool: cardPool
     };
     playLog(null, `ゲーム開始 (${nameHost} vs ${nameGuest})`);
+    if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚を場に配置`);
+    if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚を場に配置`);
     playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
     playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
     saveData();
