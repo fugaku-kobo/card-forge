@@ -2855,13 +2855,16 @@ function buildCardHTML(c, idx, opts) {
     // ① レベル(左上、丸囲み) ② IP(隣、丸囲み) ③ カード名(横長) ④ HP(右独立)
     // ⑤ カードイラスト  ⑥ 技1  ⑦ 技2
     // ⑧ 作品名(左下)  ⑨ ルール(右下)
+    const charLvLabels = { '1': '脇役', '2': '名脇役', '3': '相棒/ライバル' };
+    const charLvLabel = charLvLabels[String(c.level || '')] || '';
+    const lvTooltip = c.level ? `Lv${c.level}${charLvLabel?'・'+charLvLabel:''}(背景の色はレベルを表します)` : '';
     body = `
       <div class="cp-header">
-        ${c.level ? `<div class="cp-badge cp-badge-level" style="background:${color}">${escapeHtml(c.level)}</div>` : ''}
+        ${c.level ? `<div class="cp-badge cp-badge-level" style="background:${color}" title="${escapeHtml(lvTooltip)}">${escapeHtml(c.level)}</div>` : ''}
         ${c.ip ? `<div class="cp-badge cp-badge-ip" title="没で得るIP">${escapeHtml(c.ip)}</div>` : ''}
         <div class="cp-title-bar" style="background:${color}">
           <div class="cp-title">${escapeHtml(c.name || '無名')}${unlimitedMark}</div>
-          ${c.subrole ? `<div class="cp-subrole">${escapeHtml(c.subrole)}</div>` : ''}
+          ${(c.subrole || charLvLabel) ? `<div class="cp-subrole">${escapeHtml(c.subrole || charLvLabel)}</div>` : ''}
         </div>
         ${c.hp ? `<div class="cp-badge cp-badge-hp" title="HP">${escapeHtml(c.hp)}</div>` : ''}
       </div>
