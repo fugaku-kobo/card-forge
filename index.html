@@ -216,6 +216,48 @@ main {
   padding-top: 12px;
   border-top: 1px dashed rgba(201, 169, 97, 0.2);
 }
+.skill-block {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: rgba(201, 169, 97, 0.04);
+  border: 1px solid rgba(201, 169, 97, 0.15);
+}
+.skill-block > label {
+  display: block;
+  color: var(--gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.skill-fields {
+  display: grid;
+  grid-template-columns: 1fr 80px;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.skill-fields input {
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  padding: 7px 10px;
+  font-family: inherit; font-size: 0.9rem;
+}
+.skill-fields input[id$="Cost"] {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+.skill-block textarea {
+  width: 100%;
+  min-height: 50px;
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  color: var(--parchment);
+  padding: 7px 10px;
+  font-family: inherit; font-size: 0.9rem;
+  resize: vertical;
+}
 .editor-section-title {
   font-size: 0.8rem;
   color: var(--gold);
@@ -1641,13 +1683,21 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
         <div id="fields-skills" style="display:none">
           <div class="editor-section">
             <div class="editor-section-title">技 / スキル</div>
-            <div class="field">
+            <div class="skill-block">
               <label>技1</label>
-              <textarea id="f-skill1" placeholder="例: メス投げ　必要コスト１　指定したキャラに２０ダメージ"></textarea>
+              <div class="skill-fields">
+                <input type="text" id="f-skill1Name" placeholder="技名 (例: メス投げ)">
+                <input type="text" id="f-skill1Cost" placeholder="コスト" maxlength="2" inputmode="numeric">
+              </div>
+              <textarea id="f-skill1Effect" placeholder="効果 (例: 指定したキャラに20ダメージ)"></textarea>
             </div>
-            <div class="field">
-              <label>技2</label>
-              <textarea id="f-skill2" placeholder="(空欄でも可)"></textarea>
+            <div class="skill-block">
+              <label>技2 (空欄でも可)</label>
+              <div class="skill-fields">
+                <input type="text" id="f-skill2Name" placeholder="技名">
+                <input type="text" id="f-skill2Cost" placeholder="コスト" maxlength="2" inputmode="numeric">
+              </div>
+              <textarea id="f-skill2Effect" placeholder="効果"></textarea>
             </div>
           </div>
           <div class="field" id="field-other-ability">
@@ -2222,8 +2272,16 @@ function readForm() {
   };
   if (kind === 'leveled' || kind === 'character') {
     data.level = document.getElementById('f-level').value;
-    data.skill1 = document.getElementById('f-skill1').value.trim();
-    data.skill2 = document.getElementById('f-skill2').value.trim();
+    data.skill1 = composeSkillText(
+      document.getElementById('f-skill1Name').value,
+      document.getElementById('f-skill1Cost').value,
+      document.getElementById('f-skill1Effect').value
+    );
+    data.skill2 = composeSkillText(
+      document.getElementById('f-skill2Name').value,
+      document.getElementById('f-skill2Cost').value,
+      document.getElementById('f-skill2Effect').value
+    );
   }
   if (kind === 'character') {
     data.subrole = document.getElementById('f-subrole').value.trim();
@@ -2263,8 +2321,15 @@ function writeForm(c) {
   document.getElementById('f-unlimited2').checked = !!c.unlimited;
   document.getElementById('f-other').value = c.rule || c.other || '';
   document.getElementById('f-ip2').value = c.ip || '';
-  document.getElementById('f-skill1').value = c.skill1 || '';
-  document.getElementById('f-skill2').value = c.skill2 || '';
+  // 既存スキルテキストを 名前/コスト/効果 に分解してフォームに割り当て
+  const sk1 = parseSkillText(c.skill1 || '');
+  const sk2 = parseSkillText(c.skill2 || '');
+  document.getElementById('f-skill1Name').value = sk1.name;
+  document.getElementById('f-skill1Cost').value = sk1.cost;
+  document.getElementById('f-skill1Effect').value = sk1.effect;
+  document.getElementById('f-skill2Name').value = sk2.name;
+  document.getElementById('f-skill2Cost').value = sk2.cost;
+  document.getElementById('f-skill2Effect').value = sk2.effect;
   document.getElementById('f-effect1').value = c.effect1 || '';
   document.getElementById('f-effect2').value = c.effect2 || '';
   document.getElementById('f-effect3').value = c.effect3 || '';
@@ -2499,6 +2564,39 @@ function buildCardHTML(c, idx, opts) {
 }
 
 // 技の描画(技名/コスト/効果)
+// スキルテキストを 「技名 必要コストN 効果」形式に組み立てる(保存用)
+function composeSkillText(name, cost, effect) {
+  name = (name || '').trim();
+  cost = (cost || '').trim();
+  effect = (effect || '').trim();
+  if (!name && !cost && !effect) return '';
+  const parts = [];
+  if (name) parts.push(name);
+  if (cost) parts.push(`必要コスト${normalizeNumStr(cost)}`);
+  if (effect) parts.push(effect);
+  return parts.join('　');
+}
+
+// 既存のスキルテキストを 名前/コスト/効果 に分解(編集用)
+function parseSkillText(text) {
+  text = (text || '').trim();
+  if (!text) return { name: '', cost: '', effect: '' };
+  // パターンA: 「技名 必要コスト1 効果」
+  let m = text.match(/^(.+?)[\s　]+(?:必要)?コスト[\s　]*([0-9０-９]+)[\s　]+(.+)$/);
+  if (m) return { name: m[1].trim(), cost: normalizeNumStr(m[2]), effect: m[3].trim() };
+  // パターンB: 「技名 (コスト1) 効果」
+  m = text.match(/^(.+?)[\s　]*[（(](?:必要)?コスト[\s　]*([0-9０-９]+)[）)][\s　]*(.+)$/);
+  if (m) return { name: m[1].trim(), cost: normalizeNumStr(m[2]), effect: m[3].trim() };
+  // パターンC: 末尾コスト「技名 必要コスト1」(効果なし)
+  m = text.match(/^(.+?)[\s　]+(?:必要)?コスト[\s　]*([0-9０-９]+)[\s　]*$/);
+  if (m) return { name: m[1].trim(), cost: normalizeNumStr(m[2]), effect: '' };
+  // 分解できない: 1行目を技名扱い、残りを効果に(コストは空)
+  // 多くの場合「技名 効果」のパターン → 最初の空白で区切る試み
+  const sp = text.match(/^(\S+)[\s　]+(.+)$/);
+  if (sp) return { name: sp[1].trim(), cost: '', effect: sp[2].trim() };
+  return { name: text, cost: '', effect: '' };
+}
+
 function renderSkill(text, label) {
   if (!text || !text.trim()) {
     return `<div class="cp-skill cp-skill-empty">${label}: なし</div>`;
