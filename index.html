@@ -1595,8 +1595,51 @@ main {
   box-shadow: 0 4px 12px rgba(201, 169, 97, 0.5);
   z-index: 5;
 }
-.card-chip.lv2 { background: var(--lv2-bg); border-color: var(--lv2-frame); }
-.card-chip.lv3 { background: var(--lv3-bg); border: 2px solid var(--lv3-frame); }
+/* Lv1: 通常(白)、左の縦帯と隅マーカーで他Lvとの差別化 */
+.card-chip.lv1 {
+  border-left: 4px solid #8a8a8a;
+}
+.card-chip.lv1::after {
+  content: '★';
+  position: absolute;
+  top: 1px; right: 2px;
+  font-size: 7px;
+  color: #999;
+  z-index: 2;
+}
+/* Lv2: 落ち着いた金茶系のグラデ + 太い茶金枠 + ★★ */
+.card-chip.lv2 {
+  background: linear-gradient(180deg, #f3eed5 0%, #d8caa0 100%);
+  border: 2px solid #8a6d2c;
+  border-left: 5px solid #8a6d2c;
+}
+.card-chip.lv2::after {
+  content: '★★';
+  position: absolute;
+  top: 0px; right: 2px;
+  font-size: 8px;
+  color: #8a6d2c;
+  letter-spacing: -1.5px;
+  text-shadow: 0 0 2px rgba(255,255,255,0.7);
+  z-index: 2;
+}
+/* Lv3: 鮮やかな金色グラデ + 強発光 + ★★★ */
+.card-chip.lv3 {
+  background: linear-gradient(135deg, #fff7c2 0%, #ffe082 50%, #f5c84a 100%);
+  border: 2.5px solid #d4af37;
+  border-left: 6px solid #d4af37;
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.55);
+}
+.card-chip.lv3::after {
+  content: '★★★';
+  position: absolute;
+  top: 0px; right: 2px;
+  font-size: 8px;
+  color: #b8860b;
+  letter-spacing: -1.5px;
+  text-shadow: 0 0 2px rgba(255,255,255,0.9);
+  z-index: 2;
+}
 .card-chip.face-down {
   background: linear-gradient(135deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
   border-color: var(--gold);
@@ -1616,12 +1659,27 @@ main {
   font-size: 7px;
 }
 .card-chip-badge {
-  width: 12px; height: 12px;
-  border-radius: 50%;
+  min-width: 18px; height: 13px;
+  padding: 0 3px;
+  border-radius: 3px;
   display: flex; align-items: center; justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 7px;
+  font-size: 7.5px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.02em;
+}
+/* 主人公カードのチップは👑バッジ + 金枠 */
+.card-chip.chip-hero {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
+}
+.card-chip.chip-hero::before {
+  content: '👑';
+  position: absolute;
+  top: 1px; left: 2px;
+  font-size: 11px;
+  z-index: 2;
 }
 .card-chip-name {
   flex: 1;
@@ -5049,8 +5107,10 @@ function buildCardChip(inst, side, fromZone, faceDown) {
   }
   const lvNum = parseInt(card.level) || 0;
   const classes = ['card-chip'];
+  if (lvNum === 1) classes.push('lv1');
   if (lvNum === 2) classes.push('lv2');
   if (lvNum === 3) classes.push('lv3');
+  if (isLeaderCard(card)) classes.push('chip-hero');
   if (faceDown) classes.push('face-down');
 
   if (faceDown) {
@@ -5059,7 +5119,7 @@ function buildCardChip(inst, side, fromZone, faceDown) {
 
   const color = getTypeColor(card.type);
   const icon = getDisplayIcon(card);
-  const lvBadge = card.level ? `<span class="card-chip-badge" style="background:${color}">${escapeHtml(card.level)}</span>` : '';
+  const lvBadge = card.level ? `<span class="card-chip-badge" style="background:${color}">Lv${escapeHtml(card.level)}</span>` : '';
   const hpBadge = (inst.hp !== undefined && inst.hp !== null && inst.hp > 0)
     ? `<div class="card-chip-hp" title="現HP">${inst.hp}</div>` : '';
   const ipMark = card.ip ? `<span title="IP ${escapeHtml(card.ip)}">💎${escapeHtml(card.ip)}</span>` : '';
