@@ -572,6 +572,9 @@ main {
   line-height: 1.3;
   overflow: hidden;
   flex: 1;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* === ④ 効果エリア(効果カード用、大きく1つだけ) === */
@@ -602,6 +605,8 @@ main {
   color: #222;
   overflow: hidden;
   white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* === ⑤ フッター(作品名・ルール) === */
@@ -2737,6 +2742,32 @@ function render() {
       controls: reorderBtns
     });
   }).join('');
+  fitCardTexts(grid);
+}
+
+// 長文に対してフォントサイズを動的に縮小し、コンテナの高さに収める
+function fitTextElement(el, minRatio) {
+  if (!el) return;
+  el.style.fontSize = ''; // リセットして CSS デフォルトから再計測
+  const cs = getComputedStyle(el);
+  const initial = parseFloat(cs.fontSize);
+  if (!initial) return;
+  const minFloor = 4; // どんなに小さくてもこれより下にはしない
+  const min = Math.max(minFloor, initial * (minRatio || 0.55));
+  let size = initial;
+  let safety = 60;
+  while (size > min && el.scrollHeight > el.clientHeight + 1 && safety-- > 0) {
+    size -= 0.5;
+    el.style.fontSize = size + 'px';
+  }
+}
+// 与えたコンテナ配下の全カードプレビューに対してテキストを縮小
+function fitCardTexts(rootEl) {
+  if (!rootEl) return;
+  rootEl.querySelectorAll('.card-preview').forEach(card => {
+    card.querySelectorAll('.cp-skill-effect, .cp-effect-text').forEach(el => fitTextElement(el));
+    card.querySelectorAll('.cp-footer-rule').forEach(el => fitTextElement(el, 0.7));
+  });
 }
 
 function escapeHtml(s) {
@@ -2772,9 +2803,12 @@ function moveCard(idx, delta) {
 function openCardZoom(idx) {
   const c = state.cards[idx];
   if (!c) return;
-  document.getElementById('cardZoomCard').innerHTML = buildCardHTML(c, idx, {showIndex: false, attrs: ''});
+  const zoomCard = document.getElementById('cardZoomCard');
+  zoomCard.innerHTML = buildCardHTML(c, idx, {showIndex: false, attrs: ''});
   document.getElementById('cardZoomMeta').textContent = `№ ${idx + 1} / ${state.cards.length}`;
   document.getElementById('cardZoomBg').classList.add('show');
+  // 表示後にテキストを収める(display:none状態だと幅が取れないので少し待つ)
+  setTimeout(() => fitCardTexts(zoomCard), 0);
 }
 function closeCardZoom(event) {
   if (event && event.target.id !== 'cardZoomBg' && !event.target.classList.contains('card-zoom-close')) return;
@@ -3179,6 +3213,8 @@ function renderDeckDetail() {
             </div>`;
           }).join('')}</div>`}
     </div>`;
+
+  fitCardTexts(detail);
 
   // 検索入力のフォーカスを保持 (oninputでrenderDeckDetail()するためフォーカス復元が必要)
   if (deckAddFilter._focused === 'search') {
@@ -4041,6 +4077,7 @@ function showPlayHoverPreview(cardId, event) {
   const el = document.getElementById('playHoverPreview');
   el.innerHTML = buildCardHTML(card, Math.max(0, idx), {showIndex: false, attrs: ''});
   el.classList.add('show');
+  fitCardTexts(el);
 
   // ホバーされたチップの近くに位置調整
   const chip = event?.currentTarget;
@@ -4733,6 +4770,8 @@ async function generatePDF(mode) {
     for (let i = 0; i < cardsToPrint.length; i++) {
       const el = createCardElementForPDF(cardsToPrint[i]);
       offscreen.innerHTML = ''; offscreen.appendChild(el);
+      // 長文をPDFサイズに収まるよう自動縮小
+      fitCardTexts(offscreen);
       const canvas = await html2canvas(el, {scale: 1, useCORS: true, backgroundColor: '#FAFAF7', logging: false});
       cardImages.push(canvas.toDataURL('image/png'));
       if ((i + 1) % 3 === 0) toast(`画像生成中... ${i+1}/${cardsToPrint.length}`);
