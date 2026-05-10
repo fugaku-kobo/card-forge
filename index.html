@@ -1484,6 +1484,39 @@ main {
   gap: 10px;
   flex: 1;
 }
+/* 原稿ゾーン (勝利条件、目立つ位置に配置) */
+.play-manuscript-zone {
+  background: linear-gradient(180deg, rgba(255, 248, 220, 0.06) 0%, var(--bg-deep) 100%);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 2px;
+}
+.play-manuscript-zone .play-zone-title {
+  color: #f4d36c;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+.play-manuscript-count {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gold-bright);
+}
+.play-manuscript-count.win {
+  color: #5fbf5f;
+  text-shadow: 0 0 8px rgba(95, 191, 95, 0.6);
+}
+.play-manuscript-cards {
+  min-height: 56px;
+  background: rgba(0,0,0,0.2);
+  padding: 4px;
+  border: 1px dashed rgba(212, 175, 55, 0.25);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
 /* リーダー行 (リーダー1枚 + 控え 横並び) */
 .play-leader-row {
   display: grid;
@@ -2427,6 +2460,16 @@ function loadData() {
         state.playSession.phaseIdx = 2; // 「メイン」相当 = ② アイディア
         state.playSession.firstPlayer = state.playSession.firstPlayer || 'A';
         delete state.playSession.phase;
+      }
+      // 原稿カード配列・泣きフラグの初期化
+      if (state.playSession) {
+        ['A','B'].forEach(k => {
+          const s = state.playSession.sides?.[k];
+          if (s) {
+            if (!s.manuscriptCards) s.manuscriptCards = [];
+            if (s.nakiUsed === undefined) s.nakiUsed = false;
+          }
+        });
       }
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
       loaded = true;
@@ -4348,12 +4391,14 @@ function makePlaySide(deckId, name) {
   return {
     name: name || '',
     deckId: deckId,
-    manuscript: 0,
+    manuscript: 0,       // 旧抽象カウンタ (互換用、表示は manuscriptCards.length 優先)
+    manuscriptCards: [], // 原稿ゾーン (持ち込み勝利時にデッキトップから物理的に送られる)
     ip: 0,
+    nakiUsed: false,     // 泣きの一回を既に使用したか
     hand: [],            // [{instanceId, cardId, hp?}]
     deck: [],            // 山札 (上から取る)
-    leader: [],          // リーダーゾーン (現在のリーダー、最大1枚)
-    leaderReserve: [],   // リーダー控え (Lv2/Lv3 等の進化先)
+    leader: [],          // 主人公ゾーン (現在の主人公、最大1枚)
+    leaderReserve: [],   // 主人公控え (Lv2/Lv3 等の進化先)
     field: [],           // 場 (キャラ・継続効果)
     discard: []          // 没案ゾーン
   };
@@ -4559,9 +4604,12 @@ function nextPhase() {
   if (isFirstTurnFirstPlayer && next === 1) next = 2;
   if (isFirstTurnFirstPlayer && next === 3) next = 4;
   if (next > 5) {
-    // ⑤ の次はターン終了
     endTurn();
     return;
+  }
+  // 副作用: ① ドローフェイズに入ったら自動で2枚ドロー
+  if (next === 1) {
+    drawCard(ps.activeSide, 2);
   }
   setPhase(next);
 }
@@ -4574,18 +4622,120 @@ function adjustCounter(side, key, delta) {
   if (!state.playSession) return;
   const s = state.playSession.sides[side];
   if (!s) return;
+  if (!s.manuscriptCards) s.manuscriptCards = [];
+
+  // 原稿カウンタは物理ゾーンに変換: +は山の上から原稿へ、-は原稿の最後を山の上へ戻す
+  if (key === 'manuscript') {
+    const oldCount = s.manuscriptCards.length;
+    if (delta > 0) {
+      for (let i = 0; i < delta; i++) {
+        if (s.deck.length === 0) break;
+        s.manuscriptCards.push(s.deck.shift());
+      }
+    } else if (delta < 0) {
+      for (let i = 0; i < -delta; i++) {
+        if (s.manuscriptCards.length === 0) break;
+        s.deck.unshift(s.manuscriptCards.pop());
+      }
+    }
+    const newCount = s.manuscriptCards.length;
+    if (newCount !== oldCount) {
+      playLog(side, `原稿 ${oldCount} → ${newCount} 枚 (山残 ${s.deck.length})`);
+      checkVictory();
+    }
+    saveData(); renderPlay();
+    netSendOp({ type: 'counter', side, key, delta });
+    return;
+  }
+
+  // IP などその他のカウンタは従来通り
   const oldVal = s[key];
   s[key] = Math.max(0, (s[key] || 0) + delta);
   if (s[key] !== oldVal) {
-    const labels = { manuscript: '原稿', ip: 'IP' };
-    playLog(side, `${labels[key]} ${oldVal} → ${s[key]}`);
-    if (key === 'manuscript' && s[key] >= PLAY_VICTORY_MANUSCRIPT && oldVal < PLAY_VICTORY_MANUSCRIPT) {
-      toast(`🏆 ${s.name} の作品が完成しました! (原稿${PLAY_VICTORY_MANUSCRIPT}枚)`);
-      playLog(side, `🏆 勝利条件達成 (原稿${PLAY_VICTORY_MANUSCRIPT}枚)`);
-    }
+    const labels = { ip: 'IP' };
+    playLog(side, `${labels[key] || key} ${oldVal} → ${s[key]}`);
   }
   saveData(); renderPlay();
   netSendOp({ type: 'counter', side, key, delta });
+}
+
+// 持ち込みバトル: 攻撃側が敵フィールドのキャラを没にし、自分の山から N枚 を原稿へ
+function startBattle(attackerSide, defenderSide, defenderInstId, manuscriptCount) {
+  if (!state.playSession) return;
+  const ps = state.playSession;
+  const att = ps.sides[attackerSide];
+  const def = ps.sides[defenderSide];
+  if (!att || !def) return;
+  const dIdx = def.field.findIndex(x => x.instanceId === defenderInstId);
+  if (dIdx < 0) { toast('対象カードが見つかりません'); return; }
+  if (!att.manuscriptCards) att.manuscriptCards = [];
+
+  // 防御側カードを没案へ
+  const [defInst] = def.field.splice(dIdx, 1);
+  def.discard.push(defInst);
+  const defCard = findPlayCard(defInst.cardId);
+
+  // 攻撃側の山トップから N 枚を原稿へ
+  let sent = 0;
+  for (let i = 0; i < manuscriptCount; i++) {
+    if (att.deck.length === 0) break;
+    att.manuscriptCards.push(att.deck.shift());
+    sent++;
+  }
+
+  playLog(attackerSide, `⚔ ${defCard?.name || '?'} を没にし、原稿+${sent} (原稿計 ${att.manuscriptCards.length}, 山残 ${att.deck.length})`);
+  checkVictory();
+  saveData(); renderPlay();
+  closePlayPopover();
+  netSendOp({ type: 'battle', attackerSide, defenderSide, defenderInstId, manuscriptCount });
+}
+
+// 泣きの一回: 没案ゾーンの脇役 (Lv1キャラ) を場へ戻す、HP上乗せ、1試合1回限定
+function useNaki(side, instanceId, hpBonus) {
+  if (!state.playSession) return;
+  const s = state.playSession.sides[side];
+  if (!s || s.nakiUsed) { toast('泣きの一回は1試合に1回までです'); return; }
+  if (s.field.length > 0) { toast('場のキャラがいるので泣きの一回は使えません'); return; }
+  const dIdx = s.discard.findIndex(x => x.instanceId === instanceId);
+  if (dIdx < 0) { toast('カードが見つかりません'); return; }
+  const card = findPlayCard(s.discard[dIdx].cardId);
+  if (!card || getTypeKind(card.type) !== 'character' || (parseInt(card.level) || 0) !== 1) {
+    toast('泣きの一回で戻せるのは脇役(Lv1キャラ)のみです');
+    return;
+  }
+  const [inst] = s.discard.splice(dIdx, 1);
+  // HP上乗せ
+  const baseHp = parseInt(card.hp) || 0;
+  inst.hp = baseHp + hpBonus;
+  inst.nakiNoAttack = true; // 次の自分ターンに持ち込み不可フラグ
+  s.field.push(inst);
+  s.nakiUsed = true;
+  playLog(side, `💧 泣きの一回: ${card.name} を場に戻す (HP+${hpBonus} = ${inst.hp})`);
+  saveData(); renderPlay();
+  closePlayPopover();
+  netSendOp({ type: 'naki', side, instanceId, hpBonus });
+}
+
+// 勝敗判定
+function checkVictory() {
+  if (!state.playSession) return;
+  const ps = state.playSession;
+  ['A', 'B'].forEach(k => {
+    const s = ps.sides[k];
+    if (!s) return;
+    const count = (s.manuscriptCards?.length || 0);
+    if (count >= PLAY_VICTORY_MANUSCRIPT && !s.victoryAnnounced) {
+      s.victoryAnnounced = true;
+      playLog(k, `🏆 勝利! 原稿 ${PLAY_VICTORY_MANUSCRIPT} 枚達成`);
+      showModal('🏆 作品完成!', `${s.name} が原稿 ${PLAY_VICTORY_MANUSCRIPT} 枚を完成させました!`, () => {});
+    }
+    // 場全没 + 泣き使用済み = 敗北
+    if (s.nakiUsed && s.field.length === 0 && !s.defeatAnnounced) {
+      s.defeatAnnounced = true;
+      playLog(k, '💧 敗北 (泣きの一回後に場が全没)');
+      showModal('💧 敗北', `${s.name} は泣きの一回を使った後、場のキャラクターが全て没になりました`, () => {});
+    }
+  });
 }
 
 function adjustFieldHP(side, instanceId, delta) {
@@ -4619,9 +4769,9 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   // ルール検証 (ローカル操作時のみ。リモート受信は信頼してスキップ)
   if (!_isApplyingRemoteOp) {
     const candidate = fromArr[idx];
+    const newCard = findPlayCard(candidate.cardId);
     // [Lv順序] 主人公昇格は Lv +1 のみ許可
     if (toZone === 'leader') {
-      const newCard = findPlayCard(candidate.cardId);
       if (newCard && isLeaderCard(newCard)) {
         const newLv = parseInt(newCard.level) || 0;
         const currentLeader = s.leader[0];
@@ -4636,6 +4786,24 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
           } else {
             toast(`Lv${currentLv}からLv${newLv}には進化できません(順番にLv1→Lv2→Lv3)`);
           }
+          return;
+        }
+      } else {
+        toast('主人公ゾーンには主人公カードのみ配置できます');
+        return;
+      }
+    }
+    // [キャラ進化] Lv2/Lv3 のキャラは場に Lv(N-1) のキャラがいる必要
+    if (toZone === 'field' && newCard && getTypeKind(newCard.type) === 'character' && fromZone !== 'field') {
+      const newLv = parseInt(newCard.level) || 0;
+      if (newLv >= 2) {
+        const targetLv = newLv - 1;
+        const hasTarget = s.field.some(x => {
+          const c = findPlayCard(x.cardId);
+          return c && getTypeKind(c.type) === 'character' && (parseInt(c.level) || 0) === targetLv;
+        });
+        if (!hasTarget) {
+          toast(`Lv${newLv} のキャラは Lv${targetLv} に重ねて進化させます。先に Lv${targetLv} を場に出してください。`);
           return;
         }
       }
@@ -4721,10 +4889,34 @@ function openPlayPopover(side, instanceId, fromZone) {
 
   // ネット対戦時、自分のサイドでなければ操作はさせない(閲覧のみ)
   const canControl = myCanControl(side);
+  const ps = state.playSession;
+  const isPhase3 = ps.phaseIdx === 3;
+  const myAttackerSide = ps.network?.mySide || ps.activeSide;
+  // 敵フィールドのキャラに ③ 持ち込みバトル
+  const canBattle = isPhase3 && fromZone === 'field' && side !== myAttackerSide
+                  && ps.activeSide === myAttackerSide
+                  && (ps.network?.mode === 'solo' || ps.network?.mySide === myAttackerSide);
+  // 泣きの一回: 自分の没案に脇役、自分の場が空、未使用、自分のターン
+  const mySideForNaki = myAttackerSide;
+  const myState = ps.sides[mySideForNaki];
+  const canNaki = isPhase3 && side === mySideForNaki && fromZone === 'discard'
+                && !myState.nakiUsed && myState.field.length === 0
+                && (() => {
+                    const c = findPlayCard(inst.cardId);
+                    return c && getTypeKind(c.type) === 'character' && (parseInt(c.level) || 0) === 1;
+                  })();
+  const battleBtns = canBattle ? `
+    <button class="btn-primary" onclick="startBattle('${myAttackerSide}','${side}','${instanceId}',1)">⚔ 持ち込みバトル (原稿+1)</button>
+    <button class="btn-primary" onclick="startBattle('${myAttackerSide}','${side}','${instanceId}',2)">⚔⚔ 持ち込みバトル (原稿+2)</button>` : '';
+  const nakiBtns = canNaki ? `
+    <button class="btn-primary" onclick="useNaki('${mySideForNaki}','${instanceId}',100)">💧 泣きの一回 (HP+100で戻す)</button>
+    <button class="btn-primary" onclick="useNaki('${mySideForNaki}','${instanceId}',50)">💧 泣きの一回 (HP+50で戻す)</button>` : '';
+
   if (!canControl) {
     const html = `
-      <div class="play-popover-title">${escapeHtml(cardName)}${inst.hp !== undefined ? ` (HP ${inst.hp})` : ''}<br><span style="font-size:0.78rem; color:var(--parchment-dim);">相手のカードは操作できません</span></div>
+      <div class="play-popover-title">${escapeHtml(cardName)}${inst.hp !== undefined ? ` (HP ${inst.hp})` : ''}<br><span style="font-size:0.78rem; color:var(--parchment-dim);">${canBattle?'敵キャラ — 持ち込みバトル可能':'相手のカードは操作できません'}</span></div>
       <div class="play-popover-actions">
+        ${battleBtns}
         ${actions.map(a => `<button onclick="${a.fn}; closePlayPopover();">${a.label}</button>`).join('')}
         <button onclick="closePlayPopover()" style="margin-top: 8px;">閉じる</button>
       </div>`;
@@ -4739,9 +4931,14 @@ function openPlayPopover(side, instanceId, fromZone) {
     actions.push({ label: '➡ 控えへ戻す', fn: `moveInstance('${side}','${instanceId}','leader','leaderReserve')` });
     actions.push({ label: '➡ 没案ゾーンへ (退場)', fn: `moveInstance('${side}','${instanceId}','leader','discard')` });
   } else if (fromZone === 'leaderReserve') {
-    actions.push({ label: '➡ 主人公へ昇格 (練り上げ)', fn: `moveInstance('${side}','${instanceId}','leaderReserve','leader')` });
+    actions.push({ label: '👑 主人公へ昇格 (練り上げ)', fn: `moveInstance('${side}','${instanceId}','leaderReserve','leader')` });
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','leaderReserve','discard')` });
   } else if (fromZone === 'hand') {
+    // 主人公カードは主人公ゾーンへ昇格を最優先で出す
+    if (card && isLeaderCard(card)) {
+      actions.push({ label: '👑 主人公ゾーンへ昇格', fn: `moveInstance('${side}','${instanceId}','hand','leader')` });
+      actions.push({ label: '➡ 主人公控えへ', fn: `moveInstance('${side}','${instanceId}','hand','leaderReserve')` });
+    }
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','hand','discard')` });
     actions.push({ label: '➡ 山の上へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',true)` });
@@ -4769,6 +4966,8 @@ function openPlayPopover(side, instanceId, fromZone) {
   const html = `
     <div class="play-popover-title">${escapeHtml(cardName)}${inst.hp !== undefined ? ` (HP ${inst.hp})` : ''}</div>
     <div class="play-popover-actions">
+      ${battleBtns}
+      ${nakiBtns}
       ${actions.map(a => `<button onclick="${a.fn}; ${a.keep ? '' : 'closePlayPopover();'}">${a.label}</button>`).join('')}
       <button onclick="closePlayPopover()" style="margin-top: 8px;">キャンセル</button>
     </div>`;
@@ -4998,6 +5197,7 @@ function renderPlaySide(sideKey) {
   const s = ps.sides[sideKey];
   if (!s.leader) s.leader = []; // 旧データ互換
   if (!s.leaderReserve) s.leaderReserve = [];
+  if (!s.manuscriptCards) s.manuscriptCards = [];
   const isActive = ps.activeSide === sideKey;
   const canControl = myCanControl(sideKey);
   const dis = canControl ? '' : 'disabled';
@@ -5019,6 +5219,9 @@ function renderPlaySide(sideKey) {
   const discardHtml = s.discard.length === 0
     ? '<div class="play-zone-empty">没案なし</div>'
     : s.discard.slice().reverse().map(inst => buildCardChip(inst, sideKey, 'discard', false)).join('');
+  const manuscriptHtml = s.manuscriptCards.length === 0
+    ? '<div class="play-zone-empty">原稿なし</div>'
+    : s.manuscriptCards.slice().reverse().map(inst => buildCardChip(inst, sideKey, 'manuscriptCards', false)).join('');
   // 山: 自分側は上3枚伏せプレビュー、相手側は枚数だけ表示(内容を覗き見できないように)
   const deckPreview = canControl
     ? s.deck.slice(0, 3).map(inst => buildCardChip(inst, sideKey, 'deck', true)).join('')
@@ -5056,13 +5259,21 @@ function renderPlaySide(sideKey) {
         </div>
       </div>
 
+      <div class="play-manuscript-zone">
+        <div class="play-zone-title">
+          <span>📝 原稿ゾーン</span>
+          <span class="play-zone-count play-manuscript-count ${s.manuscriptCards.length >= PLAY_VICTORY_MANUSCRIPT?'win':''}">${s.manuscriptCards.length} / ${PLAY_VICTORY_MANUSCRIPT}</span>
+        </div>
+        <div class="play-zone-cards play-manuscript-cards">${manuscriptHtml}</div>
+      </div>
+
       <div class="play-zones">
         <div class="play-zone">
           <div class="play-zone-title"><span>手札</span><span class="play-zone-count">${s.hand.length}</span></div>
           <div class="play-zone-cards">${handHtml}</div>
         </div>
         <div class="play-zone">
-          <div class="play-zone-title"><span>場</span><span class="play-zone-count">${s.field.length}</span></div>
+          <div class="play-zone-title"><span>場 (${s.field.length}/${PLAY_FIELD_MAX})</span><span class="play-zone-count">${s.field.length}</span></div>
           <div class="play-zone-cards">${fieldHtml}</div>
         </div>
         <div class="play-zone">
@@ -5391,6 +5602,8 @@ function netApplyRemoteOp(op) {
     }
     else if (op.type === 'endTurn') endTurn();
     else if (op.type === 'phase') setPhase(op.phaseIdx);
+    else if (op.type === 'battle') startBattle(op.attackerSide, op.defenderSide, op.defenderInstId, op.manuscriptCount);
+    else if (op.type === 'naki') useNaki(op.side, op.instanceId, op.hpBonus);
   } finally {
     _isApplyingRemoteOp = false;
   }
