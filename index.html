@@ -369,21 +369,53 @@ main {
   font-weight: 700;
   font-size: 9.5px;
 }
-.card-preview.lv2 { background: var(--lv2-bg); border: 2px solid var(--lv2-frame); }
-.card-preview.kind-leveled.lv2 {
-  background: linear-gradient(180deg, #fff5d6 0%, var(--lv2-bg) 100%);
-  border-color: var(--lv2-frame);
+/* Lv2: 落ち着いた金茶系(進化中、銀色っぽいベース) */
+.card-preview.lv2 {
+  background: linear-gradient(180deg, #f3eed5 0%, #d8caa0 100%);
+  border: 2px solid #8a6d2c;
+  box-shadow: 0 2px 6px rgba(138, 109, 44, 0.25), 0 4px 12px rgba(0,0,0,0.5);
+  position: relative;
 }
+.card-preview.lv2::after {
+  content: '★★';
+  position: absolute;
+  bottom: 4px; left: 4px;
+  font-size: 9px;
+  color: #8a6d2c;
+  text-shadow: 0 0 2px rgba(255,255,255,0.6);
+  letter-spacing: -1px;
+  z-index: 3;
+  pointer-events: none;
+}
+.card-preview.kind-leveled.lv2 {
+  background: linear-gradient(180deg, #f9f0d2 0%, #e2cb95 100%);
+  border-color: #8a6d2c;
+}
+/* Lv3: 鮮やかな金色グラデ + 強い発光(完成形) */
 .card-preview.lv3 {
-  background: var(--lv3-bg);
-  border: 3px solid var(--lv3-frame);
-  box-shadow: 0 0 12px var(--lv3-glow), 0 4px 12px rgba(0,0,0,0.5);
+  background: linear-gradient(135deg, #fff7c2 0%, #ffe082 50%, #f5c84a 100%);
+  border: 3px solid #d4af37;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.7), 0 4px 12px rgba(0,0,0,0.5), inset 0 0 12px rgba(255,255,255,0.4);
+  position: relative;
+}
+.card-preview.lv3::after {
+  content: '★★★';
+  position: absolute;
+  bottom: 4px; left: 4px;
+  font-size: 10px;
+  color: #b8860b;
+  text-shadow: 0 0 3px rgba(255,255,255,0.8);
+  letter-spacing: -1px;
+  z-index: 3;
+  pointer-events: none;
 }
 .card-preview.kind-leveled.lv3 {
-  background: linear-gradient(180deg, #fff8d4 0%, var(--lv3-bg) 100%);
-  border: 3px solid var(--lv3-frame);
+  background: linear-gradient(135deg, #fff7c2 0%, #ffd966 50%, #e8b923 100%);
+  border: 3px solid #d4af37;
 }
-.card-preview.lv3:hover { box-shadow: 0 0 20px var(--lv3-glow), 0 8px 24px rgba(201, 169, 97, 0.5); }
+.card-preview.lv3:hover {
+  box-shadow: 0 0 28px rgba(212, 175, 55, 0.9), 0 8px 24px rgba(212, 175, 55, 0.5), inset 0 0 16px rgba(255,255,255,0.5);
+}
 
 /* 自信作のキラキラバッジ */
 .card-preview.shinsaku::before {
@@ -405,36 +437,62 @@ main {
 .cp-header {
   display: flex;
   align-items: center;
-  gap: 3px;
-  height: 22px;
+  gap: 4px;
+  height: 24px;
 }
-/* バッジ(丸囲み) */
+/* バッジ: 種別ごとに形と接頭辞を変えて区別する */
 .cp-badge {
   flex-shrink: 0;
-  width: 20px; height: 20px;
-  border-radius: 50%;
+  height: 22px;
+  min-width: 26px;
+  padding: 0 5px;
+  border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700;
   font-size: 11px;
   color: white;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  white-space: nowrap;
+  gap: 2px;
+  letter-spacing: 0.02em;
 }
-.cp-badge-level { font-family: 'Cinzel', serif; }
+/* バッジ内の接頭辞 (Lv / HP など) */
+.cp-badge-prefix {
+  font-size: 7px;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+/* レベルバッジ: 「Lv 1」と表示 (角丸長方形 + Cinzel) */
+.cp-badge-level {
+  font-family: 'Cinzel', serif;
+  border: 1px solid rgba(255,255,255,0.45);
+}
+/* IPバッジ: 「💎 1」と表示 (金グラデ) */
 .cp-badge-ip {
-  background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-  color: #1a1410;
-  font-size: 10px;
+  background: linear-gradient(135deg, #f4d36c 0%, #c9a961 100%) !important;
+  color: #2a1f10 !important;
+  font-size: 11px;
+  border: 1px solid #b08a3c;
 }
+.cp-badge-ip .cp-badge-prefix {
+  font-size: 10px; /* 💎絵文字なので少し大きめ */
+}
+/* タイプバッジ(効果カード): タイプ略号を四角に */
 .cp-badge-type {
-  font-size: 10px;
+  font-size: 11px;
+  border-radius: 3px;
+  font-weight: 700;
 }
+/* HPバッジ: 「HP 70」と表示 (赤、横長楕円) */
 .cp-badge-hp {
   background: linear-gradient(135deg, #c0392b 0%, #8b2c1f 100%);
   color: white;
-  width: 26px; /* HPは数字3桁あり得るので幅広め */
+  min-width: 36px;
   height: 22px;
   border-radius: 11px;
-  font-size: 10px;
+  font-size: 11px;
+  border: 1px solid rgba(255,255,255,0.3);
 }
 
 /* 名前バー (横に長く) */
@@ -911,6 +969,21 @@ main {
   font-family: 'Cinzel', serif;
   letter-spacing: 0.05em;
 }
+.deck-size-breakdown {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(201, 169, 97, 0.18);
+  flex-wrap: wrap;
+}
+.dsb-item {
+  font-size: 0.85rem;
+  color: var(--parchment);
+}
+.dsb-hero { color: var(--gold-bright); font-weight: 600; }
+.dsb-char { color: #7eb3d6; }
+.dsb-effect { color: #c8a85f; }
 
 /* タイプ管理: 意味の説明行 */
 .type-meaning {
@@ -2860,13 +2933,13 @@ function buildCardHTML(c, idx, opts) {
     const lvTooltip = c.level ? `Lv${c.level}${charLvLabel?'・'+charLvLabel:''}(背景の色はレベルを表します)` : '';
     body = `
       <div class="cp-header">
-        ${c.level ? `<div class="cp-badge cp-badge-level" style="background:${color}" title="${escapeHtml(lvTooltip)}">${escapeHtml(c.level)}</div>` : ''}
-        ${c.ip ? `<div class="cp-badge cp-badge-ip" title="没で得るIP">${escapeHtml(c.ip)}</div>` : ''}
+        ${c.level ? `<div class="cp-badge cp-badge-level" style="background:${color}" title="${escapeHtml(lvTooltip)}"><span class="cp-badge-prefix">Lv</span>${escapeHtml(c.level)}</div>` : ''}
+        ${c.ip ? `<div class="cp-badge cp-badge-ip" title="没で得るIP(没にしたとき得られる)"><span class="cp-badge-prefix">💎</span>${escapeHtml(c.ip)}</div>` : ''}
         <div class="cp-title-bar" style="background:${color}">
           <div class="cp-title">${escapeHtml(c.name || '無名')}${unlimitedMark}</div>
           ${(c.subrole || charLvLabel) ? `<div class="cp-subrole">${escapeHtml(c.subrole || charLvLabel)}</div>` : ''}
         </div>
-        ${c.hp ? `<div class="cp-badge cp-badge-hp" title="HP">${escapeHtml(c.hp)}</div>` : ''}
+        ${c.hp ? `<div class="cp-badge cp-badge-hp" title="HP(体力)"><span class="cp-badge-prefix">HP</span>${escapeHtml(c.hp)}</div>` : ''}
       </div>
       <div class="cp-illust">
         <span class="cp-illust-icon">${escapeHtml(icon)}</span>
@@ -2895,7 +2968,7 @@ function buildCardHTML(c, idx, opts) {
     body = `
       <div class="cp-header">
         <div class="cp-badge cp-badge-type" style="background:${color}" title="${escapeHtml(c.type)}">${escapeHtml(typeShort)}</div>
-        ${c.ip ? `<div class="cp-badge cp-badge-ip" title="没で得るIP">${escapeHtml(c.ip)}</div>` : ''}
+        ${c.ip ? `<div class="cp-badge cp-badge-ip" title="没で得るIP(没にしたとき得られる)"><span class="cp-badge-prefix">💎</span>${escapeHtml(c.ip)}</div>` : ''}
         <div class="cp-title-bar" style="background:${color}">
           <div class="cp-title">${escapeHtml(c.name || '無名')}${unlimitedMark}</div>
         </div>
@@ -3332,13 +3405,25 @@ async function importDeckCode() {
 }
 // デッキ枚数ゲージ(60〜80推奨)
 const DECK_MIN = 60, DECK_MAX = 80, DECK_GAUGE_SCALE = 100;
-function renderDeckSizeGauge(total) {
+function renderDeckSizeGauge(total, deck) {
   const minPct = (DECK_MIN / DECK_GAUGE_SCALE) * 100;
   const rangePct = ((DECK_MAX - DECK_MIN) / DECK_GAUGE_SCALE) * 100;
   const fillPct = Math.min(100, (total / DECK_GAUGE_SCALE) * 100);
   let status = 'ok', label = '✓ 推奨範囲内';
   if (total < DECK_MIN) { status = 'under'; label = `あと ${DECK_MIN - total} 枚で推奨範囲`; }
   else if (total > DECK_MAX) { status = 'over'; label = `${total - DECK_MAX} 枚オーバー`; }
+
+  // 内訳: 主人公・キャラ・効果ごとの枚数
+  let heroCount = 0, charCount = 0, effectCount = 0;
+  (deck?.cards || []).forEach(e => {
+    const card = state.cards.find(c => c.id === e.cardId);
+    if (!card) return;
+    const k = getTypeKind(card.type);
+    if (k === 'leveled') heroCount += e.count;
+    else if (k === 'character') charCount += e.count;
+    else effectCount += e.count;
+  });
+
   return `
     <div class="deck-size-gauge">
       <div class="deck-size-row">
@@ -3353,6 +3438,11 @@ function renderDeckSizeGauge(total) {
       </div>
       <div class="deck-size-scale">
         <span>0</span><span>${DECK_MIN}</span><span>${DECK_MAX}</span><span>${DECK_GAUGE_SCALE}+</span>
+      </div>
+      <div class="deck-size-breakdown">
+        <span class="dsb-item dsb-hero">👑 主人公 ${heroCount}</span>
+        <span class="dsb-item dsb-char">🎴 キャラ ${charCount}</span>
+        <span class="dsb-item dsb-effect">⚡ 効果 ${effectCount}</span>
       </div>
     </div>`;
 }
@@ -3647,7 +3737,7 @@ function renderDeckDetail() {
         <button class="btn-small btn-danger" onclick="deleteDeck()">削除</button>
       </div>
     </div>
-    ${renderDeckSizeGauge(totalCount)}
+    ${renderDeckSizeGauge(totalCount, deck)}
     <div class="deck-section">
       ${renderLeaderStatusBox(leaderInfo, leaderSetCandidates)}
     </div>
@@ -5188,8 +5278,9 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-protagonist-banner').forEach(e => { e.style.padding = '9px 24px'; e.style.fontSize = '32px'; e.style.marginBottom = '8px'; e.style.borderRadius = '4px'; });
   cardEl.querySelectorAll('.cp-protagonist-mark').forEach(e => { e.style.fontSize = '32px'; });
   cardEl.querySelectorAll('.cp-protagonist-lv').forEach(e => { e.style.padding = '5px 18px'; e.style.fontSize = '32px'; e.style.borderRadius = '28px'; });
-  cardEl.querySelectorAll('.cp-badge').forEach(e => { e.style.width = '64px'; e.style.height = '64px'; e.style.fontSize = '32px'; });
-  cardEl.querySelectorAll('.cp-badge-hp').forEach(e => { e.style.width = '88px'; e.style.height = '64px'; e.style.borderRadius = '32px'; e.style.fontSize = '32px'; });
+  cardEl.querySelectorAll('.cp-badge').forEach(e => { e.style.minWidth = '78px'; e.style.height = '72px'; e.style.fontSize = '34px'; e.style.padding = '0 14px'; e.style.borderRadius = '12px'; e.style.gap = '6px'; });
+  cardEl.querySelectorAll('.cp-badge-prefix').forEach(e => { e.style.fontSize = '20px'; });
+  cardEl.querySelectorAll('.cp-badge-hp').forEach(e => { e.style.minWidth = '120px'; e.style.height = '72px'; e.style.borderRadius = '36px'; e.style.fontSize = '36px'; });
   cardEl.querySelectorAll('.cp-title-bar').forEach(e => { e.style.padding = '0 22px'; e.style.gap = '12px'; });
   cardEl.querySelectorAll('.cp-title').forEach(e => { e.style.fontSize = '36px'; });
   cardEl.querySelectorAll('.cp-subrole').forEach(e => { e.style.fontSize = '24px'; });
