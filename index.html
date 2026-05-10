@@ -2494,8 +2494,8 @@ function buildCardHTML(c, idx, opts) {
         ${memo ? `<span class="cp-illust-memo">${escapeHtml(memo)}</span>` : ''}
       </div>
       <div class="cp-skill-area">
-        ${renderSkill(c.skill1, '技1')}
-        ${renderSkill(c.skill2, '技2')}
+        ${renderSkill(c.skill1, '技1', color)}
+        ${renderSkill(c.skill2, '技2', color)}
       </div>
     `;
   } else if (kind === 'character') {
@@ -2518,8 +2518,8 @@ function buildCardHTML(c, idx, opts) {
         ${memo ? `<span class="cp-illust-memo">${escapeHtml(memo)}</span>` : ''}
       </div>
       <div class="cp-skill-area">
-        ${renderSkill(c.skill1, '技1')}
-        ${renderSkill(c.skill2, '技2')}
+        ${renderSkill(c.skill1, '技1', color)}
+        ${renderSkill(c.skill2, '技2', color)}
       </div>
       <div class="cp-footer">
         ${c.work ? `<div class="cp-footer-work">${escapeHtml(c.work)}</div>` : '<div></div>'}
@@ -2550,7 +2550,7 @@ function buildCardHTML(c, idx, opts) {
         ${memo ? `<span class="cp-illust-memo">${escapeHtml(memo)}</span>` : ''}
       </div>
       <div class="cp-effect-area">
-        ${c.cost ? `<div class="cp-cost-line">必要コスト ${escapeHtml(c.cost)}</div>` : ''}
+        ${c.cost ? `<div class="cp-cost-line" style="background:${color}">必要コスト ${escapeHtml(c.cost)}</div>` : ''}
         <div class="cp-effect-text">${escapeHtml(effectText) || '<span style="opacity:0.4;">効果なし</span>'}</div>
       </div>
       <div class="cp-footer">
@@ -2605,7 +2605,8 @@ function parseSkillText(text) {
   return { name: text, cost: '', effect: '' };
 }
 
-function renderSkill(text, label) {
+function renderSkill(text, label, color) {
+  color = color || '#5d3a6b'; // フォールバック色
   if (!text || !text.trim()) {
     return `<div class="cp-skill cp-skill-empty">${label}: なし</div>`;
   }
@@ -2624,19 +2625,23 @@ function renderSkill(text, label) {
     m = text.match(/^(.+?)[\s　]+(?:必要)?コスト[\s　]*([0-9０-９]+)[\s　]*$/);
     if (m) { name = m[1]; cost = m[2]; effect = ''; }
   }
-  if (name) {
-    const costHalfWidth = normalizeNumStr(cost);
-    return `<div class="cp-skill">
-      <div class="cp-skill-head">
-        <span class="cp-skill-name">${escapeHtml(name.trim())}</span>
-        <span class="cp-skill-cost">コスト${escapeHtml(costHalfWidth)}</span>
-      </div>
-      ${effect ? `<div class="cp-skill-effect">${escapeHtml(effect.trim())}</div>` : ''}
-    </div>`;
+  // パターンD: フォールバック「技名 効果」(コストなし) — 名前と効果は分離して描画
+  if (!name) {
+    const sp = text.match(/^(\S+?)[\s　]+(.+)$/);
+    if (sp) { name = sp[1]; cost = ''; effect = sp[2]; }
+    else { name = text; cost = ''; effect = ''; }
   }
-  // 分解できない場合はそのまま表示
+  const costHalfWidth = normalizeNumStr(cost);
+  // 背景色は inline style で直接指定 (CSS currentColor / var() に頼らないので html2canvas でも確実)
+  const costBadge = costHalfWidth
+    ? `<span class="cp-skill-cost" style="background:${color}">コスト${escapeHtml(costHalfWidth)}</span>`
+    : `<span class="cp-skill-cost cp-skill-cost-none" style="background:${color}; opacity:0.45;">−</span>`;
   return `<div class="cp-skill">
-    <div class="cp-skill-effect">${escapeHtml(text)}</div>
+    <div class="cp-skill-head">
+      <span class="cp-skill-name">${escapeHtml(name.trim())}</span>
+      ${costBadge}
+    </div>
+    ${effect ? `<div class="cp-skill-effect">${escapeHtml(effect.trim())}</div>` : ''}
   </div>`;
 }
 
