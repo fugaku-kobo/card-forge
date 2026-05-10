@@ -520,7 +520,7 @@ main {
   flex: 1;
 }
 .cp-skill-cost {
-  background: currentColor;
+  background: var(--cf-color, currentColor);
   color: white !important;
   padding: 1px 4px;
   border-radius: 2px;
@@ -553,7 +553,7 @@ main {
   text-align: center;
   font-size: 8px;
   font-weight: 700;
-  background: currentColor;
+  background: var(--cf-color, currentColor);
   color: white !important;
   padding: 2px 4px;
   border-radius: 2px;
@@ -2562,7 +2562,7 @@ function buildCardHTML(c, idx, opts) {
 
   const codeTag = c.cardCode ? `<div class="cp-card-code">${escapeHtml(c.cardCode)}</div>` : '';
 
-  return `<div class="${classes.join(' ')}" style="color:${color}" ${opts.attrs || ''} data-idx="${idx}">
+  return `<div class="${classes.join(' ')}" style="color:${color}; --cf-color:${color}" ${opts.attrs || ''} data-idx="${idx}">
     ${opts.showIndex !== false ? `<div class="cp-index">${idx+1}</div>` : ''}
     ${opts.controls || ''}
     ${opts.extraInner || ''}
