@@ -340,11 +340,47 @@ main {
 .card-preview.dragging { opacity: 0.4; }
 
 /* レベル別の枠装飾 */
+/* 主人公カード(kind-leveled): 通常時から金枠+背景グラデーションで他カードと差別化 */
+.card-preview.kind-leveled {
+  background: linear-gradient(180deg, #fff8ec 0%, #f5ecd6 100%);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 8px rgba(201, 169, 97, 0.35), 0 4px 12px rgba(0,0,0,0.5);
+}
+.card-preview.kind-leveled:hover {
+  box-shadow: 0 0 14px rgba(201, 169, 97, 0.55), 0 8px 24px rgba(201, 169, 97, 0.5);
+}
+/* 主人公バナー(上端の「👑 主人公 + Lv X」帯) */
+.cp-protagonist-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 2px 7px;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  border-radius: 1px;
+}
+.cp-protagonist-mark { font-family: 'Cinzel', serif; letter-spacing: 0.1em; }
+.cp-protagonist-lv {
+  background: rgba(255, 255, 255, 0.28);
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+}
 .card-preview.lv2 { background: var(--lv2-bg); border: 2px solid var(--lv2-frame); }
+.card-preview.kind-leveled.lv2 {
+  background: linear-gradient(180deg, #fff5d6 0%, var(--lv2-bg) 100%);
+  border-color: var(--lv2-frame);
+}
 .card-preview.lv3 {
   background: var(--lv3-bg);
   border: 3px solid var(--lv3-frame);
   box-shadow: 0 0 12px var(--lv3-glow), 0 4px 12px rgba(0,0,0,0.5);
+}
+.card-preview.kind-leveled.lv3 {
+  background: linear-gradient(180deg, #fff8d4 0%, var(--lv3-bg) 100%);
+  border: 3px solid var(--lv3-frame);
 }
 .card-preview.lv3:hover { box-shadow: 0 0 20px var(--lv3-glow), 0 8px 24px rgba(201, 169, 97, 0.5); }
 
@@ -1254,6 +1290,8 @@ main {
   transform: none !important;
 }
 .play-hover-preview .cp-index, .play-hover-preview .cp-controls { display: none; }
+.play-hover-preview .cp-protagonist-banner { padding: 3px 9px; font-size: 11px; margin-bottom: 3px; }
+.play-hover-preview .cp-protagonist-lv { padding: 1px 8px; font-size: 11px; }
 .play-hover-preview .cp-header { height: 24px; gap: 4px; }
 .play-hover-preview .cp-badge { width: 20px; height: 20px; font-size: 11px; }
 .play-hover-preview .cp-badge-hp { width: 28px; height: 20px; border-radius: 10px; font-size: 11px; }
@@ -1406,6 +1444,8 @@ main {
   .cp-title { font-size: 9px; }
   .cp-subrole { font-size: 7px; }
   .cp-title-bar { padding: 0 4px; gap: 2px; }
+  .cp-protagonist-banner { padding: 1px 4px; font-size: 6px; margin-bottom: 1px; }
+  .cp-protagonist-lv { padding: 0 4px; font-size: 6px; }
   .kind-leveled .cp-illust { height: 70px; }
   .kind-character .cp-illust { height: 55px; }
   .kind-effect .cp-illust { height: 45px; }
@@ -1507,6 +1547,8 @@ main {
   transform: none;
 }
 .card-zoom-card .card-preview:hover { transform: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+.card-zoom-card .cp-protagonist-banner { padding: 4px 12px; font-size: 14px; margin-bottom: 4px; }
+.card-zoom-card .cp-protagonist-lv { padding: 2px 10px; font-size: 14px; }
 .card-zoom-card .cp-header { height: 36px; gap: 5px; }
 .card-zoom-card .cp-badge { width: 30px; height: 30px; font-size: 16px; }
 .card-zoom-card .cp-badge-hp { width: 40px; height: 30px; border-radius: 15px; font-size: 16px; }
@@ -2477,13 +2519,15 @@ function buildCardHTML(c, idx, opts) {
 
   if (kind === 'leveled') {
     // ============ 主人公カード(設計図1番目) ============
-    // ① レベル(左上、丸囲み)  ② カード名(右に長く)
-    // ③ カードイラスト(中央大)
-    // ④ スキル1
-    // ⑤ スキル2
+    // ① 主人公バナー(👑 主人公 + レベル名) ② カード名 ③ 大イラスト ④ スキル2つ
+    const lvLabels = { '1': '原案', '2': 'ネーム', '3': '清書' };
+    const lvLabel = lvLabels[String(c.level || '')] || '';
     body = `
+      <div class="cp-protagonist-banner" style="background:${color}">
+        <span class="cp-protagonist-mark">👑 主人公</span>
+        ${c.level ? `<span class="cp-protagonist-lv">Lv ${escapeHtml(c.level)}${lvLabel ? '・' + escapeHtml(lvLabel) : ''}</span>` : ''}
+      </div>
       <div class="cp-header">
-        ${c.level ? `<div class="cp-badge cp-badge-level" style="background:${color}">${escapeHtml(c.level)}</div>` : ''}
         <div class="cp-title-bar" style="background:${color}">
           <div class="cp-title">${escapeHtml(c.name || '無名')}${unlimitedMark}</div>
           ${c.subrole ? `<div class="cp-subrole">${escapeHtml(c.subrole)}</div>` : ''}
@@ -2895,7 +2939,7 @@ function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
   const allLevelsLabel = ['1','2','3'];
   let statusHtml = '';
   if (names.length === 0) {
-    statusHtml = `<div class="leader-status warn">⚠ リーダー(主人公)が選ばれていません。Lv1/2/3 の3枚セットが必要です。</div>`;
+    statusHtml = `<div class="leader-status warn">⚠ 主人公カードが選ばれていません。Lv1/2/3 の3枚セットが必要です。</div>`;
   } else {
     statusHtml = names.map(nm => {
       const has = leaderInfo[nm].lvs;
@@ -2913,7 +2957,7 @@ function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
     : leaderSetCandidates.map(nm => `<button class="btn-small" onclick="setLeaderSet('${escapeHtml(nm).replace(/'/g, "\\'")}')">+ ${escapeHtml(nm)} (Lv1/2/3)</button>`).join('');
 
   return `
-    <div class="deck-section-title">リーダー(主人公)— 各1枚、Lv1/2/3の3枚セットが必須</div>
+    <div class="deck-section-title">主人公カード — 各1枚、Lv1/2/3の3枚セットが必須</div>
     ${statusHtml}
     ${candidateOptions ? `<div class="leader-actions"><span class="leader-actions-label">セット追加:</span>${candidateOptions}</div>` : ''}
   `;
@@ -2965,7 +3009,7 @@ function addCardToDeck(cardId) {
   if (existing) {
     if (existing.count >= maxCount) {
       const msg = card.unlimited ? '上限なし(エラー)'
-                : isLeaderCard(card) ? '主人公カードは1枚までです(リーダー扱い)'
+                : isLeaderCard(card) ? '主人公カードは1枚までです'
                 : 'デッキに同じカードは4枚までです';
       toast(msg);
       return;
@@ -3726,8 +3770,8 @@ function startPlaySession() {
     network: { mode: 'solo' }
   };
   playLog(null, `ゲーム開始 (${nameA} vs ${nameB})`);
-  if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚をリーダーゾーンへ配置`);
-  if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚をリーダーゾーンへ配置`);
+  if (heroesA > 0) playLog('A', `主人公 ${heroesA} 枚を主人公ゾーンへ配置`);
+  if (heroesB > 0) playLog('B', `主人公 ${heroesB} 枚を主人公ゾーンへ配置`);
   playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
   playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
   saveData();
@@ -3862,7 +3906,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
     const evicted = s.leader.shift();
     s.discard.push(evicted);
     const evictedCard = findPlayCard(evicted.cardId);
-    playLog(side, `${evictedCard?.name || '?'} を没案へ (リーダー交代)`);
+    playLog(side, `${evictedCard?.name || '?'} を没案へ (主人公交代)`);
   }
 
   // 場に出すときはHPをリセット
@@ -3880,7 +3924,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   else toArr.push(inst);
 
   const card = findPlayCard(inst.cardId);
-  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: 'リーダー', leaderReserve: '控え' };
+  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え' };
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
   playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
   saveData(); renderPlay();
@@ -3947,7 +3991,7 @@ function openPlayPopover(side, instanceId, fromZone) {
     actions.push({ label: '➡ 控えへ戻す', fn: `moveInstance('${side}','${instanceId}','leader','leaderReserve')` });
     actions.push({ label: '➡ 没案ゾーンへ (退場)', fn: `moveInstance('${side}','${instanceId}','leader','discard')` });
   } else if (fromZone === 'leaderReserve') {
-    actions.push({ label: '➡ リーダーへ昇格 (練り上げ)', fn: `moveInstance('${side}','${instanceId}','leaderReserve','leader')` });
+    actions.push({ label: '➡ 主人公へ昇格 (練り上げ)', fn: `moveInstance('${side}','${instanceId}','leaderReserve','leader')` });
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','leaderReserve','discard')` });
   } else if (fromZone === 'hand') {
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
@@ -4204,7 +4248,7 @@ function renderPlaySide(sideKey) {
   const hideOppHand = !canControl;
 
   const leaderHtml = s.leader.length === 0
-    ? '<div class="play-zone-empty">リーダーなし</div>'
+    ? '<div class="play-zone-empty">主人公なし</div>'
     : s.leader.map(inst => buildCardChip(inst, sideKey, 'leader', false)).join('');
   const reserveHtml = s.leaderReserve.length === 0
     ? '<div class="play-zone-empty">控えなし</div>'
@@ -4246,11 +4290,11 @@ function renderPlaySide(sideKey) {
 
       <div class="play-leader-row">
         <div class="play-zone play-zone-leader">
-          <div class="play-zone-title"><span>👑 リーダー</span><span class="play-zone-count">${s.leader.length}/1</span></div>
+          <div class="play-zone-title"><span>👑 主人公</span><span class="play-zone-count">${s.leader.length}/1</span></div>
           <div class="play-zone-cards">${leaderHtml}</div>
         </div>
         <div class="play-zone play-zone-reserve">
-          <div class="play-zone-title"><span>🎒 リーダー控え</span><span class="play-zone-count">${s.leaderReserve.length}</span></div>
+          <div class="play-zone-title"><span>🎒 主人公控え</span><span class="play-zone-count">${s.leaderReserve.length}</span></div>
           <div class="play-zone-cards">${reserveHtml}</div>
         </div>
       </div>
@@ -4479,8 +4523,8 @@ function netHandleMessage(msg, role, ctx) {
       cardPool: cardPool
     };
     playLog(null, `ゲーム開始 (${nameHost} vs ${nameGuest})`);
-    if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚をリーダーゾーンへ配置`);
-    if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚をリーダーゾーンへ配置`);
+    if (heroesA > 0) playLog('A', `主人公 ${heroesA} 枚を主人公ゾーンへ配置`);
+    if (heroesB > 0) playLog('B', `主人公 ${heroesB} 枚を主人公ゾーンへ配置`);
     playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
     playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
     saveData();
@@ -4605,6 +4649,9 @@ function createCardElementForPDF(card) {
 
   // ヘッダー(バッジ + 名前バー)
   cardEl.querySelectorAll('.cp-header').forEach(e => { e.style.height = '76px'; e.style.gap = '10px'; });
+  cardEl.querySelectorAll('.cp-protagonist-banner').forEach(e => { e.style.padding = '8px 22px'; e.style.fontSize = '28px'; e.style.marginBottom = '6px'; e.style.borderRadius = '4px'; });
+  cardEl.querySelectorAll('.cp-protagonist-mark').forEach(e => { e.style.fontSize = '28px'; });
+  cardEl.querySelectorAll('.cp-protagonist-lv').forEach(e => { e.style.padding = '4px 16px'; e.style.fontSize = '28px'; e.style.borderRadius = '24px'; });
   cardEl.querySelectorAll('.cp-badge').forEach(e => { e.style.width = '64px'; e.style.height = '64px'; e.style.fontSize = '32px'; });
   cardEl.querySelectorAll('.cp-badge-hp').forEach(e => { e.style.width = '88px'; e.style.height = '64px'; e.style.borderRadius = '32px'; e.style.fontSize = '32px'; });
   cardEl.querySelectorAll('.cp-title-bar').forEach(e => { e.style.padding = '0 22px'; e.style.gap = '12px'; });
