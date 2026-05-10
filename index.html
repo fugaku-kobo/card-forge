@@ -659,19 +659,6 @@ main {
 }
 
 /* === カード番号(順序のインデックス、右上) === */
-.cp-index {
-  position: absolute;
-  top: -8px; left: -8px;
-  width: 26px; height: 26px;
-  background: var(--gold); color: var(--ink);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Cinzel', serif;
-  font-weight: 700; font-size: 11px;
-  border: 2px solid var(--bg-deep);
-  z-index: 4;
-}
-
 .cp-controls {
   position: absolute;
   top: -8px; right: -8px;
@@ -709,19 +696,37 @@ main {
 }
 .deck-card-controls {
   position: absolute;
-  bottom: -12px; right: 50%;
+  top: 8px; right: 50%;
   transform: translateX(50%);
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
+  gap: 6px;
+  opacity: 0.95;
+  transition: opacity 0.2s, transform 0.15s;
   z-index: 5;
+  background: rgba(36, 28, 23, 0.85);
+  padding: 4px 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(201, 169, 97, 0.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
-.card-preview:hover .deck-card-controls { opacity: 1; }
+.card-preview:hover .deck-card-controls {
+  opacity: 1;
+}
 .deck-card-controls .cp-ctrl-btn {
-  width: 28px; height: 28px;
-  font-size: 14px;
+  width: 30px; height: 30px;
+  font-size: 16px;
   font-weight: 700;
+  background: var(--bg-deep);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+.deck-card-controls .cp-ctrl-btn:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+.deck-card-controls .cp-ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .empty-state {
@@ -916,6 +921,79 @@ main {
   margin-bottom: 4px;
   border-bottom: 1px dashed rgba(201, 169, 97, 0.1);
 }
+
+/* デッキ追加カード: 表示モード切替ボタン */
+.deck-section-title-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+  padding-bottom: 6px;
+}
+.deck-section-title-row .deck-section-title {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.add-view-toggle {
+  display: flex;
+  gap: 2px;
+  border: 1px solid rgba(201, 169, 97, 0.3);
+}
+.add-view-toggle button {
+  background: transparent;
+  border: none;
+  padding: 5px 11px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--parchment-dim);
+  border-radius: 0;
+}
+.add-view-toggle button:hover { background: rgba(201, 169, 97, 0.08); color: var(--gold); }
+.add-view-toggle button.active { background: var(--gold); color: var(--ink); }
+
+/* デッキ追加カード: 大きい画像表示モード */
+.add-card-large-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(189px, 1fr));
+  gap: 28px 18px;
+  max-height: 800px;
+  overflow-y: auto;
+  padding: 20px 12px;
+  border: 1px solid rgba(201, 169, 97, 0.2);
+  background: var(--bg-deep);
+}
+.add-card-large {
+  position: relative;
+  cursor: pointer;
+}
+.add-card-large .card-preview {
+  cursor: pointer;
+}
+.add-card-large-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px;
+  background: linear-gradient(180deg, transparent 60%, rgba(36, 28, 23, 0.88) 100%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.add-card-large:hover .add-card-large-overlay { opacity: 1; }
+.add-card-large-count {
+  background: var(--gold);
+  color: var(--ink);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+.add-card-large-add { pointer-events: auto; }
 
 /* デッキ追加リスト: ミニカードグリッド */
 .add-card-grid {
@@ -2193,6 +2271,12 @@ let dragSrcIdx = null;
 let cardIdCounter = 1;
 // デッキ編集画面の追加カードリスト用フィルタ状態
 let deckAddFilter = { search: '', work: '', type: '' };
+// 追加カード表示モード: 'list' (リスト) | 'grid' (ミニカード) | 'large' (大きい画像)
+let _deckAddViewMode = 'grid';
+function setDeckAddViewMode(mode) {
+  _deckAddViewMode = mode;
+  renderDeckDetail();
+}
 
 function cid() { return 'c' + (cardIdCounter++); }
 
@@ -2831,7 +2915,6 @@ function buildCardHTML(c, idx, opts) {
   const codeTag = c.cardCode ? `<div class="cp-card-code">${escapeHtml(c.cardCode)}</div>` : '';
 
   return `<div class="${classes.join(' ')}" style="color:${color}; --cf-color:${color}" ${opts.attrs || ''} data-idx="${idx}">
-    ${opts.showIndex !== false ? `<div class="cp-index">${idx+1}</div>` : ''}
     ${opts.controls || ''}
     ${opts.extraInner || ''}
     ${body}
@@ -3112,7 +3195,30 @@ function b64ToUtf8(b64) {
   return decodeURIComponent(escape(atob(b64)));
 }
 
-function exportDeckCode(deckId) {
+// gzip圧縮 (CompressionStream使用、結果は base64)
+async function compressToB64(str) {
+  if (typeof CompressionStream === 'undefined') return null; // 非対応環境
+  const blob = new Blob([str]);
+  const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = await new Response(stream).arrayBuffer();
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+// gzip解凍 (base64 → 元の文字列)
+async function decompressFromB64(b64) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('DecompressionStream未対応');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const blob = new Blob([bytes]);
+  const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).text();
+}
+
+async function exportDeckCode(deckId) {
   const deck = state.decks.find(d => d.id === (deckId || state.currentDeckId));
   if (!deck) return;
   const cardIds = new Set((deck.cards || []).map(e => e.cardId));
@@ -3122,10 +3228,20 @@ function exportDeckCode(deckId) {
     deck: { name: deck.name, description: deck.description || '', cards: deck.cards || [] },
     cards
   };
-  const code = utf8ToB64(JSON.stringify(payload));
-  // モーダル表示
+  const json = JSON.stringify(payload);
+  // 優先: gzip圧縮版 (CF2:プレフィックス)、フォールバック: 旧base64
+  let code;
+  let mode;
+  const compressed = await compressToB64(json);
+  if (compressed) {
+    code = 'CF2:' + compressed;
+    mode = `gzip圧縮 (${json.length} → ${code.length} 文字, ${Math.round(100*code.length/json.length)}%)`;
+  } else {
+    code = utf8ToB64(json);
+    mode = `非圧縮 (${code.length} 文字、ブラウザが圧縮非対応)`;
+  }
   document.getElementById('deckCodeTitle').textContent = `📋 「${deck.name}」の共有コード`;
-  document.getElementById('deckCodeDesc').textContent = `このコードを相手に渡してください。相手は「📥 コードから取込」で読み込むとデッキとカードが追加されます。`;
+  document.getElementById('deckCodeDesc').textContent = `このコードを相手に渡してください。「📥 コードから取込」で読み込めます。 [${mode}]`;
   const ta = document.getElementById('deckCodeText');
   ta.value = code;
   ta.readOnly = true;
@@ -3160,12 +3276,20 @@ function closeDeckCodeModal() {
   document.getElementById('deckCodeModal').classList.remove('show');
 }
 
-function importDeckCode() {
+async function importDeckCode() {
   const code = document.getElementById('deckCodeText').value.trim();
   if (!code) { toast('コードを貼り付けてください'); return; }
   let payload;
   try {
-    payload = JSON.parse(b64ToUtf8(code));
+    let json;
+    if (code.startsWith('CF2:')) {
+      // 圧縮版
+      json = await decompressFromB64(code.substring(4));
+    } else {
+      // 旧 v1 形式 (非圧縮 base64)
+      json = b64ToUtf8(code);
+    }
+    payload = JSON.parse(json);
   } catch (e) {
     toast('コードが不正です');
     console.error(e);
@@ -3258,6 +3382,72 @@ function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
     ${statusHtml}
     ${candidateOptions ? `<div class="leader-actions"><span class="leader-actions-label">セット追加:</span>${candidateOptions}</div>` : ''}
   `;
+}
+
+// 追加できるカードを表示モードに応じて描画
+function renderAddCards(availableCards, deck) {
+  const mode = _deckAddViewMode || 'grid';
+  if (mode === 'list') {
+    return `<div class="add-card-list">${availableCards.map(c => {
+      const entry = (deck.cards || []).find(x => x.cardId === c.id);
+      const currentCount = entry ? entry.count : 0;
+      const max = getMaxCopies(c);
+      const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
+      return `
+      <div class="add-card-row" onclick="addCardToDeck('${c.id}')"
+           onmouseenter="showHoverPreview('${c.id}', event)"
+           onmouseleave="hideHoverPreview()">
+        <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
+        <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}${isLeaderCard(c)?' 👑':''}</div>
+        <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}${c.work?' / '+escapeHtml(c.work):''} <span style="color: #c9a961;">[${limitText}]</span></div>
+        <button class="add-card-btn btn-primary">+ 追加</button>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  if (mode === 'large') {
+    return `<div class="add-card-large-grid">${availableCards.map(c => {
+      const entry = (deck.cards || []).find(x => x.cardId === c.id);
+      const currentCount = entry ? entry.count : 0;
+      const max = getMaxCopies(c);
+      const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
+      const idx = state.cards.indexOf(c);
+      return `<div class="add-card-large" onclick="addCardToDeck('${c.id}')" title="クリックで追加">
+        ${buildCardHTML(c, idx, {showIndex:false, attrs:''})}
+        <div class="add-card-large-overlay">
+          <span class="add-card-large-count">${limitText}</span>
+          <button class="add-card-large-add btn-primary btn-small">+ 追加</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  // 'grid' (デフォルト)
+  return `<div class="add-card-grid">${availableCards.map(c => {
+    const entry = (deck.cards || []).find(x => x.cardId === c.id);
+    const currentCount = entry ? entry.count : 0;
+    const max = getMaxCopies(c);
+    const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
+    const tColor = getTypeColor(c.type);
+    const icon = getDisplayIcon(c);
+    const isHero = isLeaderCard(c);
+    return `
+    <button class="add-card-mini ${isHero?'is-hero':''} ${currentCount>0?'in-deck':''}"
+            onclick="addCardToDeck('${c.id}')"
+            onmouseenter="showHoverPreview('${c.id}', event)"
+            onmouseleave="hideHoverPreview()"
+            title="${escapeHtml(c.name)}">
+      <div class="add-card-mini-color" style="background:${tColor}"></div>
+      ${isHero ? '<div class="add-card-mini-hero">👑</div>' : ''}
+      ${c.level ? `<div class="add-card-mini-lv" style="background:${tColor}">Lv${escapeHtml(c.level)}</div>` : ''}
+      <div class="add-card-mini-icon">${escapeHtml(icon)}</div>
+      <div class="add-card-mini-name">${escapeHtml(c.name)}</div>
+      <div class="add-card-mini-meta">
+        ${c.cost ? `<span class="amini-tag amini-cost">⚡${escapeHtml(c.cost)}</span>` : ''}
+        ${c.ip ? `<span class="amini-tag amini-ip">💎${escapeHtml(c.ip)}</span>` : ''}
+        <span class="amini-tag amini-count">${limitText}</span>
+      </div>
+      ${c.work ? `<div class="add-card-mini-work">${escapeHtml(c.work)}</div>` : ''}
+    </button>`;
+  }).join('')}</div>`;
 }
 
 // 指定名の主人公 Lv1/2/3 を一括でデッキに追加(既に別名が居れば確認の上で交代)
@@ -3480,7 +3670,14 @@ function renderDeckDetail() {
           }).join('')}</div>`}
     </div>
     <div class="deck-section">
-      <div class="deck-section-title">追加できるカード (${availableCards.length} / ${availableAll.length}種類)</div>
+      <div class="deck-section-title-row">
+        <div class="deck-section-title">追加できるカード (${availableCards.length} / ${availableAll.length}種類)</div>
+        <div class="add-view-toggle">
+          <button class="${_deckAddViewMode==='list'?'active':''}" onclick="setDeckAddViewMode('list')" title="リスト表示">📋</button>
+          <button class="${_deckAddViewMode==='grid'?'active':''}" onclick="setDeckAddViewMode('grid')" title="ミニカード">🃏</button>
+          <button class="${_deckAddViewMode==='large'?'active':''}" onclick="setDeckAddViewMode('large')" title="大きい画像">🖼</button>
+        </div>
+      </div>
       <div class="deck-add-filter">
         <input type="text" id="deck-filter-search" value="${escapeHtml(f.search)}"
                placeholder="🔍 名前・スキル・効果で検索"
@@ -3496,33 +3693,7 @@ function renderDeckDetail() {
         <button class="btn-small" onclick="resetDeckAddFilter()">クリア</button>
       </div>
       ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>条件に合うカードがありません</p></div>`
-        : `<div class="add-card-grid">${availableCards.map(c => {
-            const entry = (deck.cards || []).find(x => x.cardId === c.id);
-            const currentCount = entry ? entry.count : 0;
-            const max = getMaxCopies(c);
-            const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
-            const tColor = getTypeColor(c.type);
-            const icon = getDisplayIcon(c);
-            const isHero = isLeaderCard(c);
-            return `
-            <button class="add-card-mini ${isHero?'is-hero':''} ${currentCount>0?'in-deck':''}"
-                    onclick="addCardToDeck('${c.id}')"
-                    onmouseenter="showHoverPreview('${c.id}', event)"
-                    onmouseleave="hideHoverPreview()"
-                    title="${escapeHtml(c.name)}">
-              <div class="add-card-mini-color" style="background:${tColor}"></div>
-              ${isHero ? '<div class="add-card-mini-hero">👑</div>' : ''}
-              ${c.level ? `<div class="add-card-mini-lv" style="background:${tColor}">Lv${escapeHtml(c.level)}</div>` : ''}
-              <div class="add-card-mini-icon">${escapeHtml(icon)}</div>
-              <div class="add-card-mini-name">${escapeHtml(c.name)}</div>
-              <div class="add-card-mini-meta">
-                ${c.cost ? `<span class="amini-tag amini-cost">⚡${escapeHtml(c.cost)}</span>` : ''}
-                ${c.ip ? `<span class="amini-tag amini-ip">💎${escapeHtml(c.ip)}</span>` : ''}
-                <span class="amini-tag amini-count">${limitText}</span>
-              </div>
-              ${c.work ? `<div class="add-card-mini-work">${escapeHtml(c.work)}</div>` : ''}
-            </button>`;
-          }).join('')}</div>`}
+        : renderAddCards(availableCards, deck)}
     </div>`;
 
   fitCardTexts(detail);
