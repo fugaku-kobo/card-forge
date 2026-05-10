@@ -2477,15 +2477,29 @@ function renderSkill(text, label) {
   if (!text || !text.trim()) {
     return `<div class="cp-skill cp-skill-empty">${label}: なし</div>`;
   }
-  // テキストから「技名 必要コストN 効果」を抽出
-  const m = text.match(/^(.+?)[\s　]+必要コスト[\s　]*([0-9]+)[\s　]+(.+)$/);
-  if (m) {
+  // テキストから「技名 [必要]コストN 効果」を抽出 (全角数字・「必要」省略・括弧表記にも対応)
+  let name = '', cost = '', effect = '';
+  // パターンA: 「技名 必要コスト1 効果」 / 「技名 コスト1 効果」(全角・半角どちらも)
+  let m = text.match(/^(.+?)[\s　]+(?:必要)?コスト[\s　]*([0-9０-９]+)[\s　]+(.+)$/);
+  if (m) { name = m[1]; cost = m[2]; effect = m[3]; }
+  // パターンB: 「技名 (コスト1) 効果」 / 「技名(コスト1)効果」
+  if (!name) {
+    m = text.match(/^(.+?)[\s　]*[（(](?:必要)?コスト[\s　]*([0-9０-９]+)[）)][\s　]*(.+)$/);
+    if (m) { name = m[1]; cost = m[2]; effect = m[3]; }
+  }
+  // パターンC: 末尾コスト無し「技名 必要コスト1」(効果なし、または効果が技名と同行)
+  if (!name) {
+    m = text.match(/^(.+?)[\s　]+(?:必要)?コスト[\s　]*([0-9０-９]+)[\s　]*$/);
+    if (m) { name = m[1]; cost = m[2]; effect = ''; }
+  }
+  if (name) {
+    const costHalfWidth = normalizeNumStr(cost);
     return `<div class="cp-skill">
       <div class="cp-skill-head">
-        <span class="cp-skill-name">${escapeHtml(m[1].trim())}</span>
-        <span class="cp-skill-cost">コスト${escapeHtml(m[2])}</span>
+        <span class="cp-skill-name">${escapeHtml(name.trim())}</span>
+        <span class="cp-skill-cost">コスト${escapeHtml(costHalfWidth)}</span>
       </div>
-      <div class="cp-skill-effect">${escapeHtml(m[3].trim())}</div>
+      ${effect ? `<div class="cp-skill-effect">${escapeHtml(effect.trim())}</div>` : ''}
     </div>`;
   }
   // 分解できない場合はそのまま表示
