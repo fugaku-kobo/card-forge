@@ -1057,6 +1057,17 @@ main {
   gap: 10px;
   flex: 1;
 }
+/* リーダーゾーン (専用エリア、横長で目立たせる) */
+.play-zone-leader {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.12) 0%, var(--bg-deep) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
+  border-style: solid !important;
+  margin-bottom: 4px;
+}
+.play-zone-leader .play-zone-title {
+  color: var(--gold-bright);
+  font-weight: 700;
+}
 .play-zone {
   background: var(--bg-deep);
   border: 1px dashed rgba(201, 169, 97, 0.25);
@@ -3483,6 +3494,7 @@ function makePlaySide(deckId, name) {
     ip: 0,
     hand: [],     // [{instanceId, cardId, hp?}]
     deck: [],     // 山札 (上から取る)
+    leader: [],   // リーダーゾーン (主人公カード Lv1/2/3)
     field: [],    // 場 (キャラ・継続効果)
     discard: []   // 没案ゾーン
   };
@@ -3514,9 +3526,10 @@ function shuffleArray(arr) {
   return arr;
 }
 
-// 主人公(リーダー)カードを山札から抜いて場へ移動 (ゲーム開始時に呼ぶ)
+// 主人公(リーダー)カードを山札から抜いてリーダーゾーンへ移動 (ゲーム開始時に呼ぶ)
 // cardPool: カード参照を解決するためのプール(state.cards + 必要なら相手のカード)
-function extractLeadersToField(side, cardPool) {
+function extractLeadersToZone(side, cardPool) {
+  if (!side.leader) side.leader = [];
   const heroInstIds = new Set();
   side.deck.forEach(inst => {
     const card = (cardPool || state.cards).find(c => c.id === inst.cardId);
@@ -3524,14 +3537,14 @@ function extractLeadersToField(side, cardPool) {
   });
   const heroes = side.deck.filter(inst => heroInstIds.has(inst.instanceId));
   side.deck = side.deck.filter(inst => !heroInstIds.has(inst.instanceId));
-  // レベル順(1→2→3)でソートして場に並べる(同名内でレベル順、別ヒーローはまとめて)
+  // レベル順(1→2→3)でソートして並べる(同名内でレベル順、別ヒーローはまとめて)
   heroes.sort((a, b) => {
     const ca = (cardPool || state.cards).find(c => c.id === a.cardId) || {};
     const cb = (cardPool || state.cards).find(c => c.id === b.cardId) || {};
     if ((ca.name || '') !== (cb.name || '')) return (ca.name || '').localeCompare(cb.name || '');
     return (parseInt(ca.level) || 0) - (parseInt(cb.level) || 0);
   });
-  side.field = [...heroes, ...side.field];
+  side.leader = [...heroes, ...side.leader];
   return heroes.length;
 }
 
@@ -3548,8 +3561,8 @@ function startPlaySession() {
   sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
   sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
   // リーダー(主人公)カードは山札から抜いて場へ
-  const heroesA = extractLeadersToField(sideA, state.cards);
-  const heroesB = extractLeadersToField(sideB, state.cards);
+  const heroesA = extractLeadersToZone(sideA, state.cards);
+  const heroesB = extractLeadersToZone(sideB, state.cards);
   // 初手ドロー(リーダーを除いた山から)
   for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
     if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
@@ -3566,8 +3579,8 @@ function startPlaySession() {
     network: { mode: 'solo' }
   };
   playLog(null, `ゲーム開始 (${nameA} vs ${nameB})`);
-  if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚を場に配置`);
-  if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚を場に配置`);
+  if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚をリーダーゾーンへ配置`);
+  if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚をリーダーゾーンへ配置`);
   playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
   playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
   saveData();
@@ -3598,8 +3611,8 @@ function restartPlaySession() {
     const sideB = makePlaySide(deckIdB, nameB);
     sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
     sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
-    extractLeadersToField(sideA, state.cards);
-    extractLeadersToField(sideB, state.cards);
+    extractLeadersToZone(sideA, state.cards);
+    extractLeadersToZone(sideB, state.cards);
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
       if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
@@ -3710,7 +3723,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   else toArr.push(inst);
 
   const card = findPlayCard(inst.cardId);
-  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山' };
+  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: 'リーダーゾーン' };
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
   playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
   saveData(); renderPlay();
@@ -3772,7 +3785,10 @@ function openPlayPopover(side, instanceId, fromZone) {
   }
 
   // ゾーン移動候補
-  if (fromZone === 'hand') {
+  if (fromZone === 'leader') {
+    actions.push({ label: '➡ 場に出す (現リーダー)', fn: `moveInstance('${side}','${instanceId}','leader','field')` });
+    actions.push({ label: '➡ 没案ゾーンへ (退場)', fn: `moveInstance('${side}','${instanceId}','leader','discard')` });
+  } else if (fromZone === 'hand') {
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','hand','discard')` });
     actions.push({ label: '➡ 山の上へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',true)` });
@@ -4018,12 +4034,16 @@ function renderPlayLogList() {
 function renderPlaySide(sideKey) {
   const ps = state.playSession;
   const s = ps.sides[sideKey];
+  if (!s.leader) s.leader = []; // 旧データ互換
   const isActive = ps.activeSide === sideKey;
   const canControl = myCanControl(sideKey);
   const dis = canControl ? '' : 'disabled';
   // ネット対戦中、相手の手札は内容を伏せて枚数のみ
   const hideOppHand = !canControl;
 
+  const leaderHtml = s.leader.length === 0
+    ? '<div class="play-zone-empty">リーダーなし</div>'
+    : s.leader.map(inst => buildCardChip(inst, sideKey, 'leader', false)).join('');
   const handHtml = s.hand.length === 0
     ? '<div class="play-zone-empty">手札なし</div>'
     : s.hand.map(inst => buildCardChip(inst, sideKey, 'hand', hideOppHand)).join('');
@@ -4057,6 +4077,11 @@ function renderPlaySide(sideKey) {
         </div>
         ${canControl ? `<button class="btn-small" onclick="drawCard('${sideKey}',1)">山からドロー</button>
         <button class="btn-small" onclick="shuffleDeck('${sideKey}')">山シャッフル</button>` : ''}
+      </div>
+
+      <div class="play-zone play-zone-leader">
+        <div class="play-zone-title"><span>👑 リーダーゾーン</span><span class="play-zone-count">${s.leader.length}</span></div>
+        <div class="play-zone-cards">${leaderHtml}</div>
       </div>
 
       <div class="play-zones">
@@ -4269,8 +4294,8 @@ function netHandleMessage(msg, role, ctx) {
       msg.cardPool || []
     );
     // リーダー(主人公)カードを場へ
-    const heroesA = extractLeadersToField(sideA, cardPool);
-    const heroesB = extractLeadersToField(sideB, cardPool);
+    const heroesA = extractLeadersToZone(sideA, cardPool);
+    const heroesB = extractLeadersToZone(sideB, cardPool);
     // 初手ドロー(リーダーを除いた山から)
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
       if (sideA.deck.length) sideA.hand.push(sideA.deck.shift());
@@ -4283,8 +4308,8 @@ function netHandleMessage(msg, role, ctx) {
       cardPool: cardPool
     };
     playLog(null, `ゲーム開始 (${nameHost} vs ${nameGuest})`);
-    if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚を場に配置`);
-    if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚を場に配置`);
+    if (heroesA > 0) playLog('A', `リーダー ${heroesA} 枚をリーダーゾーンへ配置`);
+    if (heroesB > 0) playLog('B', `リーダー ${heroesB} 枚をリーダーゾーンへ配置`);
     playLog('A', `初手 ${sideA.hand.length} 枚ドロー`);
     playLog('B', `初手 ${sideB.hand.length} 枚ドロー`);
     saveData();
