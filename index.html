@@ -1672,7 +1672,62 @@ main {
   background: linear-gradient(90deg, var(--bg-mid) 0%, var(--bg-light) 50%, var(--bg-mid) 100%);
   border: 1px solid var(--gold);
   padding: 12px 18px;
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  display: grid;
+  grid-template-areas:
+    "info actions"
+    "stepper stepper"
+    "desc desc";
+  grid-template-columns: 1fr auto;
+  gap: 10px 18px;
+}
+.play-turn-info { grid-area: info; }
+.play-turnbar-actions { grid-area: actions; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.phase-stepper {
+  grid-area: stepper;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.phase-step {
+  background: var(--bg-deep);
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  color: var(--parchment-dim);
+  padding: 6px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+.phase-step:hover { background: rgba(201, 169, 97, 0.08); color: var(--gold); }
+.phase-step.done {
+  color: var(--parchment-dim);
+  background: rgba(95, 191, 95, 0.08);
+  border-color: rgba(95, 191, 95, 0.35);
+}
+.phase-step.cur {
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-bright) 100%);
+  color: var(--ink);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(201, 169, 97, 0.5);
+  font-weight: 700;
+}
+.phase-step.skip { opacity: 0.4; text-decoration: line-through; }
+.phase-icon { font-size: 1.1rem; font-family: 'Cinzel', serif; }
+.phase-label { font-size: 0.72rem; letter-spacing: 0.05em; }
+.phase-current-desc {
+  grid-area: desc;
+  color: var(--parchment);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 4px 8px;
+  background: rgba(201, 169, 97, 0.06);
+  border-left: 3px solid var(--gold);
+}
+@media (max-width: 768px) {
+  .play-turnbar { grid-template-areas: "info" "stepper" "desc" "actions"; grid-template-columns: 1fr; }
+  .phase-label { font-size: 0.65rem; }
+  .phase-step { padding: 5px 2px; }
 }
 .play-turn-info {
   display: flex; align-items: center; gap: 14px;
@@ -2366,6 +2421,12 @@ function loadData() {
       // ネットワークプレイは再ロード時に復元できないのでクリア(ソロのみ復元)
       if (state.playSession?.network && state.playSession.network.mode !== 'solo') {
         state.playSession = null;
+      }
+      // 旧形式の phase 文字列を phaseIdx に移行
+      if (state.playSession && state.playSession.phaseIdx === undefined) {
+        state.playSession.phaseIdx = 2; // 「メイン」相当 = ② アイディア
+        state.playSession.firstPlayer = state.playSession.firstPlayer || 'A';
+        delete state.playSession.phase;
       }
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
       loaded = true;
@@ -4268,6 +4329,16 @@ function download(blob, filename) {
 
 // ============ PLAY (テストプレイ用プレイマット) ============
 const PLAY_INITIAL_HAND = 7;
+const PLAY_FIELD_MAX = 6;
+// フェーズ定義 (ターン進行)
+const PHASE_DEFS = [
+  { idx: 0, name: '開始', icon: 'ⓠ', full: 'ⓠ ゲーム開始', desc: '主人公・脇役を表に' },
+  { idx: 1, name: 'ドロー', icon: '①', full: '① ドローフェイズ', desc: 'デッキから2枚ドロー(先行1ターン目はスキップ)' },
+  { idx: 2, name: 'アイディア', icon: '②', full: '② アイディアフェイズ', desc: '手札から場に出す/進化/展開/伏せ' },
+  { idx: 3, name: '持ち込み', icon: '③', full: '③ 持ち込みフェイズ', desc: '相手キャラを攻撃 → 原稿ゾーンへ送る' },
+  { idx: 4, name: '担当編集', icon: '④', full: '④ 担当編集フェイズ', desc: '展開/どんでん返し使用、主人公練り上げ' },
+  { idx: 5, name: 'エンド', icon: '⑤', full: '⑤ エンドフェイズ', desc: 'ターン終了' }
+];
 const PLAY_VICTORY_MANUSCRIPT = 10;
 let playInstanceCounter = 1;
 function pInst() { return 'pi' + (playInstanceCounter++); }
@@ -4381,7 +4452,8 @@ function startPlaySession() {
     active: true,
     turn: 1,
     activeSide: 'A',
-    phase: 'メイン',
+    phaseIdx: 0,
+    firstPlayer: 'A',
     sides: { A: sideA, B: sideB },
     log: [],
     network: { mode: 'solo' }
@@ -4426,7 +4498,7 @@ function restartPlaySession() {
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
     }
     state.playSession = {
-      active: true, turn: 1, activeSide: 'A', phase: 'メイン',
+      active: true, turn: 1, activeSide: 'A', phaseIdx: 0, firstPlayer: 'A',
       sides: { A: sideA, B: sideB }, log: [],
       network: { mode: 'solo' }
     };
@@ -4458,17 +4530,44 @@ function endTurn() {
   const oldSide = ps.activeSide;
   ps.activeSide = ps.activeSide === 'A' ? 'B' : 'A';
   if (ps.activeSide === 'A') ps.turn++; // BからAに戻ったらターン++
+  // 新ターンの開始は ① ドローフェイズから
+  ps.phaseIdx = 1;
   playLog(oldSide, `ターン終了 → ${ps.activeSide}のターン (${ps.turn})`);
   saveData(); renderPlay();
   netSendOp({ type: 'endTurn' });
 }
 
-function changePhase(phase) {
+// フェーズインデックスを直接セット (UI のステッパーから)
+function setPhase(idx) {
   if (!state.playSession) return;
-  state.playSession.phase = phase;
+  const newIdx = Math.max(0, Math.min(5, idx));
+  if (state.playSession.phaseIdx === newIdx) return;
+  state.playSession.phaseIdx = newIdx;
+  const def = PHASE_DEFS[newIdx];
+  playLog(state.playSession.activeSide, `→ ${def.full}`);
   saveData(); renderPlay();
-  netSendOp({ type: 'phase', phase });
+  netSendOp({ type: 'phase', phaseIdx: newIdx });
 }
+
+// 「次のフェーズへ」: 現在のフェーズから1つ進める
+function nextPhase() {
+  if (!state.playSession) return;
+  const ps = state.playSession;
+  const isFirstTurnFirstPlayer = (ps.turn === 1 && ps.activeSide === ps.firstPlayer);
+  let next = ps.phaseIdx + 1;
+  // 先行1ターン目は ① ドローと ③ 持ち込み をスキップ
+  if (isFirstTurnFirstPlayer && next === 1) next = 2;
+  if (isFirstTurnFirstPlayer && next === 3) next = 4;
+  if (next > 5) {
+    // ⑤ の次はターン終了
+    endTurn();
+    return;
+  }
+  setPhase(next);
+}
+
+// 互換: 旧 changePhase(phase) は無視 (古いネットワークメッセージ用)
+function changePhase(_phase) { /* 旧API、何もしない */ }
 
 // ============ カウンタ ============
 function adjustCounter(side, key, delta) {
@@ -4516,9 +4615,41 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   if (!fromArr) return;
   const idx = fromArr.findIndex(x => x.instanceId === instanceId);
   if (idx < 0) return;
+
+  // ルール検証 (ローカル操作時のみ。リモート受信は信頼してスキップ)
+  if (!_isApplyingRemoteOp) {
+    const candidate = fromArr[idx];
+    // [Lv順序] 主人公昇格は Lv +1 のみ許可
+    if (toZone === 'leader') {
+      const newCard = findPlayCard(candidate.cardId);
+      if (newCard && isLeaderCard(newCard)) {
+        const newLv = parseInt(newCard.level) || 0;
+        const currentLeader = s.leader[0];
+        const currentLv = currentLeader
+          ? (parseInt(findPlayCard(currentLeader.cardId)?.level) || 0)
+          : 0;
+        if (newLv !== currentLv + 1) {
+          if (currentLv === 0) {
+            toast(`主人公ゾーンが空です。Lv1から順番に出してください (試行: Lv${newLv})`);
+          } else if (newLv <= currentLv) {
+            toast(`既に Lv${currentLv} です。Lv${currentLv + 1} のカードで練り上げてください`);
+          } else {
+            toast(`Lv${currentLv}からLv${newLv}には進化できません(順番にLv1→Lv2→Lv3)`);
+          }
+          return;
+        }
+      }
+    }
+    // [場の上限] キャラクターアイディアゾーンは 6 枚まで
+    if (toZone === 'field' && fromZone !== 'field' && s.field.length >= PLAY_FIELD_MAX) {
+      toast(`場のキャラクターアイディアゾーンは ${PLAY_FIELD_MAX} 枚までです`);
+      return;
+    }
+  }
+
   const [inst] = fromArr.splice(idx, 1);
 
-  // リーダーゾーンは1枚まで: 既存があれば没案へ自動移動(=練り上げ・レベル交代)
+  // 主人公ゾーンは1枚まで: 既存があれば没案へ自動移動(=練り上げ・レベル交代)
   if (toZone === 'leader' && s.leader.length >= 1) {
     const evicted = s.leader.shift();
     s.discard.push(evicted);
@@ -4954,21 +5085,33 @@ function renderTurnBar() {
                   : net.mode === 'guest' ? `<span class="play-net-badge guest">🌐 GUEST (${escapeHtml(net.mySide)}側)</span>`
                   : '';
   const myTurn = net.mode === 'solo' || net.mySide === ps.activeSide;
+  const curIdx = ps.phaseIdx ?? 2;
+  const curDef = PHASE_DEFS[curIdx] || PHASE_DEFS[0];
+  const isFirstTurnFirstPlayer = (ps.turn === 1 && ps.activeSide === ps.firstPlayer);
+  // 先行1ターン目は①と③をスキップ表示
+  const stepper = PHASE_DEFS.map(p => {
+    const skipped = isFirstTurnFirstPlayer && (p.idx === 1 || p.idx === 3);
+    const cls = p.idx === curIdx ? 'cur' : (p.idx < curIdx ? 'done' : '');
+    return `<button class="phase-step ${cls} ${skipped?'skip':''}"
+              onclick="setPhase(${p.idx})"
+              title="${escapeHtml(p.full)} — ${escapeHtml(p.desc)}${skipped?'(先行1ターン目はスキップ)':''}"
+              ${myTurn?'':'disabled'}>
+              <span class="phase-icon">${p.icon}</span>
+              <span class="phase-label">${p.name}</span>
+            </button>`;
+  }).join('');
   return `
     <div class="play-turnbar">
       <div class="play-turn-info">
         <div class="play-turn-num">ターン ${ps.turn}</div>
         <div class="play-active-side">アクティブ: <strong>${escapeHtml(activeName)}</strong>${myTurn?'':' (相手ターン)'}</div>
         ${netBadge}
-        <div>フェーズ:
-          <select onchange="changePhase(this.value)" ${myTurn?'':'disabled'}>
-            ${['ドロー','メイン','バトル','エンド','相手ターン'].map(p =>
-              `<option value="${p}" ${ps.phase===p?'selected':''}>${p}</option>`).join('')}
-          </select>
-        </div>
       </div>
+      <div class="phase-stepper">${stepper}</div>
+      <div class="phase-current-desc">${escapeHtml(curDef.full)} — ${escapeHtml(curDef.desc)}</div>
       <div class="play-turnbar-actions">
-        <button class="btn-primary" onclick="endTurn()" ${myTurn?'':'disabled'}>ターン終了</button>
+        <button class="btn-primary" onclick="nextPhase()" ${myTurn?'':'disabled'}>${curIdx >= 5 ? 'ターン終了' : '次のフェーズへ →'}</button>
+        <button class="btn-small" onclick="endTurn()" ${myTurn?'':'disabled'} title="現在のフェーズに関係なくターン終了">⏭ ターン終了</button>
         <button class="btn-small" onclick="togglePlayLog()">📜 ログ (${ps.log.length})</button>
         ${net.mode === 'solo' ? `<button class="btn-small" onclick="restartPlaySession()">↺ リスタート</button>` : ''}
         <button class="btn-small btn-danger" onclick="endPlaySession()">✕ 終了</button>
@@ -5143,7 +5286,7 @@ function netHandleMessage(msg, role, ctx) {
       if (sideB.deck.length) sideB.hand.push(sideB.deck.shift());
     }
     state.playSession = {
-      active: true, turn: 1, activeSide: 'A', phase: 'メイン',
+      active: true, turn: 1, activeSide: 'A', phaseIdx: 0, firstPlayer: 'A',
       sides: { A: sideA, B: sideB }, log: [],
       network: { mode: 'host', mySide: 'A', roomId: netPeer.id },
       cardPool: cardPool
@@ -5247,7 +5390,7 @@ function netApplyRemoteOp(op) {
       saveData(); renderPlay();
     }
     else if (op.type === 'endTurn') endTurn();
-    else if (op.type === 'phase') changePhase(op.phase);
+    else if (op.type === 'phase') setPhase(op.phaseIdx);
   } finally {
     _isApplyingRemoteOp = false;
   }
