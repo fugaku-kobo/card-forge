@@ -1667,11 +1667,17 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
           </div>
         </div>
 
-        <!-- IP のみ (展開・テコ入れ・どんでん返し) -->
+        <!-- IP・コスト (展開・テコ入れ・どんでん返し) -->
         <div id="fields-ip-only" style="display:none">
-          <div class="field">
-            <label>没で得るIP</label>
-            <input type="text" id="f-ip2" placeholder="例: 2">
+          <div class="field-row">
+            <div class="field">
+              <label>必要コスト (使うとき)</label>
+              <input type="text" id="f-cost" placeholder="例: 2" maxlength="2" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label>没で得るIP</label>
+              <input type="text" id="f-ip2" placeholder="例: 2">
+            </div>
           </div>
           <div class="field-checkbox">
             <input type="checkbox" id="f-unlimited2">
@@ -2294,6 +2300,7 @@ function readForm() {
   }
   if (kind === 'effect') {
     data.ip = document.getElementById('f-ip2').value.trim();
+    data.cost = normalizeNumStr(document.getElementById('f-cost').value);
     data.unlimited = document.getElementById('f-unlimited2').checked;
     data.effect1 = document.getElementById('f-effect1').value.trim();
     data.effect2 = document.getElementById('f-effect2').value.trim();
@@ -2321,6 +2328,7 @@ function writeForm(c) {
   document.getElementById('f-unlimited2').checked = !!c.unlimited;
   document.getElementById('f-other').value = c.rule || c.other || '';
   document.getElementById('f-ip2').value = c.ip || '';
+  document.getElementById('f-cost').value = c.cost || '';
   // 既存スキルテキストを 名前/コスト/効果 に分解してフォームに割り当て
   const sk1 = parseSkillText(c.skill1 || '');
   const sk2 = parseSkillText(c.skill2 || '');
