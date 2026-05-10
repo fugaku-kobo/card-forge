@@ -845,6 +845,198 @@ main {
   font-size: 0.78rem;
   letter-spacing: 0.05em;
 }
+/* デッキ枚数ゲージ */
+.deck-size-gauge {
+  background: var(--bg-mid);
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+.deck-size-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 8px;
+}
+.deck-size-num {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-bright);
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+.deck-size-unit { color: var(--parchment-dim); font-size: 0.9rem; font-weight: 400; }
+.deck-size-status {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  font-family: 'Noto Serif JP', serif;
+}
+.deck-size-status.status-ok { color: #5fbf5f; }
+.deck-size-status.status-under { color: #c87f4a; }
+.deck-size-status.status-over { color: #c0392b; }
+.deck-size-bar {
+  position: relative;
+  height: 14px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201, 169, 97, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.deck-size-zone {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: rgba(95, 191, 95, 0.15);
+}
+.deck-size-fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  transition: width 0.35s cubic-bezier(.5,1.5,.5,1), background 0.3s;
+  border-right: 1px solid rgba(255,255,255,0.3);
+}
+.deck-size-fill.under { background: linear-gradient(90deg, #8a5523, #c87f4a); }
+.deck-size-fill.ok    { background: linear-gradient(90deg, #4a8a3a, #5fbf5f); }
+.deck-size-fill.over  { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+.deck-size-tick {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 1px;
+  background: rgba(201, 169, 97, 0.6);
+}
+.deck-size-scale {
+  display: flex; justify-content: space-between;
+  font-size: 0.7rem; color: var(--parchment-dim);
+  margin-top: 4px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.05em;
+}
+
+/* タイプ管理: 意味の説明行 */
+.type-meaning {
+  color: var(--parchment-dim);
+  font-size: 0.78rem;
+  font-style: italic;
+  padding: 0 14px 8px 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed rgba(201, 169, 97, 0.1);
+}
+
+/* デッキ追加リスト: ミニカードグリッド */
+.add-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  max-height: 540px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid rgba(201, 169, 97, 0.2);
+  background: var(--bg-deep);
+}
+.add-card-mini {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  padding: 14px 6px 8px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  color: var(--parchment);
+  text-align: center;
+  overflow: hidden;
+  min-height: 160px;
+}
+.add-card-mini:hover {
+  border-color: var(--gold);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 14px rgba(201, 169, 97, 0.35);
+  z-index: 2;
+}
+.add-card-mini.in-deck {
+  background: linear-gradient(180deg, rgba(95,191,95,0.15) 0%, var(--bg-deep) 100%);
+  border-color: rgba(95, 191, 95, 0.5);
+}
+.add-card-mini.is-hero {
+  background: linear-gradient(180deg, rgba(212,175,55,0.18) 0%, var(--bg-deep) 100%);
+  border-color: var(--gold);
+  box-shadow: 0 0 6px rgba(201, 169, 97, 0.25);
+}
+.add-card-mini-color {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+}
+.add-card-mini-hero {
+  position: absolute;
+  top: 7px; left: 4px;
+  font-size: 14px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+.add-card-mini-lv {
+  position: absolute;
+  top: 7px; right: 4px;
+  color: white;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.add-card-mini-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin: 4px 0 6px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.add-card-mini-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.2;
+  min-height: 1.9em;
+  margin-bottom: 4px;
+}
+.add-card-mini-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: auto;
+}
+.amini-tag {
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(201, 169, 97, 0.2);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.03em;
+}
+.amini-cost { background: rgba(255,255,255,0.12); color: var(--parchment); }
+.amini-ip { background: rgba(74, 144, 200, 0.25); color: #7eb3d6; }
+.amini-count { background: rgba(95, 191, 95, 0.25); color: #95d495; }
+.add-card-mini-work {
+  font-size: 0.65rem;
+  color: var(--parchment-dim);
+  font-style: italic;
+  margin-top: 3px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* カードズーム下部のアクション */
+.card-zoom-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
 .deck-add-filter {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto;
@@ -1937,6 +2129,7 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
     <button class="card-zoom-close" onclick="closeCardZoom()">✕</button>
     <div class="card-zoom-card" id="cardZoomCard"></div>
     <div class="card-zoom-meta" id="cardZoomMeta"></div>
+    <div class="card-zoom-actions" id="cardZoomActions"></div>
   </div>
 </div>
 <!-- プレイ用ホバープレビュー (チップにマウスを置くと原寸表示) -->
@@ -1965,13 +2158,23 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
 const STORAGE_KEY = 'card_forge_data_v4_tezuka';
 
 // 5つの基本タイプ
+// 色は意味重視: 主人公=朱赤(主役)、キャラ=青(仲間)、展開=緑(発想)、テコ入れ=橙(介入)、どんでん返し=紫(逆転)
 const BUILTIN_TYPES = [
-  { name: '主人公',         color: '#8b2c1f', builtin: true, kind: 'leveled' },
-  { name: 'キャラクター',   color: '#2c4f7c', builtin: true, kind: 'character' },
-  { name: '展開アイディア', color: '#3d6b3a', builtin: true, kind: 'effect' },
-  { name: 'テコ入れ',       color: '#6b4f2c', builtin: true, kind: 'effect' },
-  { name: 'どんでん返し',   color: '#5d3a6b', builtin: true, kind: 'effect' }
+  { name: '主人公',         color: '#a02d1f', builtin: true, kind: 'leveled',   meaning: '漫画の主役・リーダー (各1枚、Lv1/2/3が必須)' },
+  { name: 'キャラクター',   color: '#2c5fa0', builtin: true, kind: 'character', meaning: '場で戦う仲間(脇役/相棒/ライバル/自信作)' },
+  { name: '展開アイディア', color: '#3d8a3a', builtin: true, kind: 'effect',    meaning: 'アイデア・物語の発展を促すカード' },
+  { name: 'テコ入れ',       color: '#c8761f', builtin: true, kind: 'effect',    meaning: '伏せて相手ターンに発動する介入カード' },
+  { name: 'どんでん返し',   color: '#6e3a8b', builtin: true, kind: 'effect',    meaning: '原稿6枚以上で使える大逆転カード' }
 ];
+
+// 旧デフォルト色 → 新色マイグレーション用
+const OLD_DEFAULT_COLORS = {
+  '主人公':         '#8b2c1f',
+  'キャラクター':   '#2c4f7c',
+  '展開アイディア': '#3d6b3a',
+  'テコ入れ':       '#6b4f2c',
+  'どんでん返し':   '#5d3a6b'
+};
 // kind の意味:
 // - 'leveled':   レベルあり、技あり、HPなし、IPなし   (主人公)
 // - 'character': レベル・サブ区分・HP・IP・技・自信作  (キャラクター)
@@ -2014,6 +2217,8 @@ function loadData() {
 
   // 基本タイプは常に存在を保証
   ensureBuiltinTypes();
+  // 旧色を新色へ自動更新(ユーザーカスタム色は維持)
+  migrateBuiltinColors();
   // デッキ形式の移行
   migrateDecks();
   // カードのunlimitedフラグを必要なら推測
@@ -2029,6 +2234,19 @@ function ensureBuiltinTypes() {
       // builtinフラグとkindは正規化(ユーザーが変更できないように)
       exists.builtin = true;
       exists.kind = builtin.kind;
+      // meaning も常に最新化
+      exists.meaning = builtin.meaning;
+    }
+  });
+}
+
+// 旧デフォルト色のままなら新色に更新(カスタム済の色は維持)
+function migrateBuiltinColors() {
+  state.types.forEach(t => {
+    const old = OLD_DEFAULT_COLORS[t.name];
+    const newType = BUILTIN_TYPES.find(b => b.name === t.name);
+    if (old && newType && t.color === old) {
+      t.color = newType.color;
     }
   });
 }
@@ -2738,7 +2956,7 @@ function render() {
       </div>` : '';
     return buildCardHTML(c, i, {
       selected: editingIdx === i,
-      attrs: `onclick="editCard(${i})" ${dragAttrs}`,
+      attrs: `onclick="openCardZoom(${i})" onmouseenter="showHoverPreview('${c.id}', event)" onmouseleave="hideHoverPreview()" ${dragAttrs}`,
       controls: reorderBtns
     });
   }).join('');
@@ -2800,15 +3018,32 @@ function moveCard(idx, delta) {
 }
 
 // ============ CARD ZOOM ============
+let _zoomCurrentIdx = null;
 function openCardZoom(idx) {
   const c = state.cards[idx];
   if (!c) return;
+  _zoomCurrentIdx = idx;
   const zoomCard = document.getElementById('cardZoomCard');
   zoomCard.innerHTML = buildCardHTML(c, idx, {showIndex: false, attrs: ''});
   document.getElementById('cardZoomMeta').textContent = `№ ${idx + 1} / ${state.cards.length}`;
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  document.getElementById('cardZoomActions').innerHTML = `
+    <button class="btn-small" onclick="closeCardZoom()">閉じる</button>
+    ${isMobile ? '' : '<button class="btn-small btn-primary" onclick="editFromZoom()">✏ 編集</button>'}`;
   document.getElementById('cardZoomBg').classList.add('show');
   // 表示後にテキストを収める(display:none状態だと幅が取れないので少し待つ)
   setTimeout(() => fitCardTexts(zoomCard), 0);
+}
+function editFromZoom() {
+  if (_zoomCurrentIdx === null) return;
+  const idx = _zoomCurrentIdx;
+  closeCardZoom();
+  // ライブラリタブに戻して編集
+  const libBtn = document.querySelector('.tab-btn[data-tab="library"]');
+  if (libBtn && !document.getElementById('tab-library').classList.contains('active')) {
+    libBtn.click();
+  }
+  editCard(idx);
 }
 function closeCardZoom(event) {
   if (event && event.target.id !== 'cardZoomBg' && !event.target.classList.contains('card-zoom-close')) return;
@@ -2968,6 +3203,33 @@ function importDeckCode() {
   closeDeckCodeModal();
   toast(`「${newDeck.name}」を取込(カード${addedCards}枚追加)`);
 }
+// デッキ枚数ゲージ(60〜80推奨)
+const DECK_MIN = 60, DECK_MAX = 80, DECK_GAUGE_SCALE = 100;
+function renderDeckSizeGauge(total) {
+  const minPct = (DECK_MIN / DECK_GAUGE_SCALE) * 100;
+  const rangePct = ((DECK_MAX - DECK_MIN) / DECK_GAUGE_SCALE) * 100;
+  const fillPct = Math.min(100, (total / DECK_GAUGE_SCALE) * 100);
+  let status = 'ok', label = '✓ 推奨範囲内';
+  if (total < DECK_MIN) { status = 'under'; label = `あと ${DECK_MIN - total} 枚で推奨範囲`; }
+  else if (total > DECK_MAX) { status = 'over'; label = `${total - DECK_MAX} 枚オーバー`; }
+  return `
+    <div class="deck-size-gauge">
+      <div class="deck-size-row">
+        <div class="deck-size-num">${total} <span class="deck-size-unit">枚</span></div>
+        <div class="deck-size-status status-${status}">${label}</div>
+      </div>
+      <div class="deck-size-bar" title="推奨 ${DECK_MIN}〜${DECK_MAX} 枚">
+        <div class="deck-size-zone" style="left:${minPct}%; width:${rangePct}%"></div>
+        <div class="deck-size-fill ${status}" style="width:${fillPct}%"></div>
+        <div class="deck-size-tick" style="left:${minPct}%" title="推奨下限 ${DECK_MIN}"></div>
+        <div class="deck-size-tick" style="left:${minPct + rangePct}%" title="推奨上限 ${DECK_MAX}"></div>
+      </div>
+      <div class="deck-size-scale">
+        <span>0</span><span>${DECK_MIN}</span><span>${DECK_MAX}</span><span>${DECK_GAUGE_SCALE}+</span>
+      </div>
+    </div>`;
+}
+
 // リーダー状況パネル
 function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
   const names = Object.keys(leaderInfo);
@@ -2998,24 +3260,45 @@ function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
   `;
 }
 
-// 指定名のリーダー Lv1/2/3 を一括でデッキに追加(既に1枚あるレベルはスキップ)
+// 指定名の主人公 Lv1/2/3 を一括でデッキに追加(既に別名が居れば確認の上で交代)
 function setLeaderSet(name) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   if (!deck.cards) deck.cards = [];
-  const heroes = state.cards.filter(c => isLeaderCard(c) && c.name === name);
-  let added = 0;
-  ['1','2','3'].forEach(lv => {
-    const card = heroes.find(c => String(c.level) === lv);
-    if (!card) return;
-    const existing = deck.cards.find(x => x.cardId === card.id);
-    if (existing && existing.count >= 1) return; // 既に1枚あるのでスキップ
-    if (existing) { existing.count = 1; }
-    else { deck.cards.push({cardId: card.id, count: 1}); }
-    added++;
+
+  const otherNames = new Set();
+  deck.cards.forEach(e => {
+    const c = state.cards.find(c => c.id === e.cardId);
+    if (c && isLeaderCard(c) && c.name !== name) otherNames.add(c.name);
   });
-  saveData(); renderDeckList();
-  toast(added > 0 ? `「${name}」をセット追加 (${added}枚)` : `「${name}」は既に揃っています`);
+
+  const doApply = () => {
+    // 別名の主人公カードを全削除
+    deck.cards = deck.cards.filter(e => {
+      const c = state.cards.find(c => c.id === e.cardId);
+      return !(c && isLeaderCard(c) && c.name !== name);
+    });
+    const heroes = state.cards.filter(c => isLeaderCard(c) && c.name === name);
+    let added = 0;
+    ['1','2','3'].forEach(lv => {
+      const card = heroes.find(c => String(c.level) === lv);
+      if (!card) return;
+      const existing = deck.cards.find(x => x.cardId === card.id);
+      if (existing && existing.count >= 1) return;
+      if (existing) existing.count = 1;
+      else deck.cards.push({cardId: card.id, count: 1});
+      added++;
+    });
+    saveData(); renderDeckList();
+    toast(added > 0 ? `「${name}」をセット追加 (${added}枚)` : `「${name}」は既に揃っています`);
+  };
+
+  if (otherNames.size > 0) {
+    const others = [...otherNames].join('・');
+    showModal('主人公の変更', `現在「${others}」がデッキに入っています。「${name}」に変更しますか?(既存の主人公カードは削除されます)`, doApply);
+  } else {
+    doApply();
+  }
 }
 
 // 主人公(リーダー)カードかどうか
@@ -3037,6 +3320,19 @@ function addCardToDeck(cardId) {
 
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
+
+  // 1デッキ1主人公: 別名の主人公が既に入っていれば拒否
+  if (isLeaderCard(card)) {
+    const otherEntry = deck.cards.find(e => {
+      const c2 = state.cards.find(c => c.id === e.cardId);
+      return c2 && isLeaderCard(c2) && c2.name !== card.name;
+    });
+    if (otherEntry) {
+      const otherCard = state.cards.find(c => c.id === otherEntry.cardId);
+      toast(`既に主人公「${otherCard?.name || '?'}」が入っています。1デッキにつき1名のみです`);
+      return;
+    }
+  }
 
   const existing = deck.cards.find(x => x.cardId === cardId);
   const maxCount = getMaxCopies(card);
@@ -3158,6 +3454,7 @@ function renderDeckDetail() {
         <button class="btn-small btn-danger" onclick="deleteDeck()">削除</button>
       </div>
     </div>
+    ${renderDeckSizeGauge(totalCount)}
     <div class="deck-section">
       ${renderLeaderStatusBox(leaderInfo, leaderSetCandidates)}
     </div>
@@ -3199,18 +3496,32 @@ function renderDeckDetail() {
         <button class="btn-small" onclick="resetDeckAddFilter()">クリア</button>
       </div>
       ${availableCards.length === 0 ? `<div class="empty-state" style="padding: 30px;"><p>条件に合うカードがありません</p></div>`
-        : `<div class="add-card-list">${availableCards.map(c => {
+        : `<div class="add-card-grid">${availableCards.map(c => {
             const entry = (deck.cards || []).find(x => x.cardId === c.id);
             const currentCount = entry ? entry.count : 0;
             const max = getMaxCopies(c);
             const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
+            const tColor = getTypeColor(c.type);
+            const icon = getDisplayIcon(c);
+            const isHero = isLeaderCard(c);
             return `
-            <div class="add-card-row" onclick="addCardToDeck('${c.id}')">
-              <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
-              <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}</div>
-              <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}${c.work?' / '+escapeHtml(c.work):''} <span style="color: #c9a961;">[${limitText}]</span></div>
-              <button class="add-card-btn btn-primary">+ 追加</button>
-            </div>`;
+            <button class="add-card-mini ${isHero?'is-hero':''} ${currentCount>0?'in-deck':''}"
+                    onclick="addCardToDeck('${c.id}')"
+                    onmouseenter="showHoverPreview('${c.id}', event)"
+                    onmouseleave="hideHoverPreview()"
+                    title="${escapeHtml(c.name)}">
+              <div class="add-card-mini-color" style="background:${tColor}"></div>
+              ${isHero ? '<div class="add-card-mini-hero">👑</div>' : ''}
+              ${c.level ? `<div class="add-card-mini-lv" style="background:${tColor}">Lv${escapeHtml(c.level)}</div>` : ''}
+              <div class="add-card-mini-icon">${escapeHtml(icon)}</div>
+              <div class="add-card-mini-name">${escapeHtml(c.name)}</div>
+              <div class="add-card-mini-meta">
+                ${c.cost ? `<span class="amini-tag amini-cost">⚡${escapeHtml(c.cost)}</span>` : ''}
+                ${c.ip ? `<span class="amini-tag amini-ip">💎${escapeHtml(c.ip)}</span>` : ''}
+                <span class="amini-tag amini-count">${limitText}</span>
+              </div>
+              ${c.work ? `<div class="add-card-mini-work">${escapeHtml(c.work)}</div>` : ''}
+            </button>`;
           }).join('')}</div>`}
     </div>`;
 
@@ -3306,14 +3617,19 @@ function renderStats() {
 // ============ SETTINGS ============
 function renderSettings() {
   const list = document.getElementById('typeList');
-  list.innerHTML = state.types.map((t, i) => `
+  list.innerHTML = state.types.map((t, i) => {
+    const builtin = BUILTIN_TYPES.find(b => b.name === t.name);
+    const meaning = t.meaning || builtin?.meaning || '';
+    return `
     <div class="type-row">
       <input type="text" value="${escapeHtml(t.name)}" onchange="updateTypeName(${i}, this.value)" ${t.builtin ? 'disabled' : ''}>
       <input type="color" value="${t.color}" onchange="updateTypeColor(${i}, this.value)">
       <div class="color-preview" style="background:${t.color}"></div>
       <span class="type-builtin">${t.builtin ? '基本' : 'カスタム'}</span>
       <button class="btn-danger btn-icon" onclick="removeType(${i})" ${t.builtin ? 'disabled' : ''}>削除</button>
-    </div>`).join('');
+    </div>
+    ${meaning ? `<div class="type-meaning">${escapeHtml(meaning)}</div>` : ''}`;
+  }).join('');
 }
 function addType() {
   promptInput('新しいタイプ', 'タイプ名を入力(キャラクター仕様で作成されます)', '', (name) => {
@@ -4070,6 +4386,14 @@ function closePlayPopover() {
 }
 
 // ホバーで原寸プレビュー表示 (テキストが小さくて読めないチップを補完)
+// 汎用ホバープレビュー(ライブラリ・デッキ追加リスト・PLAY 共通)
+function showHoverPreview(cardId, event) {
+  showPlayHoverPreview(cardId, event);
+}
+function hideHoverPreview() {
+  hidePlayHoverPreview();
+}
+
 function showPlayHoverPreview(cardId, event) {
   const card = findPlayCard(cardId);
   if (!card) return;
