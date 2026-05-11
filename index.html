@@ -1592,10 +1592,41 @@ main {
 }
 .zone-stack-label.win { color: #5fbf5f; font-weight: 700; }
 .zone-stack-inspiration {
-  border-color: rgba(74, 144, 200, 0.5);
-  background: linear-gradient(180deg, rgba(74, 144, 200, 0.08) 0%, var(--bg-deep) 100%);
+  width: 110px;
+  border: 2px solid rgba(244, 211, 108, 0.55);
+  background: linear-gradient(180deg, rgba(244, 211, 108, 0.12) 0%, var(--bg-deep) 100%);
+  box-shadow: inset 0 0 12px rgba(244, 211, 108, 0.15);
 }
-.zone-stack-inspiration .zone-stack-label { color: #7eb3d6; }
+.zone-stack-inspiration:hover {
+  border-color: var(--gold-bright);
+  box-shadow: inset 0 0 16px rgba(244, 211, 108, 0.3), 0 0 8px rgba(244, 211, 108, 0.35);
+}
+.zone-stack-inspiration .zone-stack-label {
+  color: var(--parchment-dim);
+  text-align: center;
+  font-size: 0.7rem;
+}
+/* 💡 IP の大型表示 */
+.inspiration-power {
+  display: flex; align-items: baseline; justify-content: center; gap: 3px;
+  padding: 4px 0 2px;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 0 10px rgba(244, 211, 108, 0.65), 0 1px 2px rgba(0,0,0,0.6);
+}
+.inspiration-power-icon { font-size: 1.1rem; }
+.inspiration-power-num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #ffe082;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+.inspiration-power-unit {
+  font-size: 0.75rem;
+  color: #f4d36c;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
 .zone-stack-cards {
   position: relative;
   height: 88px;
@@ -5767,8 +5798,8 @@ function renderPlaySide(sideKey) {
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','manuscript',-1)" ${dis}>−</button>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','manuscript',1)" ${dis}>＋</button>
         </div>
-        <div class="counter-pill ip-pill" title="IP(没で得るインスピレーションパワー)">
-          💎 IP <strong>${s.ip}</strong>
+        <div class="counter-pill ip-pill" title="💡 インスピレーションパワー(IP)を手動調整">
+          💡 <strong>${s.ip}</strong>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','ip',-1)" ${dis}>−</button>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','ip',1)" ${dis}>＋</button>
         </div>
@@ -5802,8 +5833,13 @@ function renderPlaySide(sideKey) {
             <div class="zone-stack-label ${msWinClass}">📝 原稿 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}</div>
             <div class="zone-stack-cards">${manuscriptStack}</div>
           </div>
-          <div class="zone-stack zone-stack-inspiration" onclick="showZoneModal('${sideKey}','inspiration','💡 インスピレーションゾーン')" title="任意でIP化したカード(②/④/⑤フェーズで送れる)">
-            <div class="zone-stack-label">💡 INSP ${(s.inspiration||[]).length}</div>
+          <div class="zone-stack zone-stack-inspiration" onclick="showZoneModal('${sideKey}','inspiration','💡 インスピレーションゾーン')" title="IPパワー: 累積${s.ip}・所蔵${(s.inspiration||[]).length}枚">
+            <div class="inspiration-power">
+              <span class="inspiration-power-icon">💡</span>
+              <span class="inspiration-power-num">${s.ip || 0}</span>
+              <span class="inspiration-power-unit">IP</span>
+            </div>
+            <div class="zone-stack-label">${(s.inspiration||[]).length} 枚</div>
             <div class="zone-stack-cards">${inspirationStack}</div>
           </div>
           <div class="zone-stack" onclick="showZoneModal('${sideKey}','discard','📥 没案ゾーン')" title="戦闘で没になったカード">
