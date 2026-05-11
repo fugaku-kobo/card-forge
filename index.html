@@ -1591,6 +1591,11 @@ main {
   white-space: nowrap;
 }
 .zone-stack-label.win { color: #5fbf5f; font-weight: 700; }
+.zone-stack-inspiration {
+  border-color: rgba(74, 144, 200, 0.5);
+  background: linear-gradient(180deg, rgba(74, 144, 200, 0.08) 0%, var(--bg-deep) 100%);
+}
+.zone-stack-inspiration .zone-stack-label { color: #7eb3d6; }
 .zone-stack-cards {
   position: relative;
   height: 88px;
@@ -2828,13 +2833,14 @@ function loadData() {
         state.playSession.firstPlayer = state.playSession.firstPlayer || 'A';
         delete state.playSession.phase;
       }
-      // 原稿カード配列・泣きフラグの初期化
+      // 原稿カード配列・泣きフラグ・インスピレーションゾーンの初期化
       if (state.playSession) {
         ['A','B'].forEach(k => {
           const s = state.playSession.sides?.[k];
           if (s) {
             if (!s.manuscriptCards) s.manuscriptCards = [];
             if (s.nakiUsed === undefined) s.nakiUsed = false;
+            if (!s.inspiration) s.inspiration = [];
           }
         });
       }
@@ -4747,7 +4753,7 @@ const PHASE_DEFS = [
   { idx: 2, name: 'アイディア', icon: '②', full: '② アイディアフェイズ', desc: '手札から場に出す/進化/展開/伏せ' },
   { idx: 3, name: '持ち込み', icon: '③', full: '③ 持ち込みフェイズ', desc: '相手キャラを攻撃 → 原稿ゾーンへ送る' },
   { idx: 4, name: '担当編集', icon: '④', full: '④ 担当編集フェイズ', desc: '展開/どんでん返し使用、主人公練り上げ' },
-  { idx: 5, name: 'エンド', icon: '⑤', full: '⑤ エンドフェイズ', desc: 'ターン終了' }
+  { idx: 5, name: '就寝', icon: '⑤', full: '⑤ 就寝(エンド)フェイズ', desc: '手札クリンナップ(余り手札を💡インスピレーションへ送れる)、ターン終了' }
 ];
 const PLAY_VICTORY_MANUSCRIPT = 10;
 let playInstanceCounter = 1;
@@ -4767,7 +4773,8 @@ function makePlaySide(deckId, name) {
     leader: [],          // 主人公ゾーン (現在の主人公、最大1枚)
     leaderReserve: [],   // 主人公控え (Lv2/Lv3 等の進化先)
     field: [],           // 場 (キャラ・継続効果)
-    discard: []          // 没案ゾーン
+    discard: [],         // 没案ゾーン (戦闘で没になったカード)
+    inspiration: []      // 💡 インスピレーションゾーン (任意でIP化したカード)
   };
 }
 
@@ -5128,6 +5135,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   const s = state.playSession.sides[side];
   if (!s.leader) s.leader = [];
   if (!s.leaderReserve) s.leaderReserve = [];
+  if (!s.inspiration) s.inspiration = [];
   const fromArr = s[fromZone];
   if (!fromArr) return;
   const idx = fromArr.findIndex(x => x.instanceId === instanceId);
@@ -5260,9 +5268,20 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   else toArr.push(inst);
 
   const card = findPlayCard(inst.cardId);
-  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え' };
+  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え', inspiration: 'インスピレーション' };
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
-  playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
+  // インスピレーション送りで IP 加算、戻すとき減算
+  if (toZone === 'inspiration' && fromZone !== 'inspiration') {
+    const ipGain = parseInt(card?.ip) || 1;
+    s.ip = (s.ip || 0) + ipGain;
+    playLog(side, `💡 ${card?.name || '?'} をインスピレーションへ (IP +${ipGain} → ${s.ip})`);
+  } else if (fromZone === 'inspiration' && toZone !== 'inspiration') {
+    const ipBack = parseInt(card?.ip) || 1;
+    s.ip = Math.max(0, (s.ip || 0) - ipBack);
+    playLog(side, `${card?.name || '?'} をインスピレーションから${placeNote} (IP -${ipBack} → ${s.ip})`);
+  } else {
+    playLog(side, `${card?.name || '?'} を${labels[fromZone]}から${placeNote}`);
+  }
   saveData(); renderPlay();
   netSendOp({ type: 'move', side, instanceId, fromZone, toZone, toTop: !!toTop });
   closePlayPopover();
@@ -5377,9 +5396,18 @@ function openPlayPopover(side, instanceId, fromZone) {
       actions.push({ label: '➡ 主人公控えへ', fn: `moveInstance('${side}','${instanceId}','hand','leaderReserve')` });
     }
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
+    // 💡 インスピレーションへ送る: ②/④/⑤ フェーズ限定
+    const phaseIdxNow = state.playSession.phaseIdx;
+    if (phaseIdxNow === 2 || phaseIdxNow === 4 || phaseIdxNow === 5) {
+      const ipGain = parseInt(card?.ip) || 1;
+      actions.push({ label: `💡 インスピレーションへ送る (+IP${ipGain})`, fn: `moveInstance('${side}','${instanceId}','hand','inspiration')` });
+    }
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','hand','discard')` });
     actions.push({ label: '➡ 山の上へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',true)` });
     actions.push({ label: '➡ 山の底へ戻す', fn: `moveInstance('${side}','${instanceId}','hand','deck',false)` });
+  } else if (fromZone === 'inspiration') {
+    actions.push({ label: '➡ 手札に戻す (IP-)', fn: `moveInstance('${side}','${instanceId}','inspiration','hand')` });
+    actions.push({ label: '➡ 没案ゾーンへ (IP-)', fn: `moveInstance('${side}','${instanceId}','inspiration','discard')` });
   } else if (fromZone === 'field') {
     if (inst.hp !== undefined) {
       actions.push({ label: `❤ HP −1 (現${inst.hp})`, fn: `adjustFieldHP('${side}','${instanceId}',-1)`, keep: true });
@@ -5693,6 +5721,7 @@ function renderPlaySide(sideKey) {
   // 山は常に裏向き(自分の山も先読み防止)
   const deckStack = stackChips(s.deck, true, 'deck');
   const manuscriptStack = stackChips(s.manuscriptCards, false, 'manuscriptCards');
+  const inspirationStack = stackChips(s.inspiration || [], false, 'inspiration');
 
   const fieldCountClass = s.field.length >= PLAY_FIELD_MAX ? 'full' : '';
   const msWinClass = s.manuscriptCards.length >= PLAY_VICTORY_MANUSCRIPT ? 'win' : '';
@@ -5745,7 +5774,11 @@ function renderPlaySide(sideKey) {
             <div class="zone-stack-label ${msWinClass}">📝 原稿 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}</div>
             <div class="zone-stack-cards">${manuscriptStack}</div>
           </div>
-          <div class="zone-stack" onclick="showZoneModal('${sideKey}','discard','📥 没案ゾーン')" title="没になったカード">
+          <div class="zone-stack zone-stack-inspiration" onclick="showZoneModal('${sideKey}','inspiration','💡 インスピレーションゾーン')" title="任意でIP化したカード(②/④/⑤フェーズで送れる)">
+            <div class="zone-stack-label">💡 INSP ${(s.inspiration||[]).length}</div>
+            <div class="zone-stack-cards">${inspirationStack}</div>
+          </div>
+          <div class="zone-stack" onclick="showZoneModal('${sideKey}','discard','📥 没案ゾーン')" title="戦闘で没になったカード">
             <div class="zone-stack-label">📥 没案 ${s.discard.length}</div>
             <div class="zone-stack-cards">${discardStack}</div>
           </div>
