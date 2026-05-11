@@ -1454,6 +1454,28 @@ main {
   align-items: stretch;
   overflow: hidden;
 }
+.play-side-board {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  align-items: stretch;
+  overflow: hidden;
+}
+.play-side-hand {
+  display: flex;
+}
+.play-side-hand .zone-block { flex: 1; }
+/* 上側(B): 手札を一番上、ヘッダーは下(中央寄り) */
+.play-side.side-top {
+  flex-direction: column;
+}
+.play-side.side-top .play-side-hand { order: 1; }
+.play-side.side-top .play-side-board { order: 2; }
+.play-side.side-top .play-side-header { order: 3; }
+/* 下側(A): ヘッダー上、場、手札を下 (デフォルト順) */
+.play-side.side-bottom .play-side-header { order: 1; }
+.play-side.side-bottom .play-side-board { order: 2; }
+.play-side.side-bottom .play-side-hand { order: 3; }
 .zone-block {
   background: var(--bg-deep);
   border: 1px dashed rgba(201, 169, 97, 0.2);
@@ -1483,9 +1505,39 @@ main {
   border-style: solid;
 }
 .zone-block-reserve { flex: 0 0 75px; }
+/* 主人公エリア(本体+控え一体化、コンパクト) */
+.zone-block-hero {
+  flex: 0 0 auto;
+  border-color: rgba(212, 175, 55, 0.55);
+  border-style: solid;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), var(--bg-deep));
+}
+.zone-block-hero .zone-block-label { color: var(--gold-bright); }
+.hero-zone-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+.hero-current {
+  flex: 0 0 auto;
+}
+.hero-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(212, 175, 55, 0.3);
+  margin: 2px 0;
+}
+.hero-reserve {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  opacity: 0.92;
+}
 .zone-block-hand {
-  flex: 1.4;
+  flex: 1;
   min-width: 200px;
+  min-height: 110px;
 }
 .hand-scroll {
   overflow-x: auto;
@@ -1882,6 +1934,25 @@ main {
   font-weight: 700;
   padding: 1px 4px;
   border-radius: 6px;
+}
+/* 進化スタックインジケータ (右下、HPの上) */
+.chip-stack-badge {
+  position: absolute;
+  bottom: 1px; left: 2px;
+  background: linear-gradient(135deg, #d4af37, #f4d36c);
+  color: #1a1410;
+  font-size: 7px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  z-index: 3;
+  border: 1px solid rgba(0,0,0,0.3);
+  font-family: 'Cinzel', serif;
+}
+/* 進化したカード(stackあり)は枠を二重に */
+.card-chip.lv2:has(.chip-stack-badge),
+.card-chip.lv3:has(.chip-stack-badge) {
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.55), inset 0 0 0 1.5px rgba(255,255,255,0.5);
 }
 
 /* ホバープレビュー (カードチップにマウスを置くと近接位置に原寸表示) */
@@ -5000,11 +5071,27 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   const idx = fromArr.findIndex(x => x.instanceId === instanceId);
   if (idx < 0) return;
 
-  // ルール検証 (ローカル操作時のみ。リモート受信は信頼してスキップ)
+  const candidate = fromArr[idx];
+  const newCard = findPlayCard(candidate.cardId);
+
+  // === 進化検出 ===
+  // 場に出すキャラ Lv2/Lv3 は、同名 Lv(N-1) を場に重ねる "進化"
+  let evolutionTargetIdx = -1;
+  if (toZone === 'field' && fromZone !== 'field'
+      && newCard && getTypeKind(newCard.type) === 'character') {
+    const newLv = parseInt(newCard.level) || 0;
+    if (newLv >= 2) {
+      const targetLv = newLv - 1;
+      evolutionTargetIdx = s.field.findIndex(x => {
+        const c = findPlayCard(x.cardId);
+        return c && c.name === newCard.name && (parseInt(c.level) || 0) === targetLv;
+      });
+    }
+  }
+
+  // === ルール検証 (ローカル操作時のみ) ===
   if (!_isApplyingRemoteOp) {
-    const candidate = fromArr[idx];
-    const newCard = findPlayCard(candidate.cardId);
-    // [Lv順序] 主人公昇格は Lv +1 のみ許可
+    // [Lv順序] 主人公昇格は Lv +1 のみ
     if (toZone === 'leader') {
       if (newCard && isLeaderCard(newCard)) {
         const newLv = parseInt(newCard.level) || 0;
@@ -5013,13 +5100,9 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
           ? (parseInt(findPlayCard(currentLeader.cardId)?.level) || 0)
           : 0;
         if (newLv !== currentLv + 1) {
-          if (currentLv === 0) {
-            toast(`主人公ゾーンが空です。Lv1から順番に出してください (試行: Lv${newLv})`);
-          } else if (newLv <= currentLv) {
-            toast(`既に Lv${currentLv} です。Lv${currentLv + 1} のカードで練り上げてください`);
-          } else {
-            toast(`Lv${currentLv}からLv${newLv}には進化できません(順番にLv1→Lv2→Lv3)`);
-          }
+          if (currentLv === 0) toast(`主人公ゾーンが空です。Lv1から順番に出してください (試行: Lv${newLv})`);
+          else if (newLv <= currentLv) toast(`既に Lv${currentLv} です。Lv${currentLv + 1} のカードで練り上げてください`);
+          else toast(`Lv${currentLv}からLv${newLv}には進化できません(順番にLv1→Lv2→Lv3)`);
           return;
         }
       } else {
@@ -5027,23 +5110,23 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
         return;
       }
     }
-    // [キャラ進化] Lv2/Lv3 のキャラは場に Lv(N-1) のキャラがいる必要
-    if (toZone === 'field' && newCard && getTypeKind(newCard.type) === 'character' && fromZone !== 'field') {
+    // [キャラ進化] Lv2/Lv3 → 場 は同名 Lv(N-1) が必須
+    if (toZone === 'field' && fromZone !== 'field' && newCard
+        && getTypeKind(newCard.type) === 'character'
+        && (parseInt(newCard.level) || 0) >= 2 && evolutionTargetIdx < 0) {
       const newLv = parseInt(newCard.level) || 0;
-      if (newLv >= 2) {
-        const targetLv = newLv - 1;
-        const hasTarget = s.field.some(x => {
-          const c = findPlayCard(x.cardId);
-          return c && getTypeKind(c.type) === 'character' && (parseInt(c.level) || 0) === targetLv;
-        });
-        if (!hasTarget) {
-          toast(`Lv${newLv} のキャラは Lv${targetLv} に重ねて進化させます。先に Lv${targetLv} を場に出してください。`);
-          return;
-        }
-      }
+      const sameNameAnyLv = s.field.some(x => {
+        const c = findPlayCard(x.cardId);
+        return c && c.name === newCard.name;
+      });
+      toast(sameNameAnyLv
+        ? `同名の Lv${newLv - 1} が見つかりません(Lv${newLv} は同名の Lv${newLv - 1} に重ねて進化)`
+        : `Lv${newLv} は同名の Lv${newLv - 1} に重ねて進化させます。先に同名 Lv${newLv - 1} を場に出してください。`);
+      return;
     }
-    // [場の上限] キャラクターアイディアゾーンは 6 枚まで
-    if (toZone === 'field' && fromZone !== 'field' && s.field.length >= PLAY_FIELD_MAX) {
+    // [場の上限] 進化でない普通配置のみチェック
+    if (toZone === 'field' && fromZone !== 'field' && evolutionTargetIdx < 0
+        && s.field.length >= PLAY_FIELD_MAX) {
       toast(`場のキャラクターアイディアゾーンは ${PLAY_FIELD_MAX} 枚までです`);
       return;
     }
@@ -5051,7 +5134,24 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
 
   const [inst] = fromArr.splice(idx, 1);
 
-  // 主人公ゾーンは1枚まで: 既存があれば没案へ自動移動(=練り上げ・レベル交代)
+  // === 進化処理 ===
+  if (evolutionTargetIdx >= 0) {
+    const target = s.field[evolutionTargetIdx];
+    const targetCard = findPlayCard(target.cardId);
+    // 旧カードを stack として記録(同インスタンス内に重ねる)
+    inst.stack = (target.stack || []).concat([{cardId: target.cardId, instanceId: target.instanceId}]);
+    // HP は新カードの基準値で再設定(進化で全快)
+    if (newCard && newCard.hp) inst.hp = parseInt(newCard.hp) || inst.hp || 0;
+    // 場の同位置を新カードに置換
+    s.field.splice(evolutionTargetIdx, 1, inst);
+    playLog(side, `🌟 ${targetCard?.name || '?'} (Lv${parseInt(targetCard?.level)||0}) → ${newCard.name} (Lv${parseInt(newCard.level)||0}) に進化`);
+    saveData(); renderPlay();
+    netSendOp({ type: 'move', side, instanceId, fromZone, toZone, toTop: !!toTop });
+    closePlayPopover();
+    return;
+  }
+
+  // === 主人公ゾーンの自動押し出し ===
   if (toZone === 'leader' && s.leader.length >= 1) {
     const evicted = s.leader.shift();
     s.discard.push(evicted);
@@ -5059,7 +5159,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
     playLog(side, `${evictedCard?.name || '?'} を没案へ (主人公交代)`);
   }
 
-  // 場に出すときはHPをリセット
+  // === 場に出すときの HP リセット ===
   if (toZone === 'field') {
     const card = findPlayCard(inst.cardId);
     if (card && card.hp && (inst.hp === undefined || inst.hp === 0)) {
@@ -5069,8 +5169,8 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
 
   const toArr = s[toZone];
   if (!toArr) return;
-  if (toZone === 'deck' && !toTop) toArr.push(inst); // 山の底
-  else if (toZone === 'deck' && toTop) toArr.unshift(inst); // 山の上
+  if (toZone === 'deck' && !toTop) toArr.push(inst);
+  else if (toZone === 'deck' && toTop) toArr.unshift(inst);
   else toArr.push(inst);
 
   const card = findPlayCard(inst.cardId);
@@ -5296,6 +5396,9 @@ function buildCardChip(inst, side, fromZone, faceDown) {
   const color = getTypeColor(card.type);
   const icon = getDisplayIcon(card);
   const lvBadge = card.level ? `<span class="card-chip-badge" style="background:${color}">Lv${escapeHtml(card.level)}</span>` : '';
+  const stackCount = inst.stack && inst.stack.length > 0 ? inst.stack.length : 0;
+  const stackBadge = stackCount > 0
+    ? `<div class="chip-stack-badge" title="進化元 ${stackCount} 枚を内包">⏶${stackCount}</div>` : '';
   const hpBadge = (inst.hp !== undefined && inst.hp !== null && inst.hp > 0)
     ? `<div class="card-chip-hp" title="現HP">${inst.hp}</div>` : '';
   const ipMark = card.ip ? `<span title="IP ${escapeHtml(card.ip)}">💎${escapeHtml(card.ip)}</span>` : '';
@@ -5313,6 +5416,7 @@ function buildCardChip(inst, side, fromZone, faceDown) {
     <div class="card-chip-icon">${escapeHtml(icon)}</div>
     <div class="card-chip-foot">${ipMark}${costMark}</div>
     ${hpBadge}
+    ${stackBadge}
   </div>`;
 }
 
@@ -5469,57 +5573,64 @@ function renderPlaySide(sideKey) {
   const fieldCountClass = s.field.length >= PLAY_FIELD_MAX ? 'full' : '';
   const msWinClass = s.manuscriptCards.length >= PLAY_VICTORY_MANUSCRIPT ? 'win' : '';
 
+  // 上側(B)か下側(A)か: TCG的に「相手の手札は画面の上端、自分の手札は画面の下端」
+  const positionClass = sideKey === 'B' ? 'side-top' : 'side-bottom';
+
   return `
-    <div class="play-side ${isActive ? 'active' : ''} ${canControl?'mine':'opponent'}">
+    <div class="play-side ${isActive ? 'active' : ''} ${canControl?'mine':'opponent'} ${positionClass}">
       <!-- ヘッダー: 名前 + カウンタ + アクション (一行) -->
       <div class="play-side-header">
         <div class="play-side-name">${escapeHtml(s.name)}${isActive ? ' ◆' : ''}${canControl?'':' (相手)'}</div>
         <div class="counter-pill ms-pill ${msWinClass}" title="原稿(勝利条件)">
-          📝 <strong>${s.manuscriptCards.length}</strong>/${PLAY_VICTORY_MANUSCRIPT}
+          📝 原稿 <strong>${s.manuscriptCards.length}</strong>/${PLAY_VICTORY_MANUSCRIPT}
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','manuscript',-1)" ${dis}>−</button>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','manuscript',1)" ${dis}>＋</button>
         </div>
-        <div class="counter-pill ip-pill" title="IP">
-          💎 <strong>${s.ip}</strong>
+        <div class="counter-pill ip-pill" title="IP(没で得るインスピレーションパワー)">
+          💎 IP <strong>${s.ip}</strong>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','ip',-1)" ${dis}>−</button>
           <button class="counter-mini" onclick="adjustCounter('${sideKey}','ip',1)" ${dis}>＋</button>
         </div>
         ${canControl ? `<button class="btn-small" onclick="drawCard('${sideKey}',1)" title="山からドロー">🃏 ドロー</button>
-        <button class="btn-small" onclick="shuffleDeck('${sideKey}')" title="山シャッフル">🔀</button>` : ''}
-        ${s.nakiUsed ? '<span class="naki-used-mark" title="泣きの一回 使用済">💧使用済</span>' : ''}
+        <button class="btn-small" onclick="shuffleDeck('${sideKey}')" title="山シャッフル">🔀 シャッフル</button>` : ''}
+        ${s.nakiUsed ? '<span class="naki-used-mark" title="泣きの一回 使用済">💧 泣き使用済</span>' : ''}
       </div>
 
-      <!-- メインゾーン: 一行レイアウト (主人公|控え|手札|場|スタック) -->
-      <div class="play-side-main">
-        <div class="zone-block zone-block-leader" title="主人公">
-          <div class="zone-block-label">👑</div>
-          <div class="zone-block-content">${leaderHtml}</div>
+      <!-- 場の段: 主人公エリア(本体+控え一体化) | 場 | スタック -->
+      <div class="play-side-board">
+        <div class="zone-block zone-block-hero" title="主人公エリア (本体 + 控え)">
+          <div class="zone-block-label">👑 主人公 + 控え (${s.leader.length + s.leaderReserve.length})</div>
+          <div class="zone-block-content hero-zone-content">
+            <div class="hero-current" title="現在の主人公(1枚)">${leaderHtml}</div>
+            <div class="hero-divider"></div>
+            <div class="hero-reserve" title="主人公控え(Lv2/Lv3)">${reserveHtml}</div>
+          </div>
         </div>
-        <div class="zone-block zone-block-reserve" title="主人公控え (${s.leaderReserve.length})">
-          <div class="zone-block-label">🎒 ${s.leaderReserve.length}</div>
-          <div class="zone-block-content">${reserveHtml}</div>
-        </div>
-        <div class="zone-block zone-block-hand" title="手札 ${s.hand.length}">
-          <div class="zone-block-label">✋ 手札 ${s.hand.length}</div>
-          <div class="zone-block-content hand-scroll">${handHtml}</div>
-        </div>
-        <div class="zone-block zone-block-field ${fieldCountClass}" title="場 ${s.field.length}/${PLAY_FIELD_MAX}">
+        <div class="zone-block zone-block-field ${fieldCountClass}" title="キャラクターアイディアゾーン(上限6)">
           <div class="zone-block-label">🎴 場 ${s.field.length}/${PLAY_FIELD_MAX}</div>
           <div class="zone-block-content field-grid">${fieldHtml}</div>
         </div>
         <div class="zone-block zone-block-stacks">
-          <div class="zone-stack" onclick="showZoneModal('${sideKey}','manuscriptCards','📝 原稿ゾーン')" title="原稿 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}">
-            <div class="zone-stack-label ${msWinClass}">📝 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}</div>
+          <div class="zone-stack" onclick="showZoneModal('${sideKey}','manuscriptCards','📝 原稿ゾーン')" title="原稿(勝利条件:10枚)">
+            <div class="zone-stack-label ${msWinClass}">📝 原稿 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}</div>
             <div class="zone-stack-cards">${manuscriptStack}</div>
           </div>
-          <div class="zone-stack" onclick="showZoneModal('${sideKey}','discard','📥 没案ゾーン')" title="没案 ${s.discard.length}">
-            <div class="zone-stack-label">📥 ${s.discard.length}</div>
+          <div class="zone-stack" onclick="showZoneModal('${sideKey}','discard','📥 没案ゾーン')" title="没になったカード">
+            <div class="zone-stack-label">📥 没案 ${s.discard.length}</div>
             <div class="zone-stack-cards">${discardStack}</div>
           </div>
-          <div class="zone-stack" onclick="showZoneModal('${sideKey}','deck','🎴 山(デッキ)', !canControl)" title="山 ${s.deck.length}">
-            <div class="zone-stack-label">🎴 ${s.deck.length}</div>
+          <div class="zone-stack" onclick="showZoneModal('${sideKey}','deck','🃏 山(デッキ)', !canControl)" title="山札">
+            <div class="zone-stack-label">🃏 山 ${s.deck.length}</div>
             <div class="zone-stack-cards">${deckStack}</div>
           </div>
+        </div>
+      </div>
+
+      <!-- 手札の段: 画面端寄り(自分側は画面下、相手側は画面上) -->
+      <div class="play-side-hand">
+        <div class="zone-block zone-block-hand" title="手札 ${s.hand.length}枚">
+          <div class="zone-block-label">✋ 手札 (${s.hand.length}枚)</div>
+          <div class="zone-block-content hand-scroll">${handHtml}</div>
         </div>
       </div>
     </div>`;
