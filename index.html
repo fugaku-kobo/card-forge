@@ -5417,6 +5417,12 @@ function openPlayPopover(side, instanceId, fromZone) {
     }
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','field','discard')` });
     actions.push({ label: '➡ 手札に戻す', fn: `moveInstance('${side}','${instanceId}','field','hand')` });
+    // 💡 場 → インスピ (②/④/⑤ フェーズ限定)
+    const phaseIdxNow = state.playSession.phaseIdx;
+    if (phaseIdxNow === 2 || phaseIdxNow === 4 || phaseIdxNow === 5) {
+      const ipGain = parseInt(card?.ip) || 1;
+      actions.push({ label: `💡 インスピレーションへ送る (+IP${ipGain})`, fn: `moveInstance('${side}','${instanceId}','field','inspiration')` });
+    }
   } else if (fromZone === 'discard') {
     actions.push({ label: '➡ 手札に戻す', fn: `moveInstance('${side}','${instanceId}','discard','hand')` });
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','discard','field')` });
