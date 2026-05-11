@@ -5396,9 +5396,8 @@ function openPlayPopover(side, instanceId, fromZone) {
       actions.push({ label: '➡ 主人公控えへ', fn: `moveInstance('${side}','${instanceId}','hand','leaderReserve')` });
     }
     actions.push({ label: '➡ 場に出す', fn: `moveInstance('${side}','${instanceId}','hand','field')` });
-    // 💡 インスピレーションへ送る: ②/④/⑤ フェーズ限定
-    const phaseIdxNow = state.playSession.phaseIdx;
-    if (phaseIdxNow === 2 || phaseIdxNow === 4 || phaseIdxNow === 5) {
+    // 💡 インスピレーションへ送る (全フェーズで可)
+    {
       const ipGain = parseInt(card?.ip) || 1;
       actions.push({ label: `💡 インスピレーションへ送る (+IP${ipGain})`, fn: `moveInstance('${side}','${instanceId}','hand','inspiration')` });
     }
@@ -5417,9 +5416,8 @@ function openPlayPopover(side, instanceId, fromZone) {
     }
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','field','discard')` });
     actions.push({ label: '➡ 手札に戻す', fn: `moveInstance('${side}','${instanceId}','field','hand')` });
-    // 💡 場 → インスピ (②/④/⑤ フェーズ限定)
-    const phaseIdxNow = state.playSession.phaseIdx;
-    if (phaseIdxNow === 2 || phaseIdxNow === 4 || phaseIdxNow === 5) {
+    // 💡 場 → インスピ (全フェーズで可)
+    {
       const ipGain = parseInt(card?.ip) || 1;
       actions.push({ label: `💡 インスピレーションへ送る (+IP${ipGain})`, fn: `moveInstance('${side}','${instanceId}','field','inspiration')` });
     }
@@ -5469,13 +5467,21 @@ function showPlayHoverPreview(cardId, event) {
   el.classList.add('show');
   fitCardTexts(el);
 
-  // ホバーされたチップの近くに位置調整
+  // モーダル内(ポップオーバー or ゾーン一覧 or ズーム)では画面右端に固定して被りを回避
   const chip = event?.currentTarget;
+  const inModal = chip && chip.closest('.play-popover-bg, .modal-bg, .card-zoom-bg, #playPopover');
+  if (inModal) {
+    el.style.left = 'auto';
+    el.style.right = '18px';
+    el.style.top = '86px';
+    return;
+  }
+  // 通常: ホバーされたチップの近くに位置調整
   if (chip) {
     const rect = chip.getBoundingClientRect();
     const previewW = 240;
     const previewH = Math.round(previewW * 88 / 63); // ≈ 336
-    const margin = 10;
+    const margin = 16;
     // 横: チップの右に表示、画面外なら左、それでも入らなければ右端に貼り付け
     let left = rect.right + margin;
     if (left + previewW > window.innerWidth - margin) {
