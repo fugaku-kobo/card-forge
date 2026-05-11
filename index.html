@@ -1972,6 +1972,30 @@ main {
   padding: 1px 4px;
   border-radius: 6px;
 }
+/* ハイライトモード: 手札の場に出せるカード(明るく)/ 出せないカード(暗く) */
+.card-chip.chip-unplayable {
+  filter: grayscale(0.85) brightness(0.55);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.card-chip.chip-unplayable:hover {
+  filter: grayscale(0.7) brightness(0.7);
+  opacity: 0.8;
+}
+.card-chip.chip-playable {
+  box-shadow: 0 0 8px rgba(95, 191, 95, 0.6), 0 0 0 1.5px rgba(95, 191, 95, 0.7);
+  animation: pulse-playable 1.8s ease-in-out infinite;
+}
+@keyframes pulse-playable {
+  0%, 100% { box-shadow: 0 0 8px rgba(95, 191, 95, 0.5), 0 0 0 1.5px rgba(95, 191, 95, 0.6); }
+  50% { box-shadow: 0 0 14px rgba(95, 191, 95, 0.9), 0 0 0 2px rgba(95, 191, 95, 0.9); }
+}
+/* トグル ON 状態のボタン */
+.btn-small.toggle-on {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold);
+}
 /* 進化スタックインジケータ (右下、HPの上) */
 .chip-stack-badge {
   position: absolute;
@@ -5467,6 +5491,11 @@ function buildCardChip(inst, side, fromZone, faceDown) {
   if (lvNum === 3) classes.push('lv3');
   if (isLeaderCard(card)) classes.push('chip-hero');
   if (faceDown) classes.push('face-down');
+  // ハイライトモード: 手札のカードのみ、場に出せないものを暗く
+  if (_highlightPlayable && fromZone === 'hand' && !faceDown) {
+    if (isPlayableToField(card, side)) classes.push('chip-playable');
+    else classes.push('chip-unplayable');
+  }
 
   if (faceDown) {
     return `<div class="${classes.join(' ')}" title="伏せられたカード"></div>`;
@@ -5769,6 +5798,7 @@ function renderTurnBar() {
       <div class="play-turnbar-actions">
         <button class="btn-primary" onclick="nextPhase()" ${myTurn?'':'disabled'}>${curIdx >= 5 ? 'ターン終了' : '次のフェーズへ →'}</button>
         <button class="btn-small" onclick="endTurn()" ${myTurn?'':'disabled'} title="現在のフェーズに関係なくターン終了">⏭ ターン終了</button>
+        <button class="btn-small ${_highlightPlayable?'toggle-on':''}" onclick="toggleHighlightPlayable()" title="手札の場に出せるカードを強調(出せないカードは暗くする)">${_highlightPlayable?'💡 ハイライト ON':'💡 ハイライト'}</button>
         <button class="btn-small" onclick="togglePlayLog()">📜 ログ (${ps.log.length})</button>
         ${net.mode === 'solo' ? `<button class="btn-small" onclick="restartPlaySession()">↺ リスタート</button>` : ''}
         <button class="btn-small btn-danger" onclick="endPlaySession()">✕ 終了</button>
@@ -5780,6 +5810,31 @@ function renderTurnBar() {
 let netPeer = null;
 let netConn = null;
 let _isApplyingRemoteOp = false;
+// 手札ハイライトモード: ON時、場に出せないカードを暗く表示
+let _highlightPlayable = false;
+function toggleHighlightPlayable() {
+  _highlightPlayable = !_highlightPlayable;
+  renderPlay();
+}
+
+// 指定カードが手札から「場に出せる」状態かを判定
+function isPlayableToField(card, sideKey) {
+  if (!card) return false;
+  const kind = getTypeKind(card.type);
+  if (kind !== 'character') return false; // 主人公/効果カードは場対象外
+  const s = state.playSession?.sides[sideKey];
+  if (!s) return false;
+  const lv = parseInt(card.level) || 0;
+  if (lv >= 2) {
+    // 同名の Lv(N-1) が場にいないと進化できない
+    return s.field.some(x => {
+      const c = findPlayCard(x.cardId);
+      return c && c.name === card.name && (parseInt(c.level) || 0) === lv - 1;
+    });
+  }
+  // Lv1 (脇役) または無レベル: 場の上限内なら出せる
+  return s.field.length < PLAY_FIELD_MAX;
+}
 
 function netGenerateRoomId() {
   // 6文字の英数(混同しやすい0/O/1/Iは除外)
