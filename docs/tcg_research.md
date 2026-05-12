@@ -1,12 +1,32 @@
-# 主要TCGリファレンス — 手塚カードゲーム設計のための比較資料
+# 主要 TCG 研究 — 手塚カードゲーム設計のための比較資料
 
-10本の代表的なトレーディングカードゲーム/CCGのルール体系を、共通フォーマットで整理。
-手塚カードゲームの設計改善の起点として参照。
+最終更新: 2026-05-13(`cardgame_rulebook_summaries.md` を統合)
 
-> 📚 **公式ルールブック精読サマリー** はより詳細・正確な情報が [`cardgame_rulebook_summaries.md`](./cardgame_rulebook_summaries.md) にあり。
-> 本ドキュメントは事前知識ベースの俯瞰用。デジモン/ONE PIECE/遊戯王 については公式精読版も参照のこと。
+このドキュメントは 12 のカードゲームを共通フォーマットで分析し、手塚カードゲーム改善のための知見を整理。
+**事前知識ベースの俯瞰** と **公式総合ルールの精読(可能なもの)** を統合。
 
-最終更新: 2026-05-12 (2回目: 公式PDF精読を反映)
+## 収録 TCG
+
+| # | TCG | 公式精読 |
+|---|---|---|
+| 1 | Pokémon | — |
+| 2 | デジモンカードゲーム | ⭐ Ver.3.7 (2026/03/13) |
+| 3 | ONE PIECE CARD GAME | ⭐ Ver.1.2.0 (2026/1/9) |
+| 4 | Cardfight!! Vanguard | — |
+| 5 | Magic: The Gathering | — |
+| 6 | Hearthstone | — |
+| 7 | 遊戯王 | ⭐ マスタールール 2020/4/1(部分) |
+| 8 | Weiss Schwarz | — |
+| 9 | Shadowverse | — |
+| 10 | Disney Lorcana | ⭐ Ver.2.1.0 (2026/5/1) |
+| 11 | 開運コロシアム | ⭐ Ver.2 (2025/7/31) |
+| 12 | Flesh and Blood (FAB) | ⭐ 公式日本語(rules.fabtcg.com) |
+
+## 関連ドキュメント
+
+- `docs/playtest_demos.md` — 9 ゲームのデモプレイ
+- `docs/game_design.md` — 手塚カードゲーム設計案(L1-L6)
+- `docs/rule_status.md` — 確定/未確定ルール状況
 
 ---
 
@@ -713,4 +733,19 @@ Cygames のデジタル CCG(2016〜)。Hearthstone を参考にしつつ「進�
 → **ベースは Pokémon と Digimon のハイブリッド**。
 → **テーマ性(漫画家・原稿・編集)で独自路線を確立する余地大**。
 
-参照: `docs/rule_improvement_proposals.md` で具体的な改善案を提示。
+---
+
+## 引用元 (公式 PDF / Web)
+
+- `d:\OneDrive\デスクトップ\cardrulebook\rule.pdf` — 開運コロシアム
+- `d:\OneDrive\デスクトップ\cardrulebook\general_rule.pdf` — デジモン
+- `d:\OneDrive\デスクトップ\cardrulebook\rule_comprehensive.pdf` — ONE PIECE
+- `d:\OneDrive\デスクトップ\cardrulebook\rulebook_masterrule20200401_ver1.0.pdf` — 遊戯王
+- `d:\OneDrive\デスクトップ\cardrulebook\Disney-Lorcana-Comprehensive-Rules_JP.pdf` — Lorcana
+- `d:\OneDrive\デスクトップ\cardrulebook\ja-fab-cr.txt` — FAB(rules.fabtcg.com/ja 経由)
+
+その他 TCG は事前知識ベース。
+
+---
+
+参照: `docs/game_design.md` で具体的な改善案(L1〜L6)を提示。
