@@ -1661,6 +1661,7 @@ main {
   background: transparent;
   border: none;
   padding: 0;
+  flex-wrap: wrap;  /* 第二稿で 5 ゾーンに増えたため折り返し許可 */
 }
 .zone-stack {
   width: 84px;
@@ -1683,6 +1684,59 @@ main {
   white-space: nowrap;
 }
 .zone-stack-label.win { color: #5fbf5f; font-weight: 700; }
+/* 📝 原稿ゾーン: 小型・カウンター中心(カードチップ非表示) */
+.zone-stack-manuscript {
+  width: 84px;
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.1) 0%, var(--bg-deep) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  min-height: 84px;
+}
+.zone-stack-manuscript:hover {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35);
+}
+.zone-stack-manuscript.win {
+  border-color: #5fbf5f;
+  box-shadow: 0 0 12px rgba(95, 191, 95, 0.5);
+}
+.manuscript-count-big {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 2.2rem;
+  color: var(--gold-bright);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: baseline;
+}
+.manuscript-count-big.win {
+  color: #5fbf5f;
+  text-shadow: 0 0 12px rgba(95, 191, 95, 0.65);
+}
+.manuscript-count-max {
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+  margin-left: 2px;
+  letter-spacing: 0;
+}
+/* 🎲 どんでん返しデッキ(別山): 紫テーマ、覚醒条件まで使用不可 */
+.zone-stack-dondeng {
+  width: 84px;
+  border: 1.5px dashed #6e3a8b;
+  background: linear-gradient(180deg, rgba(110, 58, 139, 0.12) 0%, var(--bg-deep) 100%);
+}
+.zone-stack-dondeng:hover {
+  border-color: #a36cc8;
+  box-shadow: inset 0 0 14px rgba(163, 108, 200, 0.2), 0 0 6px rgba(163, 108, 200, 0.35);
+}
+.zone-stack-dondeng .zone-stack-label {
+  color: #d9b3ff;
+}
 .zone-stack-inspiration {
   width: 110px;
   border: 2px solid rgba(244, 211, 108, 0.55);
@@ -5159,11 +5213,12 @@ function makePlaySide(deckId, name) {
     leaderReserve: [],   // 主人公控え (Lv2/Lv3 等の進化先)
     field: [],           // 場 (キャラ・継続効果)
     discard: [],         // 没案ゾーン (戦闘で没になったカード)
-    inspiration: []      // 💡 インスピレーションゾーン (任意でIP化したカード)
+    inspiration: [],     // 💡 インスピレーションゾーン (任意でIP化したカード)
+    dondengDeck: []      // 🎲 どんでん返しデッキ(別山、覚醒時のみ使用)
   };
 }
 
-// デッキIDからインスタンス配列を構築
+// デッキIDからインスタンス配列を構築(メインデッキのみ)
 function buildDeckInstances(deckId) {
   const deck = state.decks.find(d => d.id === deckId);
   if (!deck) return [];
@@ -5174,6 +5229,21 @@ function buildDeckInstances(deckId) {
       const inst = { instanceId: pInst(), cardId: entry.cardId };
       // キャラの初期HPを格納
       if (card && card.hp) inst.hp = parseInt(card.hp) || 0;
+      instances.push(inst);
+    }
+  });
+  return instances;
+}
+
+// どんでん返しデッキ(別山)のインスタンス配列を構築
+function buildDondengDeckInstances(deckId) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck) return [];
+  if (!deck.dondengCards) ensureDondengDeck(deck);
+  const instances = [];
+  (deck.dondengCards || []).forEach(entry => {
+    for (let i = 0; i < entry.count; i++) {
+      const inst = { instanceId: pInst(), cardId: entry.cardId };
       instances.push(inst);
     }
   });
@@ -5243,6 +5313,9 @@ function startPlaySession() {
   const sideB = makePlaySide(deckIdB, nameB);
   sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
   sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
+  // どんでん返しデッキ(別山)をビルド
+  sideA.dondengDeck = buildDondengDeckInstances(deckIdA);
+  sideB.dondengDeck = buildDondengDeckInstances(deckIdB);
   // リーダー(主人公)カードは山札から抜いて場へ
   const heroesA = extractLeadersToZone(sideA, state.cards);
   const heroesB = extractLeadersToZone(sideB, state.cards);
@@ -5295,6 +5368,8 @@ function restartPlaySession() {
     const sideB = makePlaySide(deckIdB, nameB);
     sideA.deck = shuffleArray(buildDeckInstances(deckIdA));
     sideB.deck = shuffleArray(buildDeckInstances(deckIdB));
+    sideA.dondengDeck = buildDondengDeckInstances(deckIdA);
+    sideB.dondengDeck = buildDondengDeckInstances(deckIdB);
     extractLeadersToZone(sideA, state.cards);
     extractLeadersToZone(sideB, state.cards);
     for (let i = 0; i < PLAY_INITIAL_HAND; i++) {
@@ -5614,7 +5689,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
     } else {
       allInsts.forEach(i => toArr.push(i));
     }
-    const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え', inspiration: 'インスピレーション' };
+    const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え', inspiration: 'インスピレーション', manuscriptCards: '原稿', dondengDeck: 'どんでん返し' };
     const topCardName = findPlayCard(inst.cardId)?.name || '?';
     // インスピへ展開する場合は 全カードのIPを合算
     if (toZone === 'inspiration') {
@@ -5674,7 +5749,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
   else toArr.push(inst);
 
   const card = findPlayCard(inst.cardId);
-  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え', inspiration: 'インスピレーション' };
+  const labels = { hand: '手札', field: '場', discard: '没案', deck: '山', leader: '主人公', leaderReserve: '主人公控え', inspiration: 'インスピレーション', manuscriptCards: '原稿', dondengDeck: 'どんでん返し' };
   const placeNote = toZone === 'deck' ? (toTop ? '山の上へ' : '山の底へ') : labels[toZone] + 'へ';
   // インスピレーション送りで IP 加算、戻すとき減算
   if (toZone === 'inspiration' && fromZone !== 'inspiration') {
@@ -6105,6 +6180,7 @@ function renderPlaySide(sideKey) {
   if (!s.leader) s.leader = [];
   if (!s.leaderReserve) s.leaderReserve = [];
   if (!s.manuscriptCards) s.manuscriptCards = [];
+  if (!s.dondengDeck) s.dondengDeck = [];
   const isActive = ps.activeSide === sideKey;
   const canControl = myCanControl(sideKey);
   const dis = canControl ? '' : 'disabled';
@@ -6140,6 +6216,8 @@ function renderPlaySide(sideKey) {
   const deckStack = stackChips(s.deck, true, 'deck');
   const manuscriptStack = stackChips(s.manuscriptCards, false, 'manuscriptCards');
   const inspirationStack = stackChips(s.inspiration || [], false, 'inspiration');
+  // どんでん返しデッキ (別山、裏向き) — 覚醒条件まで隠す
+  const dondengStack = stackChips(s.dondengDeck || [], true, 'dondengDeck');
 
   const fieldCountClass = s.field.length >= PLAY_FIELD_MAX ? 'full' : '';
   const msWinClass = s.manuscriptCards.length >= PLAY_VICTORY_MANUSCRIPT ? 'win' : '';
@@ -6188,9 +6266,10 @@ function renderPlaySide(sideKey) {
           </div>
         </div>
         <div class="zone-block-stacks">
-          <div class="zone-stack" onclick="showZoneModal('${sideKey}','manuscriptCards','📝 原稿ゾーン')" title="原稿(勝利条件:10枚)">
-            <div class="zone-stack-label ${msWinClass}">📝 原稿 ${s.manuscriptCards.length}/${PLAY_VICTORY_MANUSCRIPT}</div>
-            <div class="zone-stack-cards">${manuscriptStack}</div>
+          <!-- 原稿ゾーン: 小さく、勝利条件のメーター中心 -->
+          <div class="zone-stack zone-stack-manuscript ${msWinClass}" onclick="showZoneModal('${sideKey}','manuscriptCards','📝 原稿ゾーン')" title="原稿(勝利条件:${PLAY_VICTORY_MANUSCRIPT}枚)">
+            <div class="zone-stack-label ${msWinClass}">📝 原稿</div>
+            <div class="manuscript-count-big ${msWinClass}">${s.manuscriptCards.length}<span class="manuscript-count-max">/${PLAY_VICTORY_MANUSCRIPT}</span></div>
           </div>
           <div class="zone-stack zone-stack-inspiration" onclick="showZoneModal('${sideKey}','inspiration','💡 インスピレーションゾーン')" title="IPパワー: 累積${s.ip}・所蔵${(s.inspiration||[]).length}枚">
             <div class="inspiration-power">
@@ -6208,6 +6287,11 @@ function renderPlaySide(sideKey) {
           <div class="zone-stack" onclick="showZoneModal('${sideKey}','deck','🃏 山(デッキ)', true)" title="山札(伏せ)">
             <div class="zone-stack-label">🃏 山 ${s.deck.length}</div>
             <div class="zone-stack-cards">${deckStack}</div>
+          </div>
+          <!-- どんでん返しデッキ(別山、覚醒時のみ使用) -->
+          <div class="zone-stack zone-stack-dondeng" onclick="showZoneModal('${sideKey}','dondengDeck','🎲 どんでん返しデッキ', true)" title="どんでん返しデッキ(覚醒時のみ使用)">
+            <div class="zone-stack-label">🎲 どんでん返し ${s.dondengDeck.length}</div>
+            <div class="zone-stack-cards">${dondengStack}</div>
           </div>
         </div>
       </div>
@@ -6459,12 +6543,14 @@ function netJoinRoom() {
       document.getElementById('netStatus').textContent = '接続成立。デッキ情報を送信...';
       // ゲスト側のデッキ instances を構築 (シャッフル済) し、参照される全カードと一緒に送る
       const guestDeckInstances = shuffleArray(buildDeckInstances(deckIdGuest));
-      const guestCardPool = collectCardsForInstances(guestDeckInstances);
+      const guestDondengInstances = buildDondengDeckInstances(deckIdGuest);
+      const guestCardPool = collectCardsForInstances([...guestDeckInstances, ...guestDondengInstances]);
       netConn.send({
         type: 'HELLO',
         deckIdGuest,
         nameGuest,
         deckInstances: guestDeckInstances,
+        dondengInstances: guestDondengInstances,
         cardPool: guestCardPool
       });
     });
@@ -6560,8 +6646,10 @@ function netHandleMessage(msg, role, ctx) {
     const sideB = makePlaySide(msg.deckIdGuest, nameGuest);
     // ホスト側: 自分のデッキを構築
     sideA.deck = shuffleArray(buildDeckInstances(deckIdHost));
+    sideA.dondengDeck = buildDondengDeckInstances(deckIdHost);
     // ゲスト側: HELLOで受け取った既にシャッフル済のinstancesをそのまま使う
     sideB.deck = (msg.deckInstances || []).slice();
+    sideB.dondengDeck = (msg.dondengInstances || []).slice();
     if (sideB.deck.length === 0) {
       toast('ゲストのデッキが空です(エラー)');
       return;
