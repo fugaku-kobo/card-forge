@@ -2903,7 +2903,7 @@ const STORAGE_KEY = 'card_forge_data_v4_tezuka';
 // 5つの基本タイプ
 // 色は意味重視: 主人公=朱赤(主役)、キャラ=青(仲間)、展開=緑(発想)、テコ入れ=橙(介入)、どんでん返し=紫(逆転)
 const BUILTIN_TYPES = [
-  { name: '主人公',         color: '#a02d1f', builtin: true, kind: 'leveled',   meaning: '漫画の主役・リーダー (各1枚、Lv1/2/3が必須)' },
+  { name: '主人公',         color: '#a02d1f', builtin: true, kind: 'leveled',   meaning: 'デッキアイコンカード (1 枚必須、デッキを識別)' },
   { name: 'キャラクター',   color: '#2c5fa0', builtin: true, kind: 'character', meaning: '場で戦う仲間(脇役/相棒/ライバル/自信作)' },
   { name: '展開アイディア', color: '#3d8a3a', builtin: true, kind: 'effect',    meaning: 'アイデア・物語の発展を促すカード' },
   { name: 'テコ入れ',       color: '#c8761f', builtin: true, kind: 'effect',    meaning: '伏せて相手ターンに発動する介入カード' },
@@ -4111,31 +4111,32 @@ function renderDeckSizeGauge(total, deck) {
 
 // リーダー状況パネル
 function renderLeaderStatusBox(leaderInfo, leaderSetCandidates) {
-  const names = Object.keys(leaderInfo);
-  const allLevelsLabel = ['1','2','3'];
+  const entries = Object.entries(leaderInfo); // [name, {count, cards}]
   let statusHtml = '';
-  if (names.length === 0) {
-    statusHtml = `<div class="leader-status warn">⚠ 主人公カードが選ばれていません。Lv1/2/3 の3枚セットが必要です。</div>`;
+  if (entries.length === 0) {
+    statusHtml = `<div class="leader-status warn">⚠ デッキアイコンカードが選ばれていません。1 枚必須です。</div>`;
+  } else if (entries.length === 1 && entries[0][1].count === 1) {
+    statusHtml = `<div class="leader-status ok"><strong>📘 ${escapeHtml(entries[0][0])}</strong> <span class="leader-note">(1 枚)</span></div>`;
   } else {
-    statusHtml = names.map(nm => {
-      const has = leaderInfo[nm].lvs;
-      const missing = allLevelsLabel.filter(lv => !has.has(lv));
-      const cls = missing.length === 0 ? 'ok' : 'warn';
-      const detail = allLevelsLabel.map(lv => `<span class="leader-lv ${has.has(lv)?'have':'miss'}">Lv${lv}</span>`).join('');
-      const note = missing.length === 0 ? '揃っています' : `Lv${missing.join('/')} が不足`;
+    // 複数主人公 or 同じ主人公の複数枚 → 警告
+    statusHtml = entries.map(([nm, info]) => {
+      const cls = (entries.length === 1 && info.count === 1) ? 'ok' : 'warn';
+      const note = info.count > 1
+        ? `${info.count} 枚あります(1 枚にしてください)`
+        : (entries.length > 1 ? '複数の主人公がいます(1 枚に絞ってください)' : '');
       return `<div class="leader-status ${cls}">
-        <strong>${escapeHtml(nm)}</strong> ${detail} <span class="leader-note">(${note})</span>
+        <strong>📘 ${escapeHtml(nm)}</strong> <span class="leader-note">${note ? '(' + note + ')' : ''}</span>
       </div>`;
     }).join('');
   }
-  // ワンクリックでセット追加するボタン
+  // ワンクリックで主人公追加するボタン
   const candidateOptions = leaderSetCandidates.length === 0 ? ''
-    : leaderSetCandidates.map(nm => `<button class="btn-small" onclick="setLeaderSet('${escapeHtml(nm).replace(/'/g, "\\'")}')">+ ${escapeHtml(nm)} (Lv1/2/3)</button>`).join('');
+    : leaderSetCandidates.map(nm => `<button class="btn-small" onclick="setLeaderSet('${escapeHtml(nm).replace(/'/g, "\\'")}')">+ ${escapeHtml(nm)}</button>`).join('');
 
   return `
-    <div class="deck-section-title">主人公カード — 各1枚、Lv1/2/3の3枚セットが必須</div>
+    <div class="deck-section-title">デッキアイコンカード — 1 枚必須</div>
     ${statusHtml}
-    ${candidateOptions ? `<div class="leader-actions"><span class="leader-actions-label">セット追加:</span>${candidateOptions}</div>` : ''}
+    ${candidateOptions ? `<div class="leader-actions"><span class="leader-actions-label">主人公を選ぶ:</span>${candidateOptions}</div>` : ''}
   `;
 }
 
@@ -4205,11 +4206,19 @@ function renderAddCards(availableCards, deck) {
   }).join('')}</div>`;
 }
 
-// 指定名の主人公 Lv1/2/3 を一括でデッキに追加(既に別名が居れば確認の上で交代)
+// 指定名の主人公(デッキアイコン)をデッキに 1 枚追加。既に別名の主人公が居れば確認の上で交代。
 function setLeaderSet(name) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
   if (!deck.cards) deck.cards = [];
+
+  // 同名候補から代表 1 枚を選択(複数バージョンがある場合は最初の 1 枚)
+  const heroCandidates = state.cards.filter(c => isLeaderCard(c) && c.name === name);
+  if (heroCandidates.length === 0) {
+    toast(`「${name}」が見つかりません`);
+    return;
+  }
+  const targetCard = heroCandidates[0];
 
   const otherNames = new Set();
   deck.cards.forEach(e => {
@@ -4223,19 +4232,17 @@ function setLeaderSet(name) {
       const c = state.cards.find(c => c.id === e.cardId);
       return !(c && isLeaderCard(c) && c.name !== name);
     });
-    const heroes = state.cards.filter(c => isLeaderCard(c) && c.name === name);
-    let added = 0;
-    ['1','2','3'].forEach(lv => {
-      const card = heroes.find(c => String(c.level) === lv);
-      if (!card) return;
-      const existing = deck.cards.find(x => x.cardId === card.id);
-      if (existing && existing.count >= 1) return;
-      if (existing) existing.count = 1;
-      else deck.cards.push({cardId: card.id, count: 1});
-      added++;
+    // 同名で別バージョンがあればそれらも削除して、targetCard 1 枚に統一
+    deck.cards = deck.cards.filter(e => {
+      const c = state.cards.find(c => c.id === e.cardId);
+      return !(c && isLeaderCard(c) && c.id !== targetCard.id);
     });
+    // 既に target が入っていれば 1 枚に、無ければ追加
+    const existing = deck.cards.find(x => x.cardId === targetCard.id);
+    if (existing) existing.count = 1;
+    else deck.cards.push({cardId: targetCard.id, count: 1});
     saveData(); renderDeckList();
-    toast(added > 0 ? `「${name}」をセット追加 (${added}枚)` : `「${name}」は既に揃っています`);
+    toast(`デッキアイコン「${name}」を設定`);
   };
 
   if (otherNames.size > 0) {
@@ -4343,27 +4350,24 @@ function renderDeckDetail() {
     return currentCount < getMaxCopies(c);
   });
 
-  // リーダー状況の集計: 主人公カードを名前ごとにまとめ、Lv1/2/3 が揃っているか確認
-  const leaderInfo = {}; // name -> { lvs: Set<'1'|'2'|'3'>, cards: [card] }
+  // 主人公(デッキアイコン)状況の集計: 名前ごとに枚数を確認
+  const leaderInfo = {}; // name -> { count, cards }
   inDeckEntries.forEach(e => {
     if (!isLeaderCard(e.card)) return;
     const nm = e.card.name || '無名';
-    if (!leaderInfo[nm]) leaderInfo[nm] = { lvs: new Set(), cards: [] };
-    if (e.card.level) leaderInfo[nm].lvs.add(String(e.card.level));
+    if (!leaderInfo[nm]) leaderInfo[nm] = { count: 0, cards: [] };
+    leaderInfo[nm].count += e.count;
     leaderInfo[nm].cards.push(e.card);
   });
   const leaderNames = Object.keys(leaderInfo);
-  // 全主人公カードを名前+レベルで列挙(リーダーセット候補一覧)
+  // 主人公として追加可能な候補(全主人公カードを名前ごとに代表 1 枚抽出)
   const allHeroes = state.cards.filter(isLeaderCard);
   const heroByName = {};
   allHeroes.forEach(c => {
     const nm = c.name || '無名';
-    if (!heroByName[nm]) heroByName[nm] = {};
-    if (c.level) heroByName[nm][String(c.level)] = c;
+    if (!heroByName[nm]) heroByName[nm] = c;  // 同名なら最初の 1 枚
   });
-  const leaderSetCandidates = Object.keys(heroByName)
-    .filter(nm => heroByName[nm]['1'] && heroByName[nm]['2'] && heroByName[nm]['3'])
-    .sort();
+  const leaderSetCandidates = Object.keys(heroByName).sort();
 
   // 作品名一覧 (重複排除、空文字除外、ソート)
   const allWorks = [...new Set(state.cards.map(c => (c.work || '').trim()).filter(w => w))].sort();
@@ -5384,7 +5388,7 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
 
   // === ルール検証 (ローカル操作時のみ) ===
   if (!_isApplyingRemoteOp) {
-    // [Lv順序] 主人公昇格は Lv +1 のみ
+    // [主人公の配置] 主人公ゾーンは主人公カードのみ
     if (toZone === 'leader') {
       if (newCard && isLeaderCard(newCard)) {
         const newLv = parseInt(newCard.level) || 0;
@@ -5392,10 +5396,15 @@ function moveInstance(side, instanceId, fromZone, toZone, toTop) {
         const currentLv = currentLeader
           ? (parseInt(findPlayCard(currentLeader.cardId)?.level) || 0)
           : 0;
-        if (newLv !== currentLv + 1) {
-          if (currentLv === 0) toast(`主人公ゾーンが空です。Lv1から順番に出してください (試行: Lv${newLv})`);
-          else if (newLv <= currentLv) toast(`既に Lv${currentLv} です。Lv${currentLv + 1} のカードで練り上げてください`);
+        // Lv 概念ありの旧主人公カードの場合のみ Lv 順序チェック(Lv 1 → 2 → 3)
+        // 第二稿のデッキアイコンカードは Lv が無いので、自由配置可
+        if (newLv > 0 && currentLv > 0 && newLv !== currentLv + 1) {
+          if (newLv <= currentLv) toast(`既に Lv${currentLv} です。Lv${currentLv + 1} のカードで練り上げてください`);
           else toast(`Lv${currentLv}からLv${newLv}には進化できません(順番にLv1→Lv2→Lv3)`);
+          return;
+        }
+        if (newLv > 0 && currentLv === 0 && newLv > 1) {
+          toast(`主人公ゾーンが空です。Lv1から順番に出してください (試行: Lv${newLv})`);
           return;
         }
       } else {
