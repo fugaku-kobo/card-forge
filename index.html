@@ -3912,17 +3912,12 @@ function fitTextElement(el, minRatio) {
     initial = parseFloat(cs.fontSize);
   }
   if (!initial) return;
-  // PDF印刷時は最小 22px を維持(可読性最優先、長文は overflow を許容)
-  // 画面表示時は従来通り 8px を最小
-  const minFloor = isPdfMode ? 22 : 8;
-  const min = Math.max(minFloor, initial * (minRatio || 0.7));
-  // PDF モードでは overflow をはみ出させて読めるようにする
-  if (isPdfMode) {
-    el.style.overflow = 'visible';
-    el.style.whiteSpace = 'normal';
-  }
+  // PDF印刷時は最小 18px(可読性確保)、画面表示時は 8px
+  // テキストはカード内に収まるよう、必要なら縮小する
+  const minFloor = isPdfMode ? 18 : 8;
+  const min = Math.max(minFloor, initial * (minRatio || 0.6));
   let size = initial;
-  let safety = 60;
+  let safety = 80;
   while (size > min && el.scrollHeight > el.clientHeight + 1 && safety-- > 0) {
     size -= 0.5;
     el.style.fontSize = size + 'px';
@@ -6873,15 +6868,19 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-unlimited-mark').forEach(e => { e.style.fontSize = '0.8em'; });
   // イラスト
   cardEl.querySelectorAll('.cp-illust').forEach(e => { e.style.margin = '14px 4px 0'; });
+  // 第二稿でテキスト量が増えたため、イラストエリアを小さくして文章スペース確保
   if (cardEl.classList.contains('kind-leveled')) {
-    cardEl.querySelector('.cp-illust').style.height = '300px';
-    cardEl.querySelector('.cp-illust-icon').style.fontSize = '180px';
-  } else if (cardEl.classList.contains('kind-character')) {
-    cardEl.querySelector('.cp-illust').style.height = '230px';
-    cardEl.querySelector('.cp-illust-icon').style.fontSize = '140px';
-  } else if (cardEl.classList.contains('kind-effect')) {
-    cardEl.querySelector('.cp-illust').style.height = '200px';
+    // デッキアイコンは両面共通+裏面効果のテキスト量が多いので イラストを縮小
+    cardEl.querySelector('.cp-illust').style.height = '180px';
     cardEl.querySelector('.cp-illust-icon').style.fontSize = '120px';
+  } else if (cardEl.classList.contains('kind-character')) {
+    // キャラはパッシブ+技2つで文章量が多いので イラストを縮小
+    cardEl.querySelector('.cp-illust').style.height = '170px';
+    cardEl.querySelector('.cp-illust-icon').style.fontSize = '110px';
+  } else if (cardEl.classList.contains('kind-effect')) {
+    // 効果カードはテキストエリアが本体
+    cardEl.querySelector('.cp-illust').style.height = '150px';
+    cardEl.querySelector('.cp-illust-icon').style.fontSize = '100px';
   }
   cardEl.querySelectorAll('.cp-illust-memo').forEach(e => { e.style.fontSize = '24px'; e.style.bottom = '6px'; e.style.padding = '3px 8px'; });
   // 技
