@@ -1320,6 +1320,21 @@ main {
 .add-card-row:hover { background: rgba(201, 169, 97, 0.08); }
 .add-card-name { flex: 1; color: var(--parchment); font-size: 0.9rem; }
 .add-card-meta { color: var(--parchment-dim); font-size: 0.75rem; letter-spacing: 0.05em; }
+.add-card-code {
+  display: inline-block;
+  background: rgba(201, 169, 97, 0.15);
+  color: var(--gold);
+  font-family: 'Cinzel', 'Courier New', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(201, 169, 97, 0.3);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  min-width: 60px;
+  text-align: center;
+}
 .add-card-btn { padding: 3px 10px; font-size: 0.75rem; }
 
 /* === STATS TAB === */
@@ -3556,6 +3571,7 @@ function getFilteredCards() {
   if (search) {
     filtered = filtered.filter(c =>
       (c.name || '').toLowerCase().includes(search) ||
+      (c.cardCode || '').toLowerCase().includes(search) ||
       (c.skill1 || '').toLowerCase().includes(search) ||
       (c.skill2 || '').toLowerCase().includes(search) ||
       (c.effect1 || '').toLowerCase().includes(search) ||
@@ -3563,7 +3579,12 @@ function getFilteredCards() {
       (c.effect3 || '').toLowerCase().includes(search) ||
       (c.other || '').toLowerCase().includes(search) ||
       (c.art || '').toLowerCase().includes(search) ||
-      (c.subrole || '').toLowerCase().includes(search)
+      (c.subrole || '').toLowerCase().includes(search) ||
+      (c.work || '').toLowerCase().includes(search) ||
+      (c.passive || '').toLowerCase().includes(search) ||
+      (c.frontEffect || '').toLowerCase().includes(search) ||
+      (c.backEffectName || '').toLowerCase().includes(search) ||
+      (c.backEffect || '').toLowerCase().includes(search)
     );
   }
   if (typeFilter) filtered = filtered.filter(c => c.type === typeFilter);
@@ -4257,16 +4278,22 @@ function renderAddCards(availableCards, deck) {
   const mode = _deckAddViewMode || 'grid';
   if (mode === 'list') {
     return `<div class="add-card-list">${availableCards.map(c => {
-      const entry = (deck.cards || []).find(x => x.cardId === c.id);
+      // どんでん返しは別山なので、そちらのカウントを参照
+      const entry = isDondengCard(c)
+        ? (deck.dondengCards || []).find(x => x.cardId === c.id)
+        : (deck.cards || []).find(x => x.cardId === c.id);
       const currentCount = entry ? entry.count : 0;
       const max = getMaxCopies(c);
       const limitText = c.unlimited ? '∞' : `${currentCount}/${max}`;
+      const codeBadge = c.cardCode ? `<span class="add-card-code">${escapeHtml(c.cardCode)}</span>` : '';
+      const dondengMark = isDondengCard(c) ? ' 🎲' : '';
       return `
       <div class="add-card-row" onclick="addCardToDeck('${c.id}')"
            onmouseenter="showHoverPreview('${c.id}', event)"
            onmouseleave="hideHoverPreview()">
         <div style="width: 8px; height: 24px; background: ${getTypeColor(c.type)};"></div>
-        <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}${isLeaderCard(c)?' 👑':''}</div>
+        ${codeBadge}
+        <div class="add-card-name">${escapeHtml(c.name)}${c.unlimited ? ' <span style="color:#c9a961;">∞</span>' : ''}${isLeaderCard(c)?' 👑':''}${dondengMark}</div>
         <div class="add-card-meta">${escapeHtml(c.type)}${c.level?' / Lv.'+escapeHtml(c.level):''}${c.work?' / '+escapeHtml(c.work):''} <span style="color: #c9a961;">[${limitText}]</span></div>
         <button class="add-card-btn btn-primary">+ 追加</button>
       </div>`;
@@ -4573,7 +4600,8 @@ function renderDeckDetail() {
     if (f.work && (c.work || '').trim() !== f.work) return false;
     if (f.type && c.type !== f.type) return false;
     if (searchLower) {
-      const hay = [c.name, c.skill1, c.skill2, c.effect1, c.effect2, c.effect3, c.subrole, c.work, c.rule, c.other]
+      const hay = [c.name, c.cardCode, c.skill1, c.skill2, c.effect1, c.effect2, c.effect3,
+                   c.subrole, c.work, c.rule, c.other, c.passive, c.frontEffect, c.backEffectName, c.backEffect]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(searchLower)) return false;
     }
