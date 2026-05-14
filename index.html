@@ -3902,16 +3902,25 @@ function fitTextElement(el, minRatio) {
   // インラインスタイルで明示されたサイズがあれば、それを初期値として尊重
   // (PDF生成時に createCardElementForPDF で設定した大きいサイズを上書きされない)
   let initial;
+  let isPdfMode = false;
   if (el.style.fontSize) {
     initial = parseFloat(el.style.fontSize);
+    isPdfMode = initial > 18;  // 大きい初期値=PDF生成時(画面表示は通常 6-12px)
   } else {
     el.style.fontSize = ''; // リセットして CSS デフォルトから再計測
     const cs = getComputedStyle(el);
     initial = parseFloat(cs.fontSize);
   }
   if (!initial) return;
-  const minFloor = 8; // どんなに小さくてもこれより下にはしない(PDF印刷時の可読性確保)
+  // PDF印刷時は最小 22px を維持(可読性最優先、長文は overflow を許容)
+  // 画面表示時は従来通り 8px を最小
+  const minFloor = isPdfMode ? 22 : 8;
   const min = Math.max(minFloor, initial * (minRatio || 0.7));
+  // PDF モードでは overflow をはみ出させて読めるようにする
+  if (isPdfMode) {
+    el.style.overflow = 'visible';
+    el.style.whiteSpace = 'normal';
+  }
   let size = initial;
   let safety = 60;
   while (size > min && el.scrollHeight > el.clientHeight + 1 && safety-- > 0) {
