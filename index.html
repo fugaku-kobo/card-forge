@@ -6849,11 +6849,11 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-protagonist-mark').forEach(e => { e.style.fontSize = '32px'; });
   cardEl.querySelectorAll('.cp-protagonist-lv').forEach(e => { e.style.padding = '5px 18px'; e.style.fontSize = '32px'; e.style.borderRadius = '28px'; });
   cardEl.querySelectorAll('.cp-badge').forEach(e => { e.style.minWidth = '78px'; e.style.height = '72px'; e.style.fontSize = '34px'; e.style.padding = '0 14px'; e.style.borderRadius = '12px'; e.style.gap = '6px'; });
-  cardEl.querySelectorAll('.cp-badge-prefix').forEach(e => { e.style.fontSize = '20px'; });
+  cardEl.querySelectorAll('.cp-badge-prefix').forEach(e => { e.style.fontSize = '24px'; });
   cardEl.querySelectorAll('.cp-badge-hp').forEach(e => { e.style.minWidth = '120px'; e.style.height = '72px'; e.style.borderRadius = '36px'; e.style.fontSize = '36px'; });
   cardEl.querySelectorAll('.cp-title-bar').forEach(e => { e.style.padding = '0 22px'; e.style.gap = '12px'; });
   cardEl.querySelectorAll('.cp-title').forEach(e => { e.style.fontSize = '36px'; });
-  cardEl.querySelectorAll('.cp-subrole').forEach(e => { e.style.fontSize = '24px'; });
+  cardEl.querySelectorAll('.cp-subrole').forEach(e => { e.style.fontSize = '26px'; });
   cardEl.querySelectorAll('.cp-unlimited-mark').forEach(e => { e.style.fontSize = '0.8em'; });
   // イラスト
   cardEl.querySelectorAll('.cp-illust').forEach(e => { e.style.margin = '14px 4px 0'; });
@@ -6867,32 +6867,32 @@ function createCardElementForPDF(card) {
     cardEl.querySelector('.cp-illust').style.height = '200px';
     cardEl.querySelector('.cp-illust-icon').style.fontSize = '120px';
   }
-  cardEl.querySelectorAll('.cp-illust-memo').forEach(e => { e.style.fontSize = '20px'; e.style.bottom = '6px'; e.style.padding = '3px 6px'; });
+  cardEl.querySelectorAll('.cp-illust-memo').forEach(e => { e.style.fontSize = '24px'; e.style.bottom = '6px'; e.style.padding = '3px 8px'; });
   // 技
   cardEl.querySelectorAll('.cp-skill-area').forEach(e => { e.style.padding = '12px 4px'; e.style.gap = '10px'; });
   cardEl.querySelectorAll('.cp-skill').forEach(e => { e.style.padding = '12px 16px'; });
   cardEl.querySelectorAll('.cp-skill-name').forEach(e => { e.style.fontSize = '30px'; });
   cardEl.querySelectorAll('.cp-skill-cost').forEach(e => { e.style.fontSize = '26px'; e.style.padding = '5px 14px'; e.style.borderRadius = '8px'; });
-  cardEl.querySelectorAll('.cp-skill-effect').forEach(e => { e.style.fontSize = '26px'; e.style.lineHeight = '1.45'; });
+  cardEl.querySelectorAll('.cp-skill-effect').forEach(e => { e.style.fontSize = '28px'; e.style.lineHeight = '1.45'; });
   // 効果(効果カード用)
   cardEl.querySelectorAll('.cp-effect-area').forEach(e => { e.style.padding = '18px 22px'; e.style.gap = '12px'; e.style.margin = '12px 4px'; });
   cardEl.querySelectorAll('.cp-cost-line').forEach(e => { e.style.fontSize = '32px'; e.style.padding = '8px 18px'; e.style.borderRadius = '8px'; });
-  cardEl.querySelectorAll('.cp-effect-text').forEach(e => { e.style.fontSize = '30px'; e.style.lineHeight = '1.5'; });
+  cardEl.querySelectorAll('.cp-effect-text').forEach(e => { e.style.fontSize = '32px'; e.style.lineHeight = '1.5'; });
   // 第二稿: デッキアイコン両面/裏面効果
-  cardEl.querySelectorAll('.cp-icon-effects').forEach(e => { e.style.padding = '14px 4px'; e.style.gap = '12px'; });
-  cardEl.querySelectorAll('.cp-icon-front, .cp-icon-back').forEach(e => { e.style.padding = '14px 18px'; e.style.borderWidth = '2px'; });
-  cardEl.querySelectorAll('.cp-icon-label').forEach(e => { e.style.fontSize = '24px'; e.style.padding = '4px 14px'; e.style.borderRadius = '6px'; e.style.marginBottom = '8px'; });
-  cardEl.querySelectorAll('.cp-icon-text').forEach(e => { e.style.fontSize = '28px'; e.style.lineHeight = '1.45'; });
+  cardEl.querySelectorAll('.cp-icon-effects').forEach(e => { e.style.padding = '14px 4px'; e.style.gap = '14px'; });
+  cardEl.querySelectorAll('.cp-icon-front, .cp-icon-back').forEach(e => { e.style.padding = '16px 20px'; e.style.borderWidth = '2px'; });
+  cardEl.querySelectorAll('.cp-icon-label').forEach(e => { e.style.fontSize = '28px'; e.style.padding = '6px 18px'; e.style.borderRadius = '8px'; e.style.marginBottom = '10px'; });
+  cardEl.querySelectorAll('.cp-icon-text').forEach(e => { e.style.fontSize = '32px'; e.style.lineHeight = '1.5'; });
   // 第二稿: キャラ パッシブ能力
-  cardEl.querySelectorAll('.cp-passive-area').forEach(e => { e.style.padding = '10px 14px'; e.style.margin = '8px 4px'; e.style.borderRadius = '8px'; e.style.gap = '12px'; });
-  cardEl.querySelectorAll('.cp-passive-label').forEach(e => { e.style.fontSize = '22px'; e.style.padding = '4px 12px'; e.style.borderRadius = '6px'; });
-  cardEl.querySelectorAll('.cp-passive-text').forEach(e => { e.style.fontSize = '26px'; e.style.lineHeight = '1.4'; });
-  // フッター
-  cardEl.querySelectorAll('.cp-footer').forEach(e => { e.style.fontSize = '20px'; e.style.minHeight = '44px'; e.style.maxHeight = '78px'; e.style.padding = '8px 4px 0'; });
-  cardEl.querySelectorAll('.cp-footer-work').forEach(e => { e.style.fontSize = '20px'; e.style.padding = '5px 12px'; });
-  cardEl.querySelectorAll('.cp-footer-rule').forEach(e => { e.style.fontSize = '18px'; });
+  cardEl.querySelectorAll('.cp-passive-area').forEach(e => { e.style.padding = '12px 18px'; e.style.margin = '8px 4px'; e.style.borderRadius = '8px'; e.style.gap = '14px'; });
+  cardEl.querySelectorAll('.cp-passive-label').forEach(e => { e.style.fontSize = '26px'; e.style.padding = '6px 16px'; e.style.borderRadius = '6px'; });
+  cardEl.querySelectorAll('.cp-passive-text').forEach(e => { e.style.fontSize = '30px'; e.style.lineHeight = '1.4'; });
+  // フッター(覚醒ルール等の重要文も含むので大きめに)
+  cardEl.querySelectorAll('.cp-footer').forEach(e => { e.style.fontSize = '24px'; e.style.minHeight = '52px'; e.style.maxHeight = '140px'; e.style.padding = '10px 6px 0'; });
+  cardEl.querySelectorAll('.cp-footer-work').forEach(e => { e.style.fontSize = '24px'; e.style.padding = '6px 14px'; });
+  cardEl.querySelectorAll('.cp-footer-rule').forEach(e => { e.style.fontSize = '24px'; e.style.lineHeight = '1.4'; });
   // 型番
-  cardEl.querySelectorAll('.cp-card-code').forEach(e => { e.style.fontSize = '20px'; e.style.bottom = '-32px'; e.style.right = '4px'; });
+  cardEl.querySelectorAll('.cp-card-code').forEach(e => { e.style.fontSize = '26px'; e.style.bottom = '-36px'; e.style.right = '4px'; });
 
   if (cardEl.classList.contains('shinsaku')) {
     const before = document.createElement('div');
