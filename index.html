@@ -573,17 +573,20 @@ main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   padding: 3px 1px;
   overflow: hidden;
+  min-height: 0;
 }
 .cp-icon-front, .cp-icon-back {
   background: white;
   border: 1px solid #ccc;
-  padding: 4px 5px;
-  font-size: 9px;
-  line-height: 1.3;
+  padding: 3px 5px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 .cp-icon-back {
   border-color: #444;
@@ -597,41 +600,52 @@ main {
   border-radius: 2px;
   font-size: 8px;
   font-weight: 700;
-  margin-right: 4px;
-  vertical-align: middle;
+  margin-bottom: 2px;
+  align-self: flex-start;
 }
 .cp-icon-label-back {
   background: #444 !important;
 }
 .cp-icon-text {
+  display: block;
   color: #222;
-  font-size: 9px;
-  line-height: 1.3;
+  font-size: 9.5px;
+  line-height: 1.35;
+  flex: 1;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* === キャラ パッシブ能力エリア === */
 .cp-passive-area {
   background: #fffbe6;
   border: 1px dashed #d4a017;
-  padding: 3px 5px;
+  padding: 2px 4px;
   margin: 2px 1px;
-  font-size: 8.5px;
-  line-height: 1.3;
   border-radius: 3px;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  overflow: hidden;
 }
 .cp-passive-label {
-  display: inline-block;
   background: #d4a017;
   color: white;
   padding: 1px 4px;
   border-radius: 2px;
-  font-size: 7.5px;
+  font-size: 8px;
   font-weight: 700;
-  margin-right: 4px;
-  vertical-align: middle;
+  flex-shrink: 0;
 }
 .cp-passive-text {
   color: #5a4400;
+  font-size: 9px;
+  line-height: 1.3;
+  flex: 1;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* === ③ 技エリア(主人公・キャラ用) === */
@@ -2367,6 +2381,14 @@ main {
   .cp-effect-area { padding: 4px 5px; gap: 3px; margin: 2px 1px; }
   .cp-cost-line { font-size: 7px; padding: 1px 3px; }
   .cp-effect-text { font-size: 7px; }
+  /* 第二稿 デッキアイコン・パッシブのモバイル調整 */
+  .cp-icon-effects { padding: 2px 1px; gap: 2px; }
+  .cp-icon-front, .cp-icon-back { padding: 2px 3px; }
+  .cp-icon-label { font-size: 6px; padding: 0 3px; }
+  .cp-icon-text { font-size: 6.5px; line-height: 1.25; }
+  .cp-passive-area { padding: 1px 3px; }
+  .cp-passive-label { font-size: 6px; padding: 0 3px; }
+  .cp-passive-text { font-size: 6.5px; line-height: 1.25; }
   .cp-footer { font-size: 5.5px; min-height: 12px; max-height: 22px; }
   .cp-footer-work { font-size: 5.5px; padding: 1px 3px; }
   .cp-footer-rule { font-size: 5px; }
@@ -3809,6 +3831,8 @@ function fitCardTexts(rootEl) {
   rootEl.querySelectorAll('.card-preview').forEach(card => {
     card.querySelectorAll('.cp-skill-effect, .cp-effect-text').forEach(el => fitTextElement(el));
     card.querySelectorAll('.cp-footer-rule').forEach(el => fitTextElement(el, 0.7));
+    // 第二稿で追加: デッキアイコン両面/裏面効果、キャラ パッシブ
+    card.querySelectorAll('.cp-icon-text, .cp-passive-text').forEach(el => fitTextElement(el, 0.55));
   });
 }
 
