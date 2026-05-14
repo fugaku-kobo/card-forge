@@ -6878,6 +6878,15 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-effect-area').forEach(e => { e.style.padding = '18px 22px'; e.style.gap = '12px'; e.style.margin = '12px 4px'; });
   cardEl.querySelectorAll('.cp-cost-line').forEach(e => { e.style.fontSize = '32px'; e.style.padding = '8px 18px'; e.style.borderRadius = '8px'; });
   cardEl.querySelectorAll('.cp-effect-text').forEach(e => { e.style.fontSize = '30px'; e.style.lineHeight = '1.5'; });
+  // 第二稿: デッキアイコン両面/裏面効果
+  cardEl.querySelectorAll('.cp-icon-effects').forEach(e => { e.style.padding = '14px 4px'; e.style.gap = '12px'; });
+  cardEl.querySelectorAll('.cp-icon-front, .cp-icon-back').forEach(e => { e.style.padding = '14px 18px'; e.style.borderWidth = '2px'; });
+  cardEl.querySelectorAll('.cp-icon-label').forEach(e => { e.style.fontSize = '24px'; e.style.padding = '4px 14px'; e.style.borderRadius = '6px'; e.style.marginBottom = '8px'; });
+  cardEl.querySelectorAll('.cp-icon-text').forEach(e => { e.style.fontSize = '28px'; e.style.lineHeight = '1.45'; });
+  // 第二稿: キャラ パッシブ能力
+  cardEl.querySelectorAll('.cp-passive-area').forEach(e => { e.style.padding = '10px 14px'; e.style.margin = '8px 4px'; e.style.borderRadius = '8px'; e.style.gap = '12px'; });
+  cardEl.querySelectorAll('.cp-passive-label').forEach(e => { e.style.fontSize = '22px'; e.style.padding = '4px 12px'; e.style.borderRadius = '6px'; });
+  cardEl.querySelectorAll('.cp-passive-text').forEach(e => { e.style.fontSize = '26px'; e.style.lineHeight = '1.4'; });
   // フッター
   cardEl.querySelectorAll('.cp-footer').forEach(e => { e.style.fontSize = '20px'; e.style.minHeight = '44px'; e.style.maxHeight = '78px'; e.style.padding = '8px 4px 0'; });
   cardEl.querySelectorAll('.cp-footer-work').forEach(e => { e.style.fontSize = '20px'; e.style.padding = '5px 12px'; });
