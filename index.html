@@ -937,6 +937,18 @@ main {
   font-style: italic; font-size: 0.9rem;
 }
 .deck-section { margin-bottom: 24px; }
+.deck-section-dondeng {
+  padding: 12px;
+  border: 1px dashed #6e3a8b;
+  border-radius: 6px;
+  background: rgba(110, 58, 139, 0.05);
+}
+.deck-section-subtitle {
+  color: var(--parchment-dim);
+  font-size: 0.75rem;
+  margin: 2px 0 8px 0;
+  font-style: italic;
+}
 .deck-section-title {
   font-family: 'Cinzel', serif;
   color: var(--gold);
@@ -3907,11 +3919,14 @@ function renderDeckList() {
     return;
   }
   list.innerHTML = state.decks.map(d => {
+    ensureDondengDeck(d);
     const cardCount = getDeckTotalCount(d);
     const uniqueCount = (d.cards || []).length;
+    const dondengCount = getDondengDeckCount(d);
+    const dondengLabel = dondengCount > 0 ? ` <span style="color:#6e3a8b;">+🎲${dondengCount}</span>` : '';
     return `<div class="deck-item ${state.currentDeckId === d.id ? 'active' : ''}" onclick="selectDeck('${d.id}')">
       <div class="deck-item-name">${escapeHtml(d.name)}</div>
-      <div class="deck-item-meta">${cardCount}枚 (${uniqueCount}種類)</div></div>`;
+      <div class="deck-item-meta">${cardCount}枚 (${uniqueCount}種類)${dondengLabel}</div></div>`;
   }).join('');
   renderDeckDetail();
 }
@@ -3919,7 +3934,7 @@ function selectDeck(id) { state.currentDeckId = id; saveData(); renderDeckList()
 function createDeck() {
   promptInput('新規デッキ', 'デッキ名を入力してください', '', (name) => {
     if (!name) return;
-    const newDeck = { id: 'd' + Date.now(), name, description: '', cards: [] };
+    const newDeck = { id: 'd' + Date.now(), name, description: '', cards: [], dondengCards: [] };
     state.decks.push(newDeck);
     state.currentDeckId = newDeck.id;
     saveData(); renderDeckList();
@@ -3986,11 +4001,19 @@ async function decompressFromB64(b64) {
 async function exportDeckCode(deckId) {
   const deck = state.decks.find(d => d.id === (deckId || state.currentDeckId));
   if (!deck) return;
-  const cardIds = new Set((deck.cards || []).map(e => e.cardId));
+  ensureDondengDeck(deck);
+  const cardIds = new Set();
+  (deck.cards || []).forEach(e => cardIds.add(e.cardId));
+  (deck.dondengCards || []).forEach(e => cardIds.add(e.cardId));
   const cards = state.cards.filter(c => cardIds.has(c.id));
   const payload = {
-    v: 1,
-    deck: { name: deck.name, description: deck.description || '', cards: deck.cards || [] },
+    v: 2,  // v2: dondengCards 対応
+    deck: {
+      name: deck.name,
+      description: deck.description || '',
+      cards: deck.cards || [],
+      dondengCards: deck.dondengCards || []
+    },
     cards
   };
   const json = JSON.stringify(payload);
@@ -4060,7 +4083,7 @@ async function importDeckCode() {
     console.error(e);
     return;
   }
-  if (!payload || payload.v !== 1 || !payload.deck || !Array.isArray(payload.cards)) {
+  if (!payload || (payload.v !== 1 && payload.v !== 2) || !payload.deck || !Array.isArray(payload.cards)) {
     toast('対応していない形式です');
     return;
   }
@@ -4079,12 +4102,20 @@ async function importDeckCode() {
   const newDeckCards = (payload.deck.cards || [])
     .map(e => ({cardId: idMap[e.cardId], count: e.count}))
     .filter(e => e.cardId);
+  const newDondengCards = (payload.deck.dondengCards || [])
+    .map(e => ({cardId: idMap[e.cardId], count: e.count}))
+    .filter(e => e.cardId);
   const newDeck = {
     id: 'd' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
     name: payload.deck.name + ' (取込)',
     description: payload.deck.description || '',
-    cards: newDeckCards
+    cards: newDeckCards,
+    dondengCards: newDondengCards
   };
+  // v1 形式: メインカードに混ざってる どんでん返し を別山に移動
+  if (payload.v === 1) {
+    ensureDondengDeck(newDeck);
+  }
   state.decks.push(newDeck);
   state.currentDeckId = newDeck.id;
   saveData();
@@ -4284,6 +4315,12 @@ function setLeaderSet(name) {
 function isLeaderCard(card) {
   return card && getTypeKind(card.type) === 'leveled';
 }
+// どんでん返しカードかどうか
+function isDondengCard(card) {
+  return card && card.type === 'どんでん返し';
+}
+// どんでん返しデッキ(別山) の上限
+const DONDENG_DECK_MAX = 5;
 // カード1種あたりの最大枚数(主人公は1枚、unlimited は無制限)
 function getMaxCopies(card) {
   if (!card) return 4;
@@ -4291,14 +4328,58 @@ function getMaxCopies(card) {
   if (isLeaderCard(card)) return 1;
   return 4;
 }
+// デッキを初期化(後方互換: 既存の deck.cards に入ったどんでん返しを別山に移動)
+function ensureDondengDeck(deck) {
+  if (!deck) return;
+  if (!deck.cards) deck.cards = [];
+  if (!deck.dondengCards) deck.dondengCards = [];
+  // 既存データのマイグレーション: deck.cards 内のどんでん返しを dondengCards へ移動
+  const dondengToMigrate = [];
+  deck.cards = deck.cards.filter(entry => {
+    const c = state.cards.find(c => c.id === entry.cardId);
+    if (c && isDondengCard(c)) {
+      dondengToMigrate.push(entry);
+      return false;
+    }
+    return true;
+  });
+  dondengToMigrate.forEach(entry => {
+    const existing = deck.dondengCards.find(x => x.cardId === entry.cardId);
+    if (existing) existing.count += entry.count;
+    else deck.dondengCards.push(entry);
+  });
+}
 
 function addCardToDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
-  if (!deck.cards) deck.cards = [];
+  ensureDondengDeck(deck);
 
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
+
+  // どんでん返しカード → 別山(どんでん返しデッキ)へ
+  if (isDondengCard(card)) {
+    const totalDondeng = deck.dondengCards.reduce((s, x) => s + (x.count || 0), 0);
+    const existing = deck.dondengCards.find(x => x.cardId === cardId);
+    const maxCount = getMaxCopies(card);
+    if (totalDondeng >= DONDENG_DECK_MAX && !(existing && card.unlimited)) {
+      toast(`どんでん返しデッキは ${DONDENG_DECK_MAX} 枚までです`);
+      return;
+    }
+    if (existing) {
+      if (existing.count >= maxCount) {
+        toast(card.unlimited ? '上限なし(エラー)' : '同じカードは4枚までです');
+        return;
+      }
+      existing.count++;
+    } else {
+      deck.dondengCards.push({cardId, count: 1});
+    }
+    saveData(); renderDeckList();
+    toast(`どんでん返し「${card.name}」を追加 (${(existing ? existing.count : 1)}枚目)`);
+    return;
+  }
 
   // 1デッキ1主人公: 別名の主人公が既に入っていれば拒否
   if (isLeaderCard(card)) {
@@ -4335,11 +4416,19 @@ function addCardToDeck(cardId) {
 function decrementCardInDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
-  const entry = (deck.cards || []).find(x => x.cardId === cardId);
+  ensureDondengDeck(deck);
+  // メインデッキとどんでん返しデッキの両方から探す
+  let entry = (deck.cards || []).find(x => x.cardId === cardId);
+  let isInDondeng = false;
+  if (!entry) {
+    entry = (deck.dondengCards || []).find(x => x.cardId === cardId);
+    isInDondeng = !!entry;
+  }
   if (!entry) return;
   entry.count--;
   if (entry.count <= 0) {
-    deck.cards = deck.cards.filter(x => x.cardId !== cardId);
+    if (isInDondeng) deck.dondengCards = deck.dondengCards.filter(x => x.cardId !== cardId);
+    else deck.cards = deck.cards.filter(x => x.cardId !== cardId);
   }
   saveData(); renderDeckList();
 }
@@ -4347,13 +4436,19 @@ function decrementCardInDeck(cardId) {
 function removeCardFromDeck(cardId) {
   const deck = state.decks.find(d => d.id === state.currentDeckId);
   if (!deck) return;
+  ensureDondengDeck(deck);
   deck.cards = (deck.cards || []).filter(x => x.cardId !== cardId);
+  deck.dondengCards = (deck.dondengCards || []).filter(x => x.cardId !== cardId);
   saveData(); renderDeckList();
 }
 
-// デッキの合計枚数(枚数バッジ含む)
+// デッキの合計枚数(メインデッキのみ、どんでん返しは含まない)
 function getDeckTotalCount(deck) {
   return (deck.cards || []).reduce((sum, x) => sum + (x.count || 0), 0);
+}
+// どんでん返しデッキの合計枚数
+function getDondengDeckCount(deck) {
+  return (deck.dondengCards || []).reduce((sum, x) => sum + (x.count || 0), 0);
 }
 function renderDeckDetail() {
   const detail = document.getElementById('deckDetail');
@@ -4364,14 +4459,32 @@ function renderDeckDetail() {
     return;
   }
 
-  // デッキ内カードを {card, count} のペアで取得
+  // 後方互換: 既存データのどんでん返しを別山に分離
+  ensureDondengDeck(deck);
+
+  // メインデッキ内カードを {card, count} のペアで取得
   const inDeckEntries = (deck.cards || []).map(entry => ({
     card: state.cards.find(c => c.id === entry.cardId),
     count: entry.count
   })).filter(e => e.card);
 
-  // 追加可能カード: デッキ内にあっても、枚数が上限未満なら追加可
+  // どんでん返しデッキ内カード
+  const dondengEntries = (deck.dondengCards || []).map(entry => ({
+    card: state.cards.find(c => c.id === entry.cardId),
+    count: entry.count
+  })).filter(e => e.card);
+
+  // 追加可能カード:
+  //  - どんでん返しは別山なので dondengCards でカウント
+  //  - その他はメインデッキでカウント
   const availableAll = state.cards.filter(c => {
+    if (isDondengCard(c)) {
+      const entry = (deck.dondengCards || []).find(x => x.cardId === c.id);
+      const currentCount = entry ? entry.count : 0;
+      const totalDondeng = (deck.dondengCards || []).reduce((s, x) => s + (x.count || 0), 0);
+      if (totalDondeng >= DONDENG_DECK_MAX && !entry) return false;
+      return currentCount < getMaxCopies(c);
+    }
     const entry = (deck.cards || []).find(x => x.cardId === c.id);
     const currentCount = entry ? entry.count : 0;
     return currentCount < getMaxCopies(c);
@@ -4442,6 +4555,29 @@ function renderDeckDetail() {
             const origIdx = state.cards.indexOf(c);
             const maxCount = getMaxCopies(c);
             const canAdd = e.count < maxCount;
+            const countBadge = `<div class="deck-count-badge">×${e.count}</div>`;
+            const counterCtrls = `
+              <div class="deck-card-controls" onclick="event.stopPropagation()">
+                <button class="cp-ctrl-btn" onclick="event.stopPropagation(); decrementCardInDeck('${c.id}')" title="1枚減らす">−</button>
+                <button class="cp-ctrl-btn" onclick="event.stopPropagation(); addCardToDeck('${c.id}')" title="1枚増やす" ${!canAdd ? 'disabled' : ''}>＋</button>
+              </div>`;
+            return buildCardHTML(c, origIdx, {
+              inDeck: true, showIndex: false,
+              attrs: `onclick="openCardZoom(${origIdx})"`,
+              extraInner: countBadge + counterCtrls
+            });
+          }).join('')}</div>`}
+    </div>
+    <div class="deck-section deck-section-dondeng">
+      <div class="deck-section-title">🎲 どんでん返しデッキ(別山) — ${getDondengDeckCount(deck)} / ${DONDENG_DECK_MAX} 枚</div>
+      <div class="deck-section-subtitle">メインデッキとは別の山。主人公の覚醒(相手原稿4枚以上)時のみ使用可。</div>
+      ${dondengEntries.length === 0 ? `<div class="empty-state" style="padding: 20px;"><p>どんでん返しカードを下から追加してください(最大 ${DONDENG_DECK_MAX} 枚、0 枚でも可)</p></div>`
+        : `<div class="deck-cards">${dondengEntries.map(e => {
+            const c = e.card;
+            const origIdx = state.cards.indexOf(c);
+            const maxCount = getMaxCopies(c);
+            const totalDondeng = getDondengDeckCount(deck);
+            const canAdd = e.count < maxCount && totalDondeng < DONDENG_DECK_MAX;
             const countBadge = `<div class="deck-count-badge">×${e.count}</div>`;
             const counterCtrls = `
               <div class="deck-card-controls" onclick="event.stopPropagation()">
@@ -6641,9 +6777,18 @@ async function generatePDF(mode) {
   if (mode === 'deck') {
     const deck = state.decks.find(d => d.id === state.currentDeckId);
     if (!deck) { toast('デッキが選択されていません'); return; }
-    // 枚数分カードを複製して展開
+    ensureDondengDeck(deck);
+    // 枚数分カードを複製して展開(メイン + どんでん返し別山)
     cardsToPrint = [];
     (deck.cards || []).forEach(entry => {
+      const card = state.cards.find(c => c.id === entry.cardId);
+      if (card) {
+        for (let i = 0; i < entry.count; i++) {
+          cardsToPrint.push(card);
+        }
+      }
+    });
+    (deck.dondengCards || []).forEach(entry => {
       const card = state.cards.find(c => c.id === entry.cardId);
       if (card) {
         for (let i = 0; i < entry.count; i++) {
