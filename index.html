@@ -5911,6 +5911,15 @@ function openPlayPopover(side, instanceId, fromZone) {
     // 山のカードはドロー操作で対応するため、ここは「上を見る」だけ
     actions.push({ label: '➡ 手札に加える', fn: `moveInstance('${side}','${instanceId}','deck','hand')` });
     actions.push({ label: '➡ 没案ゾーンへ', fn: `moveInstance('${side}','${instanceId}','deck','discard')` });
+  } else if (fromZone === 'dondengDeck') {
+    // どんでん返しデッキ: 表向き、いつでも場に出せる
+    actions.push({ label: '⚡ 場に出して使う', fn: `moveInstance('${side}','${instanceId}','dondengDeck','field')` });
+    actions.push({ label: '🔥 効果発動 → 没案へ', fn: `moveInstance('${side}','${instanceId}','dondengDeck','discard')` });
+    actions.push({ label: '➡ 手札に加える', fn: `moveInstance('${side}','${instanceId}','dondengDeck','hand')` });
+    {
+      const ipGain = parseInt(card?.ip) || 1;
+      actions.push({ label: `💡 インスピレーションへ送る (+IP${ipGain})`, fn: `moveInstance('${side}','${instanceId}','dondengDeck','inspiration')` });
+    }
   }
 
   const html = `
@@ -6216,8 +6225,8 @@ function renderPlaySide(sideKey) {
   const deckStack = stackChips(s.deck, true, 'deck');
   const manuscriptStack = stackChips(s.manuscriptCards, false, 'manuscriptCards');
   const inspirationStack = stackChips(s.inspiration || [], false, 'inspiration');
-  // どんでん返しデッキ (別山、裏向き) — 覚醒条件まで隠す
-  const dondengStack = stackChips(s.dondengDeck || [], true, 'dondengDeck');
+  // どんでん返しデッキ (別山、表向き) — いつでも場に出せる
+  const dondengStack = stackChips(s.dondengDeck || [], false, 'dondengDeck');
 
   const fieldCountClass = s.field.length >= PLAY_FIELD_MAX ? 'full' : '';
   const msWinClass = s.manuscriptCards.length >= PLAY_VICTORY_MANUSCRIPT ? 'win' : '';
@@ -6288,8 +6297,8 @@ function renderPlaySide(sideKey) {
             <div class="zone-stack-label">🃏 山 ${s.deck.length}</div>
             <div class="zone-stack-cards">${deckStack}</div>
           </div>
-          <!-- どんでん返しデッキ(別山、覚醒時のみ使用) -->
-          <div class="zone-stack zone-stack-dondeng" onclick="showZoneModal('${sideKey}','dondengDeck','🎲 どんでん返しデッキ', true)" title="どんでん返しデッキ(覚醒時のみ使用)">
+          <!-- どんでん返しデッキ(別山、表向き、いつでも場に出せる) -->
+          <div class="zone-stack zone-stack-dondeng" onclick="showZoneModal('${sideKey}','dondengDeck','🎲 どんでん返しデッキ')" title="どんでん返しデッキ(表向き、いつでも場に出せる)">
             <div class="zone-stack-label">🎲 どんでん返し ${s.dondengDeck.length}</div>
             <div class="zone-stack-cards">${dondengStack}</div>
           </div>
