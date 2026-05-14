@@ -3899,12 +3899,19 @@ function render() {
 // 長文に対してフォントサイズを動的に縮小し、コンテナの高さに収める
 function fitTextElement(el, minRatio) {
   if (!el) return;
-  el.style.fontSize = ''; // リセットして CSS デフォルトから再計測
-  const cs = getComputedStyle(el);
-  const initial = parseFloat(cs.fontSize);
+  // インラインスタイルで明示されたサイズがあれば、それを初期値として尊重
+  // (PDF生成時に createCardElementForPDF で設定した大きいサイズを上書きされない)
+  let initial;
+  if (el.style.fontSize) {
+    initial = parseFloat(el.style.fontSize);
+  } else {
+    el.style.fontSize = ''; // リセットして CSS デフォルトから再計測
+    const cs = getComputedStyle(el);
+    initial = parseFloat(cs.fontSize);
+  }
   if (!initial) return;
-  const minFloor = 4; // どんなに小さくてもこれより下にはしない
-  const min = Math.max(minFloor, initial * (minRatio || 0.55));
+  const minFloor = 8; // どんなに小さくてもこれより下にはしない(PDF印刷時の可読性確保)
+  const min = Math.max(minFloor, initial * (minRatio || 0.7));
   let size = initial;
   let safety = 60;
   while (size > min && el.scrollHeight > el.clientHeight + 1 && safety-- > 0) {
