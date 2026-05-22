@@ -494,6 +494,16 @@ main {
   font-size: 11px;
   border: 1px solid rgba(255,255,255,0.3);
 }
+/* 攻撃力バッジ: 「⚔ 5」と表示 (v7、青鋼、横長楕円) */
+.cp-badge-atk {
+  background: linear-gradient(135deg, #3a5fa0 0%, #243f6e 100%);
+  color: white;
+  min-width: 36px;
+  height: 22px;
+  border-radius: 11px;
+  font-size: 11px;
+  border: 1px solid rgba(255,255,255,0.3);
+}
 
 /* 名前バー (横に長く) */
 .cp-title-bar {
@@ -2441,7 +2451,7 @@ main {
   .card-preview { width: 100%; height: auto; aspect-ratio: 63 / 88; padding: 3px; }
   .cp-header { height: 18px; gap: 2px; }
   .cp-badge { width: 16px; height: 16px; font-size: 9px; }
-  .cp-badge-hp { width: 22px; height: 18px; font-size: 9px; border-radius: 9px; }
+  .cp-badge-hp, .cp-badge-atk { width: 22px; height: 18px; font-size: 9px; border-radius: 9px; }
   .cp-title { font-size: 9px; }
   .cp-subrole { font-size: 7px; }
   .cp-title-bar { padding: 0 4px; gap: 2px; }
@@ -2560,7 +2570,7 @@ main {
 .card-zoom-card .cp-protagonist-lv { padding: 2px 10px; font-size: 14px; }
 .card-zoom-card .cp-header { height: 36px; gap: 5px; }
 .card-zoom-card .cp-badge { width: 30px; height: 30px; font-size: 16px; }
-.card-zoom-card .cp-badge-hp { width: 40px; height: 30px; border-radius: 15px; font-size: 16px; }
+.card-zoom-card .cp-badge-hp, .card-zoom-card .cp-badge-atk { width: 40px; height: 30px; border-radius: 15px; font-size: 16px; }
 .card-zoom-card .cp-title-bar { padding: 0 10px; gap: 6px; }
 .card-zoom-card .cp-title { font-size: 17px; }
 .card-zoom-card .cp-subrole { font-size: 12px; }
@@ -2735,6 +2745,10 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
               <input type="text" id="f-hp" placeholder="例: 70">
             </div>
             <div class="field">
+              <label>攻撃力</label>
+              <input type="text" id="f-atk" placeholder="例: 5">
+            </div>
+            <div class="field">
               <label>没で得るIP</label>
               <input type="text" id="f-ip" placeholder="例: 1">
             </div>
@@ -2894,7 +2908,8 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
       <aside class="deck-list-side">
         <div class="panel-title">デッキ一覧</div>
         <button class="btn-primary" style="width:100%; margin-bottom: 8px;" onclick="createDeck()">+ 新規デッキ</button>
-        <button class="btn-small" style="width:100%; margin-bottom: 12px;" onclick="openImportDeckCode()">📥 コードから取込</button>
+        <button class="btn-small" style="width:100%; margin-bottom: 6px;" onclick="openImportDeckCode()">📥 コードから取込</button>
+        <button class="btn-small" style="width:100%; margin-bottom: 12px;" onclick="openImportDeckList()">📋 型番リストから作成</button>
         <div id="deckListItems"></div>
       </aside>
       <section class="deck-detail" id="deckDetail">
@@ -3013,7 +3028,9 @@ const BUILTIN_TYPES = [
   { name: 'キャラクター',   color: '#2c5fa0', builtin: true, kind: 'character', meaning: '場で戦う仲間(脇役/相棒/ライバル/自信作)' },
   { name: '展開アイディア', color: '#3d8a3a', builtin: true, kind: 'effect',    meaning: 'アイデア・物語の発展を促すカード' },
   { name: 'テコ入れ',       color: '#c8761f', builtin: true, kind: 'effect',    meaning: '伏せて相手ターンに発動する介入カード' },
-  { name: 'どんでん返し',   color: '#6e3a8b', builtin: true, kind: 'effect',    meaning: '原稿6枚以上で使える大逆転カード' }
+  { name: 'どんでん返し',   color: '#6e3a8b', builtin: true, kind: 'effect',    meaning: '原稿6枚以上で使える大逆転カード' },
+  { name: 'ページカード',   color: '#2f7d8a', builtin: true, kind: 'effect',    meaning: 'v7: 毎ターンの共通ルール(ゲームの時計)' },
+  { name: '急展開カード',   color: '#b03a6e', builtin: true, kind: 'effect',    meaning: 'v7: 伏せて相手ターンにも撃てる介入カード' }
 ];
 
 // 旧デフォルト色 → 新色マイグレーション用
@@ -3447,6 +3464,7 @@ function readForm() {
     );
     data.subrole = document.getElementById('f-subrole').value.trim();
     data.hp = document.getElementById('f-hp').value.trim();
+    data.atk = document.getElementById('f-atk').value.trim();
     data.ip = document.getElementById('f-ip').value.trim();
     data.shinsaku = document.getElementById('f-shinsaku').checked;
     data.unlimited = document.getElementById('f-unlimited').checked;
@@ -3478,6 +3496,7 @@ function writeForm(c) {
   document.getElementById('f-level').value = c.level || '1';
   document.getElementById('f-subrole').value = c.subrole || '';
   document.getElementById('f-hp').value = c.hp || '';
+  document.getElementById('f-atk').value = c.atk || '';
   document.getElementById('f-ip').value = c.ip || '';
   document.getElementById('f-shinsaku').checked = !!c.shinsaku;
   document.getElementById('f-unlimited').checked = !!c.unlimited;
@@ -3713,6 +3732,7 @@ function buildCardHTML(c, idx, opts) {
           ${(c.subrole || charLvLabel) ? `<div class="cp-subrole">${escapeHtml(c.subrole || charLvLabel)}</div>` : ''}
         </div>
         ${c.hp ? `<div class="cp-badge cp-badge-hp" title="HP(体力)"><span class="cp-badge-prefix">HP</span>${escapeHtml(c.hp)}</div>` : ''}
+        ${c.atk ? `<div class="cp-badge cp-badge-atk" title="攻撃力"><span class="cp-badge-prefix">⚔</span>${escapeHtml(c.atk)}</div>` : ''}
       </div>
       <div class="cp-illust">
         <span class="cp-illust-icon">${escapeHtml(icon)}</span>
@@ -4209,6 +4229,73 @@ async function importDeckCode() {
   closeDeckCodeModal();
   toast(`「${newDeck.name}」を取込(カード${addedCards}枚追加)`);
 }
+
+// ============ 型番リストからデッキ作成 ============
+function openImportDeckList() {
+  document.getElementById('deckCodeTitle').textContent = '📋 型番リストからデッキ作成';
+  document.getElementById('deckCodeDesc').textContent =
+    '「型番 数量」を1行ずつ貼り付け(例: BJ-C001 2)。「デッキ名: ◯◯」で名前指定、# 行はコメント。※カードは先に「📊 Excel取込」で取り込んでおく必要があります。';
+  const ta = document.getElementById('deckCodeText');
+  ta.value = '';
+  ta.readOnly = false;
+  document.getElementById('deckCodeActions').innerHTML = `
+    <button onclick="closeDeckCodeModal()">キャンセル</button>
+    <button class="btn-primary" onclick="importDeckList()">作成</button>`;
+  document.getElementById('deckCodeModal').classList.add('show');
+  setTimeout(() => { ta.focus(); }, 50);
+}
+
+function importDeckList() {
+  const raw = document.getElementById('deckCodeText').value;
+  if (!raw.trim()) { toast('型番リストを貼り付けてください'); return; }
+  let deckName = '';
+  const counts = {}, order = [], notFound = [];
+  raw.split(/\r?\n/).forEach(line => {
+    const t = line.trim();
+    if (!t || t.startsWith('#') || t.startsWith('//')) return;
+    const nm = t.match(/^デッキ名\s*[:：]\s*(.+)$/);
+    if (nm) { deckName = nm[1].trim(); return; }
+    const parts = t.split(/[\s,，、]+/).filter(x => x);
+    if (!parts.length) return;
+    const code = parts[0].trim();
+    let cnt = 1;
+    for (let i = 1; i < parts.length; i++) {
+      const m = parts[i].match(/(\d+)/);
+      if (m) { cnt = parseInt(m[1], 10); break; }
+    }
+    if (!(cnt >= 1)) cnt = 1;
+    const card = state.cards.find(c => ((c.cardCode || '').trim() === code) || c.id === code);
+    if (!card) { if (notFound.indexOf(code) < 0) notFound.push(code); return; }
+    if (!(card.id in counts)) order.push(card.id);
+    counts[card.id] = (counts[card.id] || 0) + cnt;
+  });
+  const deckCards = order.map(id => ({ cardId: id, count: counts[id] }));
+  if (!deckCards.length) {
+    toast(notFound.length ? 'カードが見つかりません(先に「📊 Excel取込」を)' : '有効な行がありません');
+    return;
+  }
+  const deck = {
+    id: 'd' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    name: deckName || '型番リストデッキ',
+    description: '',
+    cards: deckCards,
+    dondengCards: []
+  };
+  state.decks.push(deck);
+  state.currentDeckId = deck.id;
+  saveData();
+  refreshTypeSelects(); render(); renderDeckList();
+  closeDeckCodeModal();
+  const total = deckCards.reduce((sum, e) => sum + e.count, 0);
+  if (notFound.length) {
+    showModal('一部のカードが未取込です',
+      `「${deck.name}」を作成しました(${total}枚)。ただし次の型番のカードが見つかりません。先に「📊 Excel取込」でカードを取り込んでから、もう一度この型番リストを読み込んでください: ` + notFound.join(', '),
+      () => {});
+  } else {
+    toast(`「${deck.name}」を作成(${total}枚・${deckCards.length}種)`);
+  }
+}
+
 // デッキ枚数ゲージ(60〜80推奨)
 const DECK_MIN = 60, DECK_MAX = 80, DECK_GAUGE_SCALE = 100;
 function renderDeckSizeGauge(total, deck) {
@@ -4943,6 +5030,7 @@ function importXLSX(ev) {
           else if (h === 'サブ区分') colIdx.subrole = i;
           // ステータス
           else if (h === 'HP' || h.includes('HP')) colIdx.hp = i;
+          else if (h === '攻撃力' || h.includes('攻撃')) colIdx.atk = i;
           else if (h.includes('IP') && (h.includes('得') || h === 'IP')) colIdx.ip = i;
           else if (h === '自信作' || h === 'イチオシ') colIdx.shinsaku = i;
           else if (h === 'コスト') colIdx.cost = i;  // 効果カードのコスト / アイコン裏面コスト
@@ -4982,6 +5070,8 @@ function importXLSX(ev) {
         let detectedType = null;
         if (sheetName.includes('主人公')) detectedType = '主人公';
         else if (sheetName.includes('キャラクター')) detectedType = 'キャラクター';
+        else if (sheetName.includes('急展開')) detectedType = '急展開カード';
+        else if (sheetName.includes('ページ')) detectedType = 'ページカード';
         else if (sheetName.includes('展開') && !sheetName.includes('テコ') && !sheetName.includes('どんでん')) detectedType = '展開アイディア';
         else if (sheetName.includes('テコ入れ') || sheetName === 'テコ入れカード') detectedType = 'テコ入れ';
         else if (sheetName.includes('どんでん')) detectedType = 'どんでん返し';
@@ -5001,6 +5091,8 @@ function importXLSX(ev) {
             else if (typeCellVal === '展開アイディア') cardType = '展開アイディア';
             else if (typeCellVal === 'テコ入れ') cardType = 'テコ入れ';
             else if (typeCellVal === 'どんでん返し') cardType = 'どんでん返し';
+            else if (typeCellVal === 'ページカード') cardType = 'ページカード';
+            else if (typeCellVal === '急展開カード') cardType = '急展開カード';
           }
           if (!cardType) cardType = 'キャラクター';
 
@@ -5093,6 +5185,7 @@ function importXLSX(ev) {
             card.skill2 = skill2;
             card.subrole = subrole;
             card.hp = normalizeNumStr(row[colIdx.hp]);
+            card.atk = normalizeNumStr(row[colIdx.atk]);
             card.ip = normalizeNumStr(row[colIdx.ip]);
             card.shinsaku = shinsaku;
             // 第二稿: パッシブ能力
@@ -6861,7 +6954,7 @@ function createCardElementForPDF(card) {
   cardEl.querySelectorAll('.cp-protagonist-lv').forEach(e => { e.style.padding = '5px 18px'; e.style.fontSize = '32px'; e.style.borderRadius = '28px'; });
   cardEl.querySelectorAll('.cp-badge').forEach(e => { e.style.minWidth = '78px'; e.style.height = '72px'; e.style.fontSize = '34px'; e.style.padding = '0 14px'; e.style.borderRadius = '12px'; e.style.gap = '6px'; });
   cardEl.querySelectorAll('.cp-badge-prefix').forEach(e => { e.style.fontSize = '24px'; });
-  cardEl.querySelectorAll('.cp-badge-hp').forEach(e => { e.style.minWidth = '120px'; e.style.height = '72px'; e.style.borderRadius = '36px'; e.style.fontSize = '36px'; });
+  cardEl.querySelectorAll('.cp-badge-hp, .cp-badge-atk').forEach(e => { e.style.minWidth = '120px'; e.style.height = '72px'; e.style.borderRadius = '36px'; e.style.fontSize = '36px'; });
   cardEl.querySelectorAll('.cp-title-bar').forEach(e => { e.style.padding = '0 22px'; e.style.gap = '12px'; });
   cardEl.querySelectorAll('.cp-title').forEach(e => { e.style.fontSize = '36px'; });
   cardEl.querySelectorAll('.cp-subrole').forEach(e => { e.style.fontSize = '26px'; });
