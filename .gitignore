@@ -1,0 +1,9 @@
+# 自動バックアップ(版管理は data/手塚カードゲーム_v7_vX.Y.xlsx のファイル名で行う)
+data/backups/
+
+# Excel の一時ロックファイル
+~$*.xlsx
+
+# Python バイトコードキャッシュ
+__pycache__/
+*.pyc
