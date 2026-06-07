@@ -6273,8 +6273,8 @@ function v7PlayEnsureStyle() {
   document.head.appendChild(s);
 }
 
-function v7PlaySet(k, v) { v7setup[k] = v; if (!v7match) v7PlayRender(); }
-function v7PlayToggle(k) { v7setup[k] = !v7setup[k]; if (!v7match) v7PlayRender(); }
+function v7PlaySet(k, v) { v7setup[k] = v; if (!v7match) renderPlay(); }
+function v7PlayToggle(k) { v7setup[k] = !v7setup[k]; if (!v7match) renderPlay(); }
 
 function v7PlaySetupHTML() {
   const E = window.V7Engine;
@@ -6307,13 +6307,13 @@ function v7PlayStart() {
   v7match = new VM.V7Match({
     humanWork: v7setup.humanWork, aiWork: v7setup.aiWork, humanFirst: v7setup.humanFirst,
     aiMode: v7setup.aiMode, humanPierce: v7setup.humanPierce, aiPierce: v7setup.aiPierce,
-    onUpdate: () => v7PlayRender(),
+    onUpdate: () => renderPlay(),
   });
   v7match.start();
-  v7PlayRender();
+  renderPlay();
 }
 
-function v7PlayBackToSetup() { v7match = null; v7PlayRender(); }
+function v7PlayBackToSetup() { v7match = null; _playSetupMode = 'ai'; renderPlay(); }
 
 function v7PlayAct(kind, arg) {
   if (!v7match) return;
@@ -6325,7 +6325,7 @@ function v7PlayAct(kind, arg) {
   else if (kind === 'block') v7match.chooseBlock(arg);
   else if (kind === 'blockPass') v7match.chooseBlock(null);
   else if (kind === 'heart') v7match.setHumanHeart(arg);
-  v7PlayRender();
+  renderPlay();
 }
 
 function v7UnitHTML(u, clickable, onclick) {
@@ -6456,8 +6456,11 @@ function v7PlayRender() {
   root.innerHTML = v7match ? v7PlayBoardHTML(v7match.view()) : v7PlaySetupHTML();
 }
 
-// PLAYタブのエントリ: v7 AI対戦へ(旧実装は _oldRenderPlay として温存・未使用)
-function renderPlay() { return v7PlayRender(); }
+// PLAYタブのエントリ: v7 AI対戦が進行中なら専用盤面、それ以外は旧PLAY(モードタブに🤖AI対戦を統合)
+function renderPlay() {
+  if (v7match) { v7PlayEnsureStyle(); document.getElementById('playRoot').innerHTML = v7PlayBoardHTML(v7match.view()); return; }
+  return _oldRenderPlay();
+}
 
 function _oldRenderPlay() {
   const root = document.getElementById('playRoot');
@@ -6466,18 +6469,25 @@ function _oldRenderPlay() {
     const deckOptions = state.decks.map(d =>
       `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)} (${getDeckTotalCount(d)}枚)</option>`
     ).join('');
-    if (state.decks.length === 0) {
-      root.innerHTML = `<div class="empty-state"><h3>NO DECKS</h3>
-        <p>プレイにはデッキが必要です。「🃏 DECKS」タブで作成してください。</p></div>`;
-      return;
-    }
     const tabs = `
       <div class="play-mode-tabs">
         <button class="play-mode-tab ${_playSetupMode==='solo'?'active':''}" onclick="switchPlaySetupMode('solo')">🧍 ソロ</button>
         <button class="play-mode-tab ${_playSetupMode==='host'?'active':''}" onclick="switchPlaySetupMode('host')">🌐 ホスト</button>
         <button class="play-mode-tab ${_playSetupMode==='guest'?'active':''}" onclick="switchPlaySetupMode('guest')">🌐 ゲスト</button>
         <button class="play-mode-tab ${_playSetupMode==='spectate'?'active':''}" onclick="switchPlaySetupMode('spectate')">👁 観戦</button>
+        <button class="play-mode-tab ${_playSetupMode==='ai'?'active':''}" onclick="switchPlaySetupMode('ai')">🤖 AI対戦</button>
       </div>`;
+    // AI対戦はデッキ不要(エンジン内蔵のリーダーデッキを使用)
+    if (_playSetupMode === 'ai') {
+      v7PlayEnsureStyle();
+      root.innerHTML = tabs + v7PlaySetupHTML();
+      return;
+    }
+    if (state.decks.length === 0) {
+      root.innerHTML = tabs + `<div class="empty-state"><h3>NO DECKS</h3>
+        <p>ソロ/ネット対戦にはデッキが必要です(「🃏 DECKS」タブで作成)。<br>デッキ不要の「🤖 AI対戦」もどうぞ。</p></div>`;
+      return;
+    }
 
     let body = '';
     if (_playSetupMode === 'solo') {
