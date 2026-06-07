@@ -6212,63 +6212,64 @@ function v7PlayEnsureStyle() {
   if (document.getElementById('v7p-style')) return;
   const s = document.createElement('style'); s.id = 'v7p-style';
   s.textContent = `
-  .v7p{display:flex;flex-direction:column;gap:10px;font-size:.9rem}
-  .v7p-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#2b2419;border:1px solid #5a4a2e;border-radius:10px;padding:10px 14px}
-  .v7p-top .pg{font-weight:700;color:#f0d89a}
-  .v7p-top .pgd{color:#cbb985;font-size:.82rem}
-  .v7p-top .turn{font-weight:700;color:#fff;background:#4a3c22;padding:2px 10px;border-radius:20px}
-  .v7p-top .who{padding:2px 10px;border-radius:20px;font-weight:700}
-  .v7p-top .who.human{background:#2f5d3a;color:#cdebd3}
-  .v7p-top .who.ai{background:#6b2f2f;color:#f0cccc}
-  .v7p-side{border:1px solid #5a4a2e;border-radius:10px;padding:8px 12px}
-  .v7p-side.ai{background:#3a2424}
-  .v7p-side.human{background:#243a2a}
-  .v7p-shead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px;font-size:.82rem;color:#e8dcc0}
-  .v7p-shead .lead{font-weight:700;color:#fff}
-  .v7p-shead .heart{padding:1px 8px;border-radius:10px;background:#3b3370;color:#dcd6ff}
-  .v7p-shead .heart.princess{background:#7a3b63;color:#ffd9ee}
-  .v7p-shead .ct{color:#cbb985}
-  .v7p-shead .gk{font-weight:700;color:#f5d76e}
-  .v7p-field{display:flex;gap:8px;flex-wrap:wrap;min-height:64px;align-items:flex-start}
-  .v7p-empty{color:#7d6f52;font-size:.8rem;padding:18px 4px}
-  .v7p-unit{width:96px;background:#fbf6e6;color:#2a2418;border:2px solid #b9a571;border-radius:8px;padding:5px 6px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-  .v7p-unit.star{border-color:#d4af37;background:#fff7df}
-  .v7p-unit.pierce{border-color:#b5572a}
-  .v7p-unit.sick{opacity:.6}
-  .v7p-unit .u-name{font-weight:700;font-size:.8rem;line-height:1.15}
-  .v7p-unit .u-atk{font-weight:800;color:#243f6e;font-size:1rem}
-  .v7p-unit .u-lv{position:absolute;top:3px;right:5px;font-size:.66rem;color:#7a6a3e;font-weight:700}
-  .v7p-unit .u-ab{font-size:.62rem;color:#5a4a2e;margin-top:2px;line-height:1.1}
-  .v7p-unit .u-b{margin-top:3px;display:flex;flex-wrap:wrap;gap:2px}
-  .v7b{font-size:.58rem;padding:0 4px;border-radius:6px;background:#e8dcc0;color:#4a3c22;font-weight:700}
-  .v7b.sh{background:#3a5fa0;color:#fff}.v7b.pi{background:#b5572a;color:#fff}
-  .v7b.sk{background:#888;color:#fff}.v7b.lk{background:#5a2e6b;color:#fff}.v7b.nb{background:#2f7a4a;color:#fff}
-  .v7p-unit.clickable{cursor:pointer;outline:3px solid #f5d76e;outline-offset:1px}
-  .v7p-unit.clickable:hover{transform:translateY(-3px)}
-  .v7p-hand{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-  .v7p-card{width:84px;background:#f3eed5;color:#2a2418;border:1px solid #b9a571;border-radius:7px;padding:5px 6px}
-  .v7p-card.kt{background:#e7e0ef;border-color:#9a86bf}
-  .v7p-card.clickable{cursor:pointer;outline:2px solid #6fae7e}
-  .v7p-card.clickable:hover{transform:translateY(-3px)}
-  .v7p-card .c-name{font-weight:700;font-size:.75rem;line-height:1.1}
-  .v7p-card .c-atk{font-size:.7rem;color:#243f6e;font-weight:700}
-  .v7p-card .c-ab{font-size:.6rem;color:#5a4a2e;margin-top:2px}
-  .v7p-card .c-b{font-size:.58rem;color:#7a5a2e;margin-top:2px}
-  .v7p-mid{background:#1f1a12;border:1px solid #5a4a2e;border-radius:10px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;min-height:48px}
-  .v7p-mid .prompt{font-weight:700;color:#f0d89a;flex:1;min-width:200px}
-  .v7p-btn{background:#4a7c59;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer}
-  .v7p-btn:hover{filter:brightness(1.12)}
-  .v7p-btn.alt{background:#7a5a2e}.v7p-btn.danger{background:#8a3b3b}.v7p-btn.ghost{background:#3a3324}
-  .v7p-log{background:#15120c;border:1px solid #4a3c22;border-radius:8px;padding:8px 12px;max-height:150px;overflow:auto;font-size:.76rem;color:#c7b88f;line-height:1.5}
-  .v7p-setup{max-width:680px;margin:0 auto}
-  .v7p-setup h2{color:#f0d89a}
-  .v7p-pick{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
-  .v7p-pick button{background:#2b2419;color:#e8dcc0;border:2px solid #5a4a2e;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:700}
-  .v7p-pick button.sel{border-color:#f5d76e;background:#4a3c22;color:#fff}
-  .v7p-opt{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}
-  .v7p-opt label{display:flex;gap:6px;align-items:center;color:#e8dcc0;cursor:pointer}
-  .v7p-result{text-align:center;padding:24px;background:#2b2419;border:2px solid #d4af37;border-radius:12px}
-  .v7p-result h2{font-size:1.6rem;margin:0 0 8px}
+  .v7p-board{display:grid;grid-template-rows:1fr auto 1fr;gap:8px;min-height:calc(100vh - 180px)}
+  .v7p-side{background:var(--bg-mid);border:1px solid rgba(201,169,97,.3);padding:6px 10px;display:flex;flex-direction:column;gap:6px}
+  .v7p-side.active{border-color:var(--gold);box-shadow:0 0 12px rgba(201,169,97,.25)}
+  .v7p-side.opponent{opacity:.96}
+  .v7p-side.top{flex-direction:column}
+  .v7p-side.top .v7p-shead{order:1}.v7p-side.top .v7p-zones{order:2}
+  .v7p-shead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.82rem;color:var(--parchment);border-bottom:1px solid rgba(201,169,97,.15);padding-bottom:4px}
+  .v7p-shead .nm{font-family:'Cinzel',serif;color:var(--gold-bright);font-weight:700}
+  .v7p-shead .heart{padding:1px 8px;border-radius:10px;border:1px solid var(--gold);color:var(--gold);font-size:.74rem}
+  .v7p-shead .heart.princess{color:#e79bc4;border-color:#e79bc4}
+  .v7p-shead .stat{color:var(--parchment-dim);font-size:.74rem}
+  .v7p-shead .gk{color:var(--gold-bright);font-weight:700}
+  .v7p-shead .gkn{color:var(--parchment);font-size:.74rem}
+  .v7p-zones{display:flex;gap:8px;flex:1;min-height:0}
+  .v7p-zone{background:var(--bg-deep);border:1px dashed rgba(201,169,97,.2);border-radius:3px;padding:4px 6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .v7p-zone.field{flex:2}.v7p-zone.hand{flex:1.6}
+  .v7p-zone.field.full{border-color:rgba(192,57,43,.4)}
+  .v7p-zone .zl{font-size:.7rem;color:var(--parchment-dim);font-family:'Cinzel',serif;letter-spacing:.05em}
+  .v7p-zcont{display:flex;flex-wrap:wrap;gap:5px;align-items:flex-start;flex:1;min-height:96px;align-content:flex-start}
+  .v7p-empty{color:#6f6446;font-size:.72rem;padding:14px 4px;font-style:italic}
+  .v7p-unit{width:66px;height:92px;background:#FAFAF7;color:#1a1410;border:1.5px solid rgba(0,0,0,.2);border-radius:3px;position:relative;display:flex;flex-direction:column;padding:3px;overflow:hidden;font-family:'Noto Sans JP',sans-serif;transition:transform .15s,box-shadow .15s}
+  .v7p-unit.lv2{background:linear-gradient(180deg,#f3eed5,#d8caa0);border:2px solid #8a6d2c}
+  .v7p-unit.star{box-shadow:0 0 5px rgba(212,175,55,.5);border-color:#d4af37}
+  .v7p-unit.sick{opacity:.5;filter:grayscale(.35)}
+  .v7p-unit.kt{background:linear-gradient(135deg,#2a2233,#1a1622);border-color:var(--gold)}
+  .v7p-unit.kt .unm{color:var(--gold)}
+  .v7p-unit.clickable{cursor:pointer;outline:3px solid var(--gold-bright);outline-offset:1px}
+  .v7p-unit.win{outline-color:#5fd07a}
+  .v7p-unit.clickable:hover{transform:translateY(-4px);box-shadow:0 4px 12px rgba(201,169,97,.6);z-index:5}
+  .v7p-unit .uatk{align-self:flex-start;background:linear-gradient(135deg,#3a5fa0,#243f6e);color:#fff;font-weight:800;font-size:9px;padding:1px 4px;border-radius:3px;font-family:'Cinzel',serif}
+  .v7p-unit .unm{font-size:8.5px;font-weight:700;line-height:1.1;margin-top:1px;max-height:22px;overflow:hidden}
+  .v7p-unit .uico{flex:1;display:flex;align-items:center;justify-content:center;font-size:23px;line-height:1}
+  .v7p-unit .uab{font-size:6.4px;color:#5a4a2e;line-height:1.05;max-height:19px;overflow:hidden}
+  .v7p-unit .ulv{position:absolute;top:1px;right:3px;font-size:7px;color:#8a6d2c;font-weight:700}
+  .v7p-unit .ubadges{position:absolute;bottom:1px;left:2px;display:flex;gap:1px}
+  .v7b{font-size:6.4px;padding:0 2px;border-radius:2px;font-weight:700;color:#fff}
+  .v7b.pi{background:#b5572a}.v7b.sh{background:#3a5fa0}.v7b.lk{background:#5a2e6b}.v7b.nb{background:#2f7a4a}.v7b.sk{background:#888}
+  .v7p-bar{background:var(--bg-deep);border:1px solid var(--gold);border-radius:4px;padding:8px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .v7p-bar .turn{font-family:'Cinzel',serif;color:var(--gold-bright);font-weight:700}
+  .v7p-bar .pg{color:var(--parchment);font-weight:700}
+  .v7p-bar .pgd{color:var(--parchment-dim);font-size:.78rem}
+  .v7p-bar .who{padding:2px 10px;border-radius:20px;font-size:.76rem;font-weight:700;border:1px solid}
+  .v7p-bar .who.human{color:#8fd6a0;border-color:#8fd6a0}.v7p-bar .who.ai{color:#e79b9b;border-color:#e79b9b}
+  .v7p-bar .prompt{color:var(--gold-bright);font-weight:700;width:100%;font-size:.9rem}
+  .v7p-bar .sp{flex:1}
+  .v7p-btn{background:var(--gold);color:var(--ink);border:none;border-radius:3px;padding:7px 16px;font-weight:700;cursor:pointer;font-family:'Cinzel',serif}
+  .v7p-btn:hover{background:var(--gold-bright)}
+  .v7p-btn.alt{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+  .v7p-btn.danger{background:#8a3b3b;color:#fff}
+  .v7p-btn.ghost{background:transparent;color:var(--parchment-dim);border:1px solid rgba(201,169,97,.3);padding:5px 12px;font-size:.8rem}
+  .v7p-log{background:var(--bg-deep);border:1px solid rgba(201,169,97,.2);border-radius:3px;padding:8px 12px;max-height:130px;overflow:auto;font-size:.76rem;color:var(--parchment-dim);line-height:1.55;margin-top:8px}
+  .v7p-result{text-align:center;padding:28px;background:var(--bg-mid);border:2px solid var(--gold);border-radius:4px}
+  .v7p-result h2{font-family:'Cinzel',serif;color:var(--gold-bright);font-size:1.6rem;margin:0 0 8px}
+  .v7p-pick{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px}
+  .v7p-pick button{background:var(--bg-deep);color:var(--parchment);border:1px solid rgba(201,169,97,.3);border-radius:3px;padding:8px 16px;cursor:pointer;font-weight:700}
+  .v7p-pick button.sel{border-color:var(--gold);background:rgba(201,169,97,.15);color:var(--gold-bright)}
+  .v7p-opt{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;color:var(--parchment)}
+  .v7p-opt label{display:flex;gap:6px;align-items:center;cursor:pointer}
   `;
   document.head.appendChild(s);
 }
@@ -6280,25 +6281,25 @@ function v7PlaySetupHTML() {
   const E = window.V7Engine;
   const pick = (key) => E.LEADERS.map(L =>
     `<button class="${v7setup[key] === L ? 'sel' : ''}" onclick="v7PlaySet('${key}','${L}')">${escapeHtml(E.LEADER_LABEL[L])}</button>`).join('');
-  return `<div class="v7p-setup">
+  return `<div class="play-setup">
     <h2>🤖 v7 AI対戦</h2>
-    <p style="color:#cbb985">リーダーを選んで対戦開始。攻撃力で「突破」して、違う名前のキャラ4枚を原稿に揃えたら勝ち。</p>
-    <div><b style="color:#cdebd3">あなたのリーダー</b><div class="v7p-pick">${pick('humanWork')}</div></div>
-    <div><b style="color:#f0cccc">AIのリーダー</b><div class="v7p-pick">${pick('aiWork')}</div></div>
+    <p>リーダーを選んで対戦開始。攻撃力で「突破」して、違う名前のキャラ4枚を原稿に揃えたら勝ち。デッキは内蔵のリーダー専用デッキを使います。</p>
+    <div class="field"><label>あなたのリーダー</label><div class="v7p-pick">${pick('humanWork')}</div></div>
+    <div class="field"><label>AIのリーダー</label><div class="v7p-pick">${pick('aiWork')}</div></div>
     <div class="v7p-opt">
       <label><input type="checkbox" ${v7setup.humanFirst ? 'checked' : ''} onclick="v7PlayToggle('humanFirst')"> あなたが先攻</label>
-      <label><input type="checkbox" ${v7setup.humanPierce ? 'checked' : ''} onclick="v7PlayToggle('humanPierce')"> 自分のデッキに貫通カードを入れる</label>
-      <label><input type="checkbox" ${v7setup.aiPierce ? 'checked' : ''} onclick="v7PlayToggle('aiPierce')"> AIのデッキに貫通カードを入れる</label>
+      <label><input type="checkbox" ${v7setup.humanPierce ? 'checked' : ''} onclick="v7PlayToggle('humanPierce')"> 自分に貫通カードを入れる</label>
+      <label><input type="checkbox" ${v7setup.aiPierce ? 'checked' : ''} onclick="v7PlayToggle('aiPierce')"> AIに貫通カードを入れる</label>
     </div>
     <div class="v7p-opt">
-      <label>AIの強さ:
-        <select onchange="v7PlaySet('aiMode', this.value)">
+      <label>AIの強さ:&nbsp;
+        <select onchange="v7PlaySet('aiMode', this.value)" style="width:auto">
           <option value="mcts" ${v7setup.aiMode === 'mcts' ? 'selected' : ''}>MCTS(強い・先読み)</option>
           <option value="greedy" ${v7setup.aiMode === 'greedy' ? 'selected' : ''}>貪欲(高速)</option>
         </select>
       </label>
     </div>
-    <button class="v7p-btn" style="font-size:1.05rem;padding:10px 28px" onclick="v7PlayStart()">▶ 対戦開始</button>
+    <div class="play-setup-actions"><button class="v7p-btn" style="font-size:1rem;padding:10px 28px" onclick="v7PlayStart()">▶ 対戦開始</button></div>
   </div>`;
 }
 
@@ -6328,106 +6329,116 @@ function v7PlayAct(kind, arg) {
   renderPlay();
 }
 
-function v7UnitHTML(u, clickable, onclick) {
+const V7_EMOJI = {
+  'ブラック・ジャック': '🩺', 'ピノコ': '🧒', '本間丈太郎': '👨‍⚕️', 'ドクター・キリコ': '💀',
+  'スパイダー': '🕷️', 'ヒョウタンツギ': '🐽', '鉄腕アトム': '🤖', 'ウラン': '👧', 'コバルト': '🦾',
+  'お茶の水博士': '👨‍🔬', '火の鳥': '🔥', 'ナギ': '🧑', 'ナギC': '🧑', '猿田彦': '🗿', '天弓彦': '🏹',
+  'サファイア': '👑', 'チンク': '👼', 'フランツ王子': '🤴', 'ヘケート': '🧙‍♀️', 'ロック': '🎯', '写楽': '🎭',
+};
+function v7Emoji(name) { return V7_EMOJI[name] || '🎴'; }
+
+function v7UnitHTML(u, clickable, onclick, extraCls) {
   const b = [];
-  if (u.star) b.push('<span class="v7b">主役</span>');
+  if (u.pierce) b.push('<span class="v7b pi">貫</span>');
   if (u.shield) b.push(`<span class="v7b sh">盾${u.shieldUsed ? '×' : ''}</span>`);
-  if (u.pierce) b.push('<span class="v7b pi">貫通</span>');
-  if (u.sick) b.push('<span class="v7b sk">酔</span>');
   if (u.locked) b.push('<span class="v7b lk">封</span>');
-  if (u.noBotsu) b.push('<span class="v7b nb">不没</span>');
-  const cls = ['v7p-unit', u.star ? 'star' : '', u.pierce ? 'pierce' : '', u.sick ? 'sick' : '', clickable ? 'clickable' : ''].join(' ');
-  return `<div class="${cls}" ${clickable ? `onclick="${onclick}"` : ''}>
-    <div class="u-lv">Lv${u.lv}</div>
-    <div class="u-name">${escapeHtml(u.name)}</div>
-    <div class="u-atk">⚔ ${u.eff}</div>
-    ${u.ability ? `<div class="u-ab">${escapeHtml(u.ability)}</div>` : ''}
-    <div class="u-b">${b.join('')}</div>
+  if (u.noBotsu) b.push('<span class="v7b nb">守</span>');
+  if (u.sick) b.push('<span class="v7b sk">酔</span>');
+  const cls = ['v7p-unit', u.lv === 2 ? 'lv2' : '', u.star ? 'star' : '', u.sick ? 'sick' : '', clickable ? 'clickable' : '', extraCls || ''].join(' ');
+  const title = `${u.name} ⚔${u.eff}${u.ability ? ' / ' + u.ability : ''}`;
+  return `<div class="${cls}" ${clickable ? `onclick="${onclick}"` : ''} title="${escapeHtml(title)}">
+    <div class="ulv">Lv${u.lv}</div>
+    <div class="uatk">⚔${u.eff}</div>
+    <div class="unm">${escapeHtml(u.name)}</div>
+    <div class="uico">${v7Emoji(u.name)}</div>
+    ${u.ability ? `<div class="uab">${escapeHtml(u.ability)}</div>` : ''}
+    <div class="ubadges">${b.join('')}</div>
   </div>`;
 }
 
 function v7HandHTML(c, clickable) {
   if (c.kind === 'kt') {
-    return `<div class="v7p-card kt ${clickable ? 'clickable' : ''}" ${clickable ? `onclick="v7PlayAct('trap',${c.idx})"` : ''}>
-      <div class="c-name">${escapeHtml(c.name)}</div><div class="c-ab">急展開(伏せる)</div></div>`;
+    return `<div class="v7p-unit kt ${clickable ? 'clickable' : ''}" ${clickable ? `onclick="v7PlayAct('trap',${c.idx})"` : ''} title="${escapeHtml(c.name)}(急展開)">
+      <div class="uatk" style="background:linear-gradient(135deg,#7a5a2e,#5a3e1e)">伏</div>
+      <div class="unm">${escapeHtml(c.name)}</div><div class="uico">🎴</div><div class="uab">急展開</div></div>`;
   }
-  const tags = [];
-  if (c.star) tags.push('主役'); if (c.pierce) tags.push('貫通'); if (c.shield) tags.push('盾');
-  return `<div class="v7p-card ${clickable ? 'clickable' : ''}" ${clickable ? `onclick="v7PlayAct('play',${c.idx})"` : ''}>
-    <div class="c-name">${escapeHtml(c.name)}</div>
-    <div class="c-atk">⚔${c.base} ・ Lv${c.lv}</div>
-    ${c.ability ? `<div class="c-ab">${escapeHtml(c.ability)}</div>` : ''}
-    ${tags.length ? `<div class="c-b">${tags.join('・')}</div>` : ''}
-  </div>`;
+  const b = [];
+  if (c.pierce) b.push('<span class="v7b pi">貫</span>');
+  if (c.shield) b.push('<span class="v7b sh">盾</span>');
+  const cls = ['v7p-unit', c.lv === 2 ? 'lv2' : '', c.star ? 'star' : '', clickable ? 'clickable' : ''].join(' ');
+  return `<div class="${cls}" ${clickable ? `onclick="v7PlayAct('play',${c.idx})"` : ''} title="${escapeHtml(c.name)} ⚔${c.base}${c.ability ? ' / ' + c.ability : ''}">
+    <div class="ulv">Lv${c.lv}</div><div class="uatk">⚔${c.base}</div>
+    <div class="unm">${escapeHtml(c.name)}</div><div class="uico">${v7Emoji(c.name)}</div>
+    ${c.ability ? `<div class="uab">${escapeHtml(c.ability)}</div>` : ''}<div class="ubadges">${b.join('')}</div></div>`;
 }
 
 function v7SideHTML(s, v, isHuman, attackable, blockOpts) {
+  const active = v.activeSide === (isHuman ? 'human' : 'ai');
   const heart = s.work === 'RIBBON'
     ? `<span class="heart ${s.heart === 'princess' ? 'princess' : ''}">${s.heart === 'princess' ? 'お姫さま' : '王子'}の心</span>` : '';
-  const gk = `<span class="gk">原稿 ${s.genkoCount}/${v.winGenko}</span>${s.genkoNames.length ? ' <span class="ct">' + s.genkoNames.map(escapeHtml).join('・') + '</span>' : ''}`;
+  const gkn = s.genkoNames.length ? `<span class="gkn">${s.genkoNames.map(escapeHtml).join('・')}</span>` : '';
   const head = `<div class="v7p-shead">
-    <span class="lead">${isHuman ? 'あなた' : 'AI'}:${escapeHtml(s.workLabel)}</span>${heart}
-    <span class="ct">手札${s.handCount} 山${s.deckCount} 没${s.bocchiCount} 伏${s.trapCount}</span>${gk}</div>`;
+    <span class="nm">${isHuman ? 'あなた' : 'AI'}・${escapeHtml(s.workLabel)}</span>${heart}
+    <span class="gk">📝原稿 ${s.genkoCount}/${v.winGenko}</span>${gkn}
+    <span class="sp" style="flex:1"></span>
+    <span class="stat">手札 ${s.handCount}・山 ${s.deckCount}・没 ${s.bocchiCount}・伏 ${s.trapCount}</span></div>`;
+  const ae = (v.pending && v.pending.type === 'block') ? v.pending.ae : 0;
+  const blkMap = {}; (blockOpts || []).forEach(o => { blkMap[o.uid] = o; });
   const attSet = new Set(attackable || []);
-  const blkSet = new Set((blockOpts || []).map(o => o.uid));
-  const units = s.field.length ? s.field.map(u => {
-    if (isHuman && attSet.has(u.uid)) return v7UnitHTML(u, true, `v7PlayAct('attack',${u.uid})`);
-    if (isHuman && blkSet.has(u.uid)) return v7UnitHTML(u, true, `v7PlayAct('block',${u.uid})`);
-    return v7UnitHTML(u, false);
-  }).join('') : '<div class="v7p-empty">(場にキャラなし)</div>';
-  let hand = '';
+  const fieldUnits = s.field.length ? s.field.map(u => {
+    if (isHuman && attSet.has(u.uid)) return v7UnitHTML(u, true, `v7PlayAct('attack',${u.uid})`, '');
+    if (isHuman && blkMap[u.uid]) { const o = blkMap[u.uid]; return v7UnitHTML(u, true, `v7PlayAct('block',${u.uid})`, (o.be > ae && !o.shieldStop) ? 'win' : ''); }
+    return v7UnitHTML(u, false, '', '');
+  }).join('') : '<div class="v7p-empty">場にキャラなし</div>';
+  const fieldZone = `<div class="v7p-zone field ${s.field.length >= 3 ? 'full' : ''}"><div class="zl">場 (${s.field.length}/3)</div><div class="v7p-zcont">${fieldUnits}</div></div>`;
+  let handZone = '';
   if (isHuman) {
     const canPlay = v.pending && v.pending.type === 'main';
-    hand = `<div class="v7p-hand">${s.hand.map(c => v7HandHTML(c, canPlay)).join('') || '<span class="v7p-empty">(手札なし)</span>'}</div>`;
+    const handUnits = s.hand.length ? s.hand.map(c => v7HandHTML(c, canPlay)).join('') : '<div class="v7p-empty">手札なし</div>';
+    handZone = `<div class="v7p-zone hand"><div class="zl">手札 (${s.handCount})</div><div class="v7p-zcont">${handUnits}</div></div>`;
   }
-  return `<div class="v7p-side ${isHuman ? 'human' : 'ai'}">${head}<div class="v7p-field">${units}</div>${hand}</div>`;
+  return `<div class="v7p-side ${isHuman ? 'bottom' : 'top opponent'} ${active ? 'active' : ''}">${head}<div class="v7p-zones">${fieldZone}${handZone}</div></div>`;
 }
 
-function v7MidHTML(v) {
+function v7BarHTML(v) {
   const p = v.pending || {};
   let prompt = '', btns = '';
   if (p.type === 'main') {
-    prompt = 'あなたのメイン: 手札のキャラをクリックで召喚/進化、急展開は伏せる。';
-    if (v.human.work === 'RIBBON') {
-      btns += `<button class="v7p-btn ghost" onclick="v7PlayAct('heart','prince')">王子の心</button>
-               <button class="v7p-btn ghost" onclick="v7PlayAct('heart','princess')">お姫さまの心</button>`;
-    }
+    prompt = '🖐 あなたのメイン: 手札のキャラをクリックで召喚/進化。急展開は伏せる。';
+    if (v.human.work === 'RIBBON') btns += `<button class="v7p-btn ghost" onclick="v7PlayAct('heart','prince')">王子の心</button> <button class="v7p-btn ghost" onclick="v7PlayAct('heart','princess')">お姫さまの心</button> `;
     btns += `<button class="v7p-btn" onclick="v7PlayAct('finishMain')">バトルへ ▶</button>`;
   } else if (p.type === 'attack') {
-    prompt = '攻撃するキャラ(黄枠)をクリック。突破するとそのまま原稿へ得点。';
+    prompt = '⚔ 攻撃するキャラ(金枠)をクリック。ブロックを攻撃力で上回れば突破して原稿へ得点。';
     btns = `<button class="v7p-btn alt" onclick="v7PlayAct('finishAttacks')">攻撃終了 ▶</button>`;
   } else if (p.type === 'block') {
-    const a = p.attacker;
-    prompt = `🛡 AIの「${escapeHtml(a.name)}」(⚔${p.ae})が攻撃! ブロックするキャラ(黄枠)を選ぶ。`;
-    btns = `<button class="v7p-btn danger" onclick="v7PlayAct('blockPass')">ブロックしない(得点を許す)</button>`;
-  } else {
-    prompt = '…';
+    prompt = `🛡 AIの「${escapeHtml(p.attacker.name)}」(⚔${p.ae})が攻撃! ブロックするキャラを選ぶ(緑枠=勝てる)。`;
+    btns = `<button class="v7p-btn danger" onclick="v7PlayAct('blockPass')">ブロックしない</button>`;
   }
-  return `<div class="v7p-mid"><div class="prompt">${prompt}</div>${btns}</div>`;
+  return `<div class="v7p-bar">
+    <span class="turn">T${v.turn}/${v.maxTurns}</span>
+    <span class="pg">📄 ${escapeHtml(v.pageName || '')}</span>
+    <span class="pgd">${escapeHtml(v.pageDesc || '')}</span>
+    <span class="who ${v.activeSide}">${v.activeSide === 'human' ? 'あなたの手番' : 'AIの手番'}</span>
+    <span class="pgd">AI:${v.aiMode === 'mcts' ? 'MCTS' : '貪欲'}</span>
+    <span class="sp"></span>
+    <button class="v7p-btn ghost" onclick="v7PlayBackToSetup()">中断</button>
+    <div class="prompt">${prompt}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%">${btns}</div>
+  </div>`;
 }
 
 function v7ResultHTML(v) {
   const win = v.winner === 'human' ? 'あなたの勝ち! 🎉' : (v.winner === 'ai' ? 'AIの勝ち…' : '引き分け');
-  const kind = v.winKind === 'timeout' ? '(時間切れ・原稿数判定)' : (v.winKind === 'draw' ? '' : '(原稿4枚達成)');
-  return `<div class="v7p"><div class="v7p-result">
-    <h2>${win}</h2><p style="color:#cbb985">${kind} ${v.turn}ターンで決着</p>
-    <p style="color:#e8dcc0">あなた 原稿${v.human.genkoCount} / AI 原稿${v.ai.genkoCount}</p>
-    <button class="v7p-btn" style="margin-top:10px" onclick="v7PlayBackToSetup()">もう一度</button>
-  </div>${v7LogHTML(v)}</div>`;
+  const kind = v.winKind === 'timeout' ? '(時間切れ・原稿数で判定)' : (v.winKind === 'draw' ? '' : '(原稿4枚達成)');
+  return `<div class="v7p-result">
+    <h2>${win}</h2><p style="color:var(--parchment-dim)">${kind} ${v.turn}ターンで決着</p>
+    <p style="color:var(--parchment)">あなた 原稿${v.human.genkoCount} / AI 原稿${v.ai.genkoCount}</p>
+    <button class="v7p-btn" style="margin-top:12px" onclick="v7PlayBackToSetup()">もう一度</button>
+  </div>${v7LogHTML(v)}`;
 }
 
 function v7LogHTML(v) {
   return `<div class="v7p-log">${v.logTail.map(escapeHtml).reverse().join('<br>')}</div>`;
-}
-
-function v7TopHTML(v) {
-  return `<div class="v7p-top">
-    <span class="turn">ターン ${v.turn}/${v.maxTurns}</span>
-    <span class="pg">📄 ${escapeHtml(v.pageName || v.page || '')}</span>
-    <span class="pgd">${escapeHtml(v.pageDesc || '')}</span>
-    <span class="who ${v.activeSide}">${v.activeSide === 'human' ? 'あなたの手番' : 'AIの手番'}</span>
-    <span class="pgd">AI:${v.aiMode === 'mcts' ? 'MCTS' : '貪欲'}</span>
-  </div>`;
 }
 
 function v7PlayBoardHTML(v) {
@@ -6435,13 +6446,11 @@ function v7PlayBoardHTML(v) {
   const p = v.pending || {};
   const attackable = (p.type === 'attack') ? v7match.attackableUids() : [];
   const blockOpts = (p.type === 'block') ? p.options : [];
-  return `<div class="v7p">
-    ${v7TopHTML(v)}
+  return `<div class="v7p-board">
     ${v7SideHTML(v.ai, v, false, [], [])}
-    ${v7MidHTML(v)}
+    ${v7BarHTML(v)}
     ${v7SideHTML(v.human, v, true, attackable, blockOpts)}
-    ${v7LogHTML(v)}
-  </div>`;
+  </div>${v7LogHTML(v)}`;
 }
 
 function v7PlayRender() {

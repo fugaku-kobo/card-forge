@@ -350,11 +350,10 @@
       if (!cands.length) return null;
       if (page === 'PG-024' && blockersUsed >= 1) return null;
       const rev = page === 'PG-001';
-      const pierce = attacker && attacker.card.pierce;
       let best = null, bestScore = -99;
       for (const u of cands) {
-        // 盾持ち: 貫通でなければ確実に止められる最優先択
-        if (u.card.shield && !u.shield_used && !pierce) {
+        // 盾持ち: 確実に止められる最優先択
+        if (u.card.shield && !u.shield_used) {
           const sc = 5 - u.card.base * 0.0005;
           if (sc > bestScore) { best = u; bestScore = sc; }
           continue;
@@ -468,9 +467,8 @@
     // 攻撃側 u(攻撃力 ae)対 ブロッカー blk の解決
     resolveCombat(pi, defI, u, ae, blk, page) {
       const atkPl = this.players[pi];
-      const pierce = u.card.pierce;
-      // 盾持ち/守り手による完全ブロック(貫通で無効)
-      if (blk.card.shield && !blk.shield_used && !pierce) {
+      // 盾持ち/守り手による完全ブロック
+      if (blk.card.shield && !blk.shield_used) {
         blk.shield_used = true;   // 1回だけ。攻撃側も没にならない・得点なし
         return;
       }
