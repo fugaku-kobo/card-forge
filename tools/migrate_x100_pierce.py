@@ -18,7 +18,7 @@ from _common import latest_xlsx, backup, DATA_DIR
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-PIERCE_ATK = 500          # 貫通カードの攻撃力(平均よりやや上)
+PIERCE_ATK = 300          # 貫通カードの攻撃力(扱いやすい中量級)
 PIERCE_KEYWORD = '貫通'
 
 # 符号付きの攻撃修正。直前がASCII英数字(ID/日付)の場合は対象外。

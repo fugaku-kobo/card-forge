@@ -142,8 +142,8 @@
         const c = deck[i];
         if (c.kind === 'char' && SPLASH.includes(c.name) && c.lv === 2) { deck.splice(i, 1); removed++; }
       }
-      deck.push(makeChar(starName, 2, false, true, null, { pierce: true, base: 500 }));
-      deck.push(makeChar(subName, 2, false, false, null, { pierce: true, base: 500 }));
+      deck.push(makeChar(starName, 2, false, true, null, { pierce: true, base: 300 }));
+      deck.push(makeChar(subName, 2, false, false, null, { pierce: true, base: 300 }));
     }
     if (rng) rng.shuffle(deck);
     return deck;
