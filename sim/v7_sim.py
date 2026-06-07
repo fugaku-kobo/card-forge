@@ -4,12 +4,17 @@
 docs/rule_v7.md の修正後ルールを再現し、4リーダーの勝率・試合長・引分/時間切れ率を測定する。
 
 ▼意図的な簡略化(統計の傾向把握が目的のため)
+- 攻撃力は3桁化(全数値×100)。×100は線形スケールなのでバランスは不変
+  =本シミュは「×100で挙動が変わらない」回帰チェックを兼ねる。
+- キーワード「貫通」(盾持ち・守り手の完全防御を無視)は、盾自体が未実装のため
+  本シミュでは効果を持たない(500バニラ相当)。貫通カードはデッキに組み込まない。
 - キャラ攻撃力は v7 の計算式で生成(xlsx の個別値は未使用)。
 - 各リーダーのデッキ=自作品4名×4枚 + 汎用2名×4枚 + 急展開6枚(計30)。勝利に必要な
   「異なる5名」が必ず確保できる構成。
 - AI は貪欲ヒューリスティック(最適プレイではない)。両陣営とも同一AIなので相対比較は妥当。
 - 情報系ページカード(PG-006/008/009)はヒューリスティックAIに影響しないため no-op。
-- キーワード(盾持ち/守り手)は未実装。急展開カードは KT-002/003 のみAIが能動使用。
+- キーワード(盾持ち/守り手)は未実装。急展開カードは KT-002/003/005 をAIが使用
+  (KT-001/004/006/007/008 は未使用)。
 
 実行: python sim/v7_sim.py
 """
@@ -21,13 +26,24 @@ MAX_TURNS = 20         # ページカード20枚=20ターンで終了
 FIELD_CAP = 3
 TRAP_CAP = 2
 
+# ---------------- バランス調整ノブ(main の改善案テストで切り替え)----------------
+DEFAULT_CFG = {
+    'ribbon_prince': 100,   # サファイア「王子」リーダー: 攻撃時 +N(RIBBON抑制で 200→100)
+    'franz': 200,           # フランツ「白馬の王子」: 心が王子の間 +N(300→200)
+    'gin': 100,             # サファイア「銀の騎士」: 心が王子なら +N(200→100)
+    'bj_shitto': 200,       # BJ「執刀」救命: 攻撃力 +N
+    'nagi_revive': 200,     # ナギ「輪廻」: 蘇生キャラ +N(永続)
+    'iishi_any': False,     # 本間「医の遺志」: True=任意の味方 / False=BJのみ
+}
+CFG = dict(DEFAULT_CFG)
+
 # ---------------- 攻撃力計算式 ----------------
 def base_atk(lv, has_ability, is_star):
-    a = 2 if lv == 1 else 4
-    if not has_ability:      # 通常変種 +1
-        a += 1
-    if is_star:              # 主役キャラ +1
-        a += 1
+    a = 200 if lv == 1 else 400   # 攻撃力は3桁化(×100)
+    if not has_ability:      # 通常変種 +100
+        a += 100
+    if is_star:              # 主役キャラ +100
+        a += 100
     return a
 
 # ---------------- 作品データ ----------------
@@ -148,25 +164,25 @@ class Game:
     # ---- 攻撃力(状況込み) ----
     def eff_atk(self, pi, unit, page, active):
         c = unit['card']
-        a = 3 if page == 'PG-002' else c['base']
+        a = 300 if page == 'PG-002' else c['base']
         a += unit['perm'] + unit['temp']
         ab = c['ability']
         pl = self.players[pi]
         if ab == 'horsepower' and len(pl.field) >= 3:
-            a += 3
+            a += 300
         if ab == 'pinoko' and any(u['card']['name'] == 'ブラック・ジャック' for u in pl.field):
-            a += 2
+            a += 200
         if ab == 'franz' and pl.heart == 'prince':
-            a += 3
+            a += CFG['franz']
         if ab == 'gin' and pl.heart == 'prince':
-            a += 2
+            a += CFG['gin']
         if page == 'PG-020' and c['lv'] == 2:
-            a += 2
+            a += 200
         if page == 'PG-013' and pi == active:
-            a -= 2
+            a -= 200
         if page == 'PG-014' and pi != active:
-            a -= 2
-        return max(1, a)
+            a -= 200
+        return max(100, a)
 
     # ---- 没案へ送る(完全ボツ・蘇生トリガー対応) ----
     def to_bocchi(self, pi, unit_or_card, page):
@@ -190,17 +206,24 @@ class Game:
         pl = self.players[pi]
         opp = self.players[1 - pi]
         if ab == 'mesu' and opp.field:
-            random.choice(opp.field)['temp'] -= 3
+            random.choice(opp.field)['temp'] -= 300
         elif ab == 'iishi':
-            bjs = [u for u in pl.field
-                   if u['card']['name'] == 'ブラック・ジャック' and not u['iishi']]
-            if bjs:
-                t = max(bjs, key=lambda u: u['card']['base'])
-                t['perm'] += 2
+            if CFG['iishi_any']:
+                # 任意の味方。まだ原稿入りしていない=得点候補を優先
+                cand = [u for u in pl.field if not u['iishi']
+                        and u['card']['name'] not in pl.genko_names()]
+                if not cand:
+                    cand = [u for u in pl.field if not u['iishi']]
+            else:
+                cand = [u for u in pl.field
+                        if u['card']['name'] == 'ブラック・ジャック' and not u['iishi']]
+            if cand:
+                t = max(cand, key=lambda u: u['card']['base'])
+                t['perm'] += 200
                 t['iishi'] = True
         elif ab == 'anraku':
             weak = [u for u in opp.field
-                    if self.eff_atk(1 - pi, u, page, self.active) <= 2]
+                    if self.eff_atk(1 - pi, u, page, self.active) <= 200]
             if weak:
                 victim = weak[0]
                 opp.field.remove(victim)
@@ -208,7 +231,7 @@ class Game:
         elif ab == 'uran':
             for u in pl.field:
                 if u is not unit:
-                    u['temp'] += 1
+                    u['temp'] += 100
         elif ab == 'cobalt':
             if len(pl.field) >= 3:
                 pl.draw(2)
@@ -216,7 +239,7 @@ class Game:
             pl.draw(1)
         elif ab == 'sarutahiko':
             if any(c['kind'] == 'char' and c['name'] == '猿田彦' for c in pl.bocchi):
-                unit['perm'] += 2
+                unit['perm'] += 200
         elif ab == 'amayumihiko':
             l1 = [u for u in opp.field if u['card']['lv'] == 1]
             if l1:
@@ -227,11 +250,14 @@ class Game:
         elif ab == 'chink':
             pl.heart = 'prince'
         elif ab == 'hecate' and opp.field:
-            random.choice(opp.field)['temp'] -= 2
+            random.choice(opp.field)['temp'] -= 200
 
     # ---- メインフェイズ ----
     def main_phase(self, pi, page):
         pl = self.players[pi]
+        # KT-005「読者の声」: 手札が薄ければ伏せから発動してドロー
+        while len(pl.hand) < 4 and self._pop_trap(pl, 'KT-005'):
+            pl.draw(2)
         # ナギ「輪廻」
         if pl.work == 'HINOTORI' and len(pl.field) < FIELD_CAP:
             revivable = [c for c in pl.bocchi if c['kind'] == 'char']
@@ -239,7 +265,7 @@ class Game:
                 card = max(revivable, key=lambda c: c['base'])
                 pl.bocchi.remove(card)
                 u = new_unit(card)
-                u['perm'] += 2          # 蘇生キャラ攻撃力+2
+                u['perm'] += CFG['nagi_revive']    # 蘇生キャラ攻撃力+N
                 pl.field.append(u)
                 self.trigger_etb(pi, u, page)
         # 進化
@@ -257,8 +283,8 @@ class Game:
             chars = [c for c in pl.hand if c['kind'] == 'char']
             if not chars:
                 break
-            # 評価: 能力持ち優先 + base 高い
-            card = max(chars, key=lambda c: c['base'] + (2 if c['ability'] else 0))
+            # 評価: 能力持ち優先 + base 高い(×100スケールに合わせ +200)
+            card = max(chars, key=lambda c: c['base'] + (200 if c['ability'] else 0))
             pl.hand.remove(card)
             u = new_unit(card)
             pl.field.append(u)
@@ -289,7 +315,7 @@ class Game:
         for u in cands:
             be = self.eff_atk(def_i, u, page, self.active)
             if pl.work == 'RIBBON' and pl.heart == 'princess':
-                be += 2
+                be += 200
             if not rev:
                 kills = be > atk_eff
                 survives = be > atk_eff
@@ -301,7 +327,7 @@ class Game:
             sc = (3 if kills and survives else 0) + (2 if trade else 0)
             if not kills and not trade:        # ただのチャンプ
                 sc = 1 if scoring_new else -5
-            sc -= u['card']['base'] * 0.05      # 大型温存の微バイアス
+            sc -= u['card']['base'] * 0.0005    # 大型温存の微バイアス(base×100に合わせ係数1/100)
             if sc > best_score:
                 best, best_score = u, sc
         return best if best_score > -5 else None
@@ -338,6 +364,16 @@ class Game:
         max_atk = 1 if page == 'PG-025' else 99
         done = 0
         blockers_used = 0
+        # KT-002「没ネーム」: 強敵ブロッカーがいれば伏せから発動して除去
+        if attackers and self.players[def_i].field:
+            _opp = self.players[def_i]
+            _blk = max(_opp.field,
+                       key=lambda u: self.eff_atk(def_i, u, page, self.active))
+            _topae = self.eff_atk(pi, attackers[0], page, self.active)
+            if (self.eff_atk(def_i, _blk, page, self.active) >= _topae
+                    and self._pop_trap(atk_pl, 'KT-002')):
+                _opp.field.remove(_blk)
+                self.to_bocchi(def_i, _blk, page)
         # BJ「執刀」(1ターン1度): 強敵ブロッカーをロック or 自分のアタッカーを救命+強化
         if atk_pl.work == 'BJ' and not self.bj_used and attackers:
             best = attackers[0]
@@ -345,10 +381,10 @@ class Game:
             blks = sorted(self.players[def_i].field,
                           key=lambda x: self.eff_atk(def_i, x, page, self.active),
                           reverse=True)
-            if blks and self.eff_atk(def_i, blks[0], page, self.active) >= bae + 2:
+            if blks and self.eff_atk(def_i, blks[0], page, self.active) >= bae + CFG['bj_shitto']:
                 blks[0]['locked'] = True              # 強敵の壁を無力化して縦に通す
             else:
-                best['temp'] += 2                     # 救命+攻撃力+2
+                best['temp'] += CFG['bj_shitto']      # 救命+攻撃力+N
                 best['no_botsu'] = True
             self.bj_used = True
         for u in list(attackers):
@@ -359,12 +395,12 @@ class Game:
             done += 1
             ae = self.eff_atk(pi, u, page, self.active)
             if atk_pl.work == 'RIBBON' and atk_pl.heart == 'prince':
-                ae += 2
+                ae += CFG['ribbon_prince']
             # KT-003 で押し込み
             if self._wants_push(pi, u, ae, def_i, page):
                 kt = self._pop_trap(atk_pl, 'KT-003')
                 if kt:
-                    u['temp'] += 3; ae += 3
+                    u['temp'] += 300; ae += 300
             scoring_new = True
             blk = self.choose_block(def_i, ae, blockers_used, page, scoring_new)
             if blk is None:
@@ -374,7 +410,7 @@ class Game:
                 blockers_used += 1
                 be = self.eff_atk(def_i, blk, page, self.active)
                 if self.players[def_i].work == 'RIBBON' and self.players[def_i].heart == 'princess':
-                    be += 2
+                    be += 200
                 rev = (page == 'PG-001')
                 if page in ('PG-003', 'PG-004'):
                     da, db = random.randint(1, 6), random.randint(1, 6)
@@ -426,11 +462,11 @@ class Game:
         return None
 
     def _wants_push(self, pi, u, ae, def_i, page):
-        # 相手に ae 以上のブロッカーがいて、+3 で上回れるなら押す
+        # 相手に ae 以上のブロッカーがいて、+300(KT-003) で上回れるなら押す
         opp = self.players[def_i]
         for b in opp.field:
             be = self.eff_atk(def_i, b, page, self.active)
-            if ae <= be < ae + 3:
+            if ae <= be < ae + 300:
                 return True
         return False
 
@@ -440,14 +476,14 @@ class Game:
         for _ in range(3):                      # 出目6(振り直し)を最大2回
             r = random.randint(1, 6)
             if r == 1 and pl.field:
-                max(pl.field, key=lambda u: u['card']['base'])['temp'] += 4
+                max(pl.field, key=lambda u: u['card']['base'])['temp'] += 400
             elif r == 2:
                 for u in pl.field:
                     u['sick'] = False
             elif r == 3:
                 pl.draw(2)
             elif r == 4 and self.players[1 - pi].field:
-                random.choice(self.players[1 - pi].field)['temp'] -= 3
+                random.choice(self.players[1 - pi].field)['temp'] -= 300
             elif r == 5:
                 chars = [c for c in pl.bocchi if c['kind'] == 'char']
                 if chars:
@@ -462,7 +498,7 @@ class Game:
         pl, opp = self.players[pi], self.players[1 - pi]
         if page == 'PG-022' and pl.field:
             top = max(pl.field, key=lambda u: self.eff_atk(pi, u, page, self.active))
-            top['temp'] += 3
+            top['temp'] += 300
         elif page == 'PG-007':
             for p in (pl, opp):
                 if p.bocchi:
@@ -609,29 +645,108 @@ def run_config(trials, seed, win_genko, max_turns):
     }
 
 
-def sweep():
-    """勝利名数 × ページ枚数 のスイープ。試合長の最適点を探す。"""
-    configs = [(5, 20), (5, 16), (4, 20), (4, 16), (4, 14), (4, 12)]
-    lines = []
-    lines.append('=== v7 試合長スイープ(各12000試合・ページカード込み)===')
-    lines.append('勝利 ページ | 通常勝利% 平均決着T 引分% 時間切れ% | 勝率差 '
-                 'BJ/ATOM/HINO/RIBBON')
-    for wg, mt in configs:
-        r = run_config(12000, 42, wg, mt)
-        lines.append(
-            '  %d名  %2d枚 | %7.1f %8.1f %6.1f %8.1f | %5.1f  %.0f/%.0f/%.0f/%.0f'
-            % (r['wg'], r['mt'], r['normal_win'], r['decisive'], r['draw'],
-               r['timeout'], r['spread'], r['wr']['BJ'], r['wr']['ATOM'],
-               r['wr']['HINOTORI'], r['wr']['RIBBON']))
-    report = '\n'.join(lines)
+def matchup(trials=2500):
+    """4リーダー総当たりの相性を測る。"""
+    import itertools
+    leaders = ['BJ', 'ATOM', 'HINOTORI', 'RIBBON']
+    lines = ['--- 対戦相性(各%d試合・引分除く・左側の勝率%%)---' % trials]
+    for a, b in itertools.combinations(leaders, 2):
+        random.seed(777)
+        aw = bw = 0
+        for _ in range(trials):
+            winner, _, kind = Game(a, b).run()
+            if kind == 'draw':
+                continue
+            if [a, b][winner] == a:
+                aw += 1
+            else:
+                bw += 1
+        tot = max(1, aw + bw)
+        lines.append('  %-9s %5.1f  vs %5.1f  %-9s'
+                     % (a, 100.0 * aw / tot, 100.0 * bw / tot, b))
+    return lines
+
+
+def show(tag, r):
+    return ('%-20s | BJ%3.0f ATOM%3.0f HINO%3.0f RIBBON%3.0f | 勝率差%4.1f | '
+            '通常勝利%3.0f%% 引分%4.1f%% 決着%4.1fT'
+            % (tag, r['wr']['BJ'], r['wr']['ATOM'], r['wr']['HINOTORI'],
+               r['wr']['RIBBON'], r['spread'], r['normal_win'],
+               r['draw'], r['decisive']))
+
+
+def turn_order(trials=24000):
+    """先攻・後攻の勝率を測る(現行ルール)。"""
+    random.seed(123)
+    leaders = ['BJ', 'ATOM', 'HINOTORI', 'RIBBON']
+    fw = sw = dr = 0
+    per = {L: [0, 0, 0, 0] for L in leaders}  # 先攻勝, 先攻数, 後攻勝, 後攻数
+    for _ in range(trials):
+        a, b = random.sample(leaders, 2)
+        g = Game(a, b)
+        winner, _, kind = g.run()
+        works = [a, b]
+        fwk, swk = works[g.first], works[1 - g.first]
+        per[fwk][1] += 1
+        per[swk][3] += 1
+        if kind == 'draw':
+            dr += 1
+            continue
+        if winner == g.first:
+            fw += 1
+            per[fwk][0] += 1
+        else:
+            sw += 1
+            per[swk][2] += 1
+    tot = max(1, fw + sw)
+    lines = ['--- 先攻 vs 後攻(%d試合・引分除く)---' % trials]
+    lines.append('  先攻 %.1f%%   後攻 %.1f%%   (引分 %.1f%%)'
+                 % (100.0 * fw / tot, 100.0 * sw / tot, 100.0 * dr / trials))
+    lines.append('  リーダー別(先攻時 / 後攻時 の勝率):')
+    for L in leaders:
+        d = per[L]
+        f = 100.0 * d[0] / d[1] if d[1] else 0.0
+        s = 100.0 * d[2] / d[3] if d[3] else 0.0
+        lines.append('    %-9s 先攻 %.1f%%  /  後攻 %.1f%%' % (L, f, s))
+    return lines
+
+
+def main():
+    N = 12000
+    out = ['=== v7 バランス・シミュレーション ===',
+           '勝利4名・ページ20枚・ページ/急展開カード込み・各%d試合' % N, '']
+
+    # [1] 現行ルール
+    CFG.clear(); CFG.update(DEFAULT_CFG)
+    base = run_config(N, 42, 4, 20)
+    out.append('[1] 現行ルール(RIBBON抑制 反映後)')
+    out.append(show('修正後(現行)', base))
+    out.append('')
+    out += matchup()
+    out.append('')
+    out += turn_order()
+    out.append('')
+
+    # [2] 修正前との比較
+    out.append('[2] 修正前(旧バランス)との比較')
+    out.append(show('修正後(現行)', base))
+    cands = [
+        ('修正前(旧バランス)', {'ribbon_prince': 200, 'franz': 300, 'gin': 200}),
+    ]
+    for tag, ov in cands:
+        CFG.clear(); CFG.update(DEFAULT_CFG); CFG.update(ov)
+        out.append(show(tag, run_config(N, 42, 4, 20)))
+    CFG.clear(); CFG.update(DEFAULT_CFG)
+
+    report = '\n'.join(out)
     try:
         print(report)
     except UnicodeEncodeError:
         print(report.encode('utf-8', 'replace').decode('ascii', 'replace'))
-    with open('sim/v7_sweep.txt', 'w', encoding='utf-8') as f:
+    with open('sim/v7_balance.txt', 'w', encoding='utf-8') as f:
         f.write(report + '\n')
-    print('--> sim/v7_sweep.txt に保存しました')
+    print('--> sim/v7_balance.txt に保存')
 
 
 if __name__ == '__main__':
-    sweep()
+    main()
