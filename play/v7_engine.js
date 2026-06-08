@@ -411,6 +411,7 @@
         }
       }
       // BJ「執刀」
+      this._bjLog = null;
       if (atkPl.work === 'BJ' && !this.bj_used && attackers.length) {
         const best = attackers[0];
         const bae = this.effAtk(pi, best, page, this.active);
@@ -418,8 +419,10 @@
           this.effAtk(defI, y, page, this.active) - this.effAtk(defI, x, page, this.active));
         if (blks.length && this.effAtk(defI, blks[0], page, this.active) >= bae + this.cfg.bj_shitto) {
           blks[0].locked = true;
+          this._bjLog = `執刀: 相手の${blks[0].card.name}をブロック不可に`;
         } else {
           best.temp += this.cfg.bj_shitto; best.no_botsu = true;
+          this._bjLog = `執刀: ${best.card.name}を救命(+${this.cfg.bj_shitto}・没にならない)`;
         }
         this.bj_used = true;
       }
@@ -524,11 +527,14 @@
       return false;
     }
 
-    // ---- リーダー: アトムのダイス ----
+    // ---- リーダー: アトムのダイス ----(出目の説明文を返す)
     atomDice(pi) {
       const pl = this.players[pi];
+      const NAMES = { 1: '⑴十万馬力(味方+400)', 2: '⑵ジェット噴射(召喚酔い無視)', 3: '⑶サーチライト(2ドロー)', 4: '⑷マシンガン(相手-300)', 5: '⑸人工の心(没案→手札)', 6: '⑹無限の可能性(振り直し)' };
+      const rolls = [];
       for (let k = 0; k < 3; k++) {
         const r = this.rng.randint(1, 6);
+        rolls.push(NAMES[r]);
         if (r === 1 && pl.field.length) {
           pl.field.reduce((m, u) => u.card.base > m.card.base ? u : m, pl.field[0]).temp += 400;
         } else if (r === 2) {
@@ -546,6 +552,7 @@
         }
         if (r !== 6) break;
       }
+      return rolls.join(' → ');
     }
 
     pageStart(pi, page) {

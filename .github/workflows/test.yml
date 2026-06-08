@@ -1,0 +1,25 @@
+name: v7 engine test
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'play/**'
+  pull_request:
+    paths:
+      - 'play/**'
+
+jobs:
+  engine-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: v7 エンジンのバランス回帰テスト
+        run: node play/v7_engine.test.js
+      - name: 構文チェック(engine / match)
+        run: |
+          node --check play/v7_engine.js
+          node --check play/v7_match.js

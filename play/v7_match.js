@@ -125,7 +125,7 @@
       g.pageStart(pi, page);
       g.doDraw(pi, page, t === 0);
       if (pl.work === 'RIBBON') { pl.heart = pl.field.some(u => !u.sick) ? 'prince' : 'princess'; }
-      if (pl.work === 'ATOM') { g.atomDice(pi); }
+      if (pl.work === 'ATOM') { const d = g.atomDice(pi); if (d) this._emitLog(`${this.sideName(pi)}: アトムのダイス ${d}`); }
       // KT-005 / ナギ輪廻 は自動
       while (pl.hand.length < 4 && g.popTrap(pl, 'KT-005')) { pl.draw(2); this._emitLog(`${this.sideName(pi)}: 読者の声で2ドロー`); }
       if (pl.work === 'HINOTORI' && pl.field.length < V7.FIELD_CAP) {
@@ -154,6 +154,7 @@
       let holdBack = false;
       if (this.aiMode === 'mcts') holdBack = this._mctsHoldBack(page);
       const attackers = g.battlePreSteps(pi, page);
+      if (g._bjLog) this._emitLog(`AI: ${g._bjLog}`);
       let queue = attackers.slice();
       if (holdBack && queue.length > 1) queue = queue.slice(1);
       this._battle = { atk: pi, def: this.HUMAN, queue, maxAtk: page === 'PG-025' ? 1 : 99, done: 0, blockersUsed: 0 };
@@ -269,6 +270,7 @@
       this._plays = 0;
       const g = this.game, page = this._page;
       const attackers = g.battlePreSteps(this.HUMAN, page);
+      if (g._bjLog) this._emitLog(`あなた: ${g._bjLog}`);
       this._battle = { atk: this.HUMAN, def: this.AI, pool: attackers, maxAtk: page === 'PG-025' ? 1 : 99, done: 0, blockersUsed: 0, attacked: new Set() };
       this.pending = { type: 'attack' };
       this._update();
@@ -398,6 +400,8 @@
         work: pl.work, workLabel: V7.LEADER_LABEL[pl.work] || (pl.work === 'NONE' ? '自作' : pl.work), heart: pl.heart,
         field: pl.field.map(u => this._unitView(u, i)),
         hand: i === this.HUMAN ? pl.hand.map((c, idx) => this._handView(c, idx)) : null,
+        // 決着後のAI手札公開用(対戦中はUIで非表示)
+        handReveal: this.over ? pl.hand.map((c, idx) => this._handView(c, idx)) : null,
         handCount: pl.hand.length, deckCount: pl.deck.length,
         bocchiCount: pl.bocchi.length, exileCount: pl.exile.length,
         trapCount: pl.traps.length,

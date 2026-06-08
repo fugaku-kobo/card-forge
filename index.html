@@ -6262,7 +6262,7 @@ function v7GenStarterDecks() {
   state.cards = state.cards.filter(c => !String(c.cardCode || '').startsWith('V7G-'));
   state.decks = state.decks.filter(d => !String(d.name || '').startsWith('v7スターター:'));
   const mk = (cc, name, type, level, atk, passive, work, tag) => {
-    const card = { id: cid(), cardCode: cc, name: name, type: type, work: work || '', icon: '', art: '' };
+    const card = { id: cid(), cardCode: cc, name: name, type: type, work: work || '', icon: (V7_EMOJI[name] || (type === '急展開カード' ? '🎴' : '')), art: '' };
     if (type === 'キャラクター') { card.level = String(level); card.atk = String(atk); card.passive = passive || ''; card.skill1 = passive || ''; card.v7tag = tag || ''; }
     else if (type === '主人公') { card.level = '1'; card.frontEffect = passive || ''; }
     state.cards.push(card); return card;
@@ -6361,8 +6361,42 @@ function v7PlayEnsureStyle() {
   .v7p-pick button.sel{border-color:var(--gold);background:rgba(201,169,97,.15);color:var(--gold-bright)}
   .v7p-opt{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;color:var(--parchment)}
   .v7p-opt label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  /* ログ色分け */
+  .v7p-log .lgl{padding:1px 0}
+  .v7p-log .lg-turn{color:var(--gold);font-weight:700;border-top:1px solid rgba(201,169,97,.15);margin-top:3px;padding-top:3px}
+  .v7p-log .lg-score{color:var(--gold-bright)}
+  .v7p-log .lg-botsu{color:#e09090}
+  .v7p-log .lg-play{color:#9fd9a8}
+  .v7p-log .lg-draw{color:#9fc4e0}
+  .v7p-log .lg-end{color:var(--gold-bright);font-weight:700;font-size:.85rem}
+  .v7p-log .lg-new{background:rgba(201,169,97,.12);border-radius:2px}
+  /* 拡大プレビュー */
+  #v7p-preview{position:fixed;z-index:9999;pointer-events:none;width:150px;background:#FAFAF7;color:#1a1410;border:2px solid var(--gold);border-radius:4px;padding:7px 8px;box-shadow:0 6px 22px rgba(0,0,0,.55);font-family:'Noto Sans JP',sans-serif}
+  #v7p-preview.lv2{background:linear-gradient(180deg,#f3eed5,#d8caa0)}
+  #v7p-preview .pname{font-weight:700;font-size:.92rem;line-height:1.2}
+  #v7p-preview .patk{display:inline-block;background:linear-gradient(135deg,#3a5fa0,#243f6e);color:#fff;font-weight:800;padding:1px 6px;border-radius:3px;font-family:'Cinzel',serif;margin:3px 0}
+  #v7p-preview .pico{font-size:34px;text-align:center;margin:2px 0}
+  #v7p-preview .pab{font-size:.74rem;color:#5a4a2e;line-height:1.25}
+  #v7p-preview .pbd{margin-top:4px;display:flex;gap:3px;flex-wrap:wrap}
+  /* アニメーション(全再描画と両立する範囲) */
+  @keyframes v7pop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+  .v7p-result{animation:v7pop .25s ease both}
+  @keyframes v7pulse{0%,100%{box-shadow:0 0 0 rgba(201,169,97,0)}50%{box-shadow:0 0 14px rgba(201,169,97,.5)}}
+  .v7p-track .tcell.cur{animation:v7pulse 1.6s ease-in-out infinite}
+  .v7p-bar .prompt{transition:color .2s}
+  /* モバイル/縦画面 */
+  @media (max-width:760px){
+    .v7p-board{grid-template-rows:auto auto auto;min-height:auto}
+    .v7p-zones{flex-direction:column}
+    .v7p-unit{width:56px;height:80px}
+    .v7p-unit .uico{font-size:19px}
+    .v7p-bar{font-size:.8rem}
+    .v7p-track .tcell{font-size:.58rem;padding:1px 3px}
+    #v7p-preview{width:130px}
+  }
   `;
   document.head.appendChild(s);
+  v7PreviewInit();
 }
 
 function v7PlaySet(k, v) { v7setup[k] = v; if (!v7match) renderPlay(); }
@@ -6435,6 +6469,37 @@ const V7_EMOJI = {
 };
 function v7Emoji(name) { return V7_EMOJI[name] || '🎴'; }
 
+function v7PreviewHTML(d) {
+  if (d.kt) return `<div class="pname">${escapeHtml(d.n)}</div><div class="pico">🎴</div><div class="pab">${escapeHtml(d.ab || '急展開')}</div>`;
+  const bd = [];
+  if (d.st) bd.push('<span class="v7b">主役</span>');
+  if (d.pi) bd.push('<span class="v7b pi">貫通</span>');
+  if (d.sh) bd.push('<span class="v7b sh">盾持ち</span>');
+  if (d.sk) bd.push('<span class="v7b sk">召喚酔い</span>');
+  if (d.lk) bd.push('<span class="v7b lk">執刀ロック</span>');
+  if (d.nb) bd.push('<span class="v7b nb">救命</span>');
+  return `<div class="pname">${escapeHtml(d.n)}</div><span class="patk">⚔ ${d.a}</span> <span style="font-size:.78rem;color:#8a6d2c">Lv${d.l}</span>
+    <div class="pico">${v7Emoji(d.n)}</div>${d.ab ? `<div class="pab">${escapeHtml(d.ab)}</div>` : ''}${bd.length ? `<div class="pbd">${bd.join('')}</div>` : ''}`;
+}
+function v7PreviewInit() {
+  if (window._v7pvInit) return; window._v7pvInit = true;
+  const pv = document.createElement('div'); pv.id = 'v7p-preview'; pv.style.display = 'none'; document.body.appendChild(pv);
+  document.addEventListener('mouseover', (e) => {
+    const el = e.target.closest ? e.target.closest('.v7p-unit[data-pv]') : null;
+    if (!el) return;
+    let d; try { d = JSON.parse(el.getAttribute('data-pv')); } catch (_) { return; }
+    pv.className = (d.l === 2 ? 'lv2' : ''); pv.innerHTML = v7PreviewHTML(d); pv.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    let left = r.right + 10; if (left + 160 > window.innerWidth) left = r.left - 160;
+    pv.style.left = Math.max(6, left) + 'px';
+    pv.style.top = Math.min(window.innerHeight - 190, Math.max(6, r.top - 10)) + 'px';
+  });
+  document.addEventListener('mouseout', (e) => {
+    const el = e.target.closest ? e.target.closest('.v7p-unit[data-pv]') : null;
+    if (el) pv.style.display = 'none';
+  });
+}
+
 function v7UnitHTML(u, clickable, onclick, extraCls) {
   const b = [];
   if (u.pierce) b.push('<span class="v7b pi">貫</span>');
@@ -6443,8 +6508,8 @@ function v7UnitHTML(u, clickable, onclick, extraCls) {
   if (u.noBotsu) b.push('<span class="v7b nb">守</span>');
   if (u.sick) b.push('<span class="v7b sk">酔</span>');
   const cls = ['v7p-unit', u.lv === 2 ? 'lv2' : '', u.star ? 'star' : '', u.sick ? 'sick' : '', clickable ? 'clickable' : '', extraCls || ''].join(' ');
-  const title = `${u.name} ⚔${u.eff}${u.ability ? ' / ' + u.ability : ''}`;
-  return `<div class="${cls}" ${clickable ? `onclick="${onclick}"` : ''} title="${escapeHtml(title)}">
+  const pv = escapeHtml(JSON.stringify({ n: u.name, l: u.lv, a: u.eff, ab: u.ability || '', st: !!u.star, pi: !!u.pierce, sh: !!u.shield, sk: !!u.sick, lk: !!u.locked, nb: !!u.noBotsu }));
+  return `<div class="${cls}" ${clickable ? `onclick="${onclick}"` : ''} data-pv="${pv}">
     <div class="ulv">Lv${u.lv}</div>
     <div class="uatk">⚔${u.eff}</div>
     <div class="unm">${escapeHtml(u.name)}</div>
@@ -6456,7 +6521,8 @@ function v7UnitHTML(u, clickable, onclick, extraCls) {
 
 function v7HandHTML(c, clickable) {
   if (c.kind === 'kt') {
-    return `<div class="v7p-unit kt ${clickable ? 'clickable' : ''}" ${clickable ? `onclick="v7PlayAct('trap',${c.idx})"` : ''} title="${escapeHtml(c.name)}(急展開)">
+    const pvk = escapeHtml(JSON.stringify({ n: c.name, kt: true, ab: '急展開(伏せて相手ターンにも発動)' }));
+    return `<div class="v7p-unit kt ${clickable ? 'clickable' : ''}" ${clickable ? `onclick="v7PlayAct('trap',${c.idx})"` : ''} data-pv="${pvk}">
       <div class="uatk" style="background:linear-gradient(135deg,#7a5a2e,#5a3e1e)">伏</div>
       <div class="unm">${escapeHtml(c.name)}</div><div class="uico">🎴</div><div class="uab">急展開</div></div>`;
   }
@@ -6464,7 +6530,8 @@ function v7HandHTML(c, clickable) {
   if (c.pierce) b.push('<span class="v7b pi">貫</span>');
   if (c.shield) b.push('<span class="v7b sh">盾</span>');
   const cls = ['v7p-unit', c.lv === 2 ? 'lv2' : '', c.star ? 'star' : '', clickable ? 'clickable' : ''].join(' ');
-  return `<div class="${cls}" ${clickable ? `onclick="v7PlayAct('play',${c.idx})"` : ''} title="${escapeHtml(c.name)} ⚔${c.base}${c.ability ? ' / ' + c.ability : ''}">
+  const pv = escapeHtml(JSON.stringify({ n: c.name, l: c.lv, a: c.base, ab: c.ability || '', st: !!c.star, pi: !!c.pierce, sh: !!c.shield }));
+  return `<div class="${cls}" ${clickable ? `onclick="v7PlayAct('play',${c.idx})"` : ''} data-pv="${pv}">
     <div class="ulv">Lv${c.lv}</div><div class="uatk">⚔${c.base}</div>
     <div class="unm">${escapeHtml(c.name)}</div><div class="uico">${v7Emoji(c.name)}</div>
     ${c.ability ? `<div class="uab">${escapeHtml(c.ability)}</div>` : ''}<div class="ubadges">${b.join('')}</div></div>`;
@@ -6528,15 +6595,33 @@ function v7BarHTML(v) {
 function v7ResultHTML(v) {
   const win = v.winner === 'human' ? 'あなたの勝ち! 🎉' : (v.winner === 'ai' ? 'AIの勝ち…' : '引き分け');
   const kind = v.winKind === 'timeout' ? '(時間切れ・原稿数で判定)' : (v.winKind === 'draw' ? '' : '(原稿4枚達成)');
+  const aiField = v.ai.field.map(u => v7UnitHTML(u, false, '', '')).join('') || '<span class="v7p-empty">なし</span>';
+  const aiHand = (v.ai.handReveal || []).map(c => v7HandHTML(c, false)).join('') || '<span class="v7p-empty">なし</span>';
   return `<div class="v7p-result">
     <h2>${win}</h2><p style="color:var(--parchment-dim)">${kind} ${v.turn}ターンで決着</p>
     <p style="color:var(--parchment)">あなた 原稿${v.human.genkoCount} / AI 原稿${v.ai.genkoCount}</p>
     <button class="v7p-btn" style="margin-top:12px" onclick="v7PlayBackToSetup()">もう一度</button>
+    <div style="margin-top:16px;text-align:left">
+      <div style="color:var(--gold);font-family:'Cinzel',serif;font-size:.78rem;margin-bottom:4px">🔎 AIの最終 場</div>
+      <div class="v7p-zcont">${aiField}</div>
+      <div style="color:var(--gold);font-family:'Cinzel',serif;font-size:.78rem;margin:8px 0 4px">🔎 AIの残り手札</div>
+      <div class="v7p-zcont">${aiHand}</div>
+    </div>
   </div>${v7LogHTML(v)}`;
 }
 
+function v7LogClass(line) {
+  if (/ゲーム終了|勝ち|引き分け/.test(line)) return 'lg-end';
+  if (/^― ターン|ページ:/.test(line)) return 'lg-turn';
+  if (/得点|原稿/.test(line)) return 'lg-score';
+  if (/ブロック|没|相殺/.test(line)) return 'lg-botsu';
+  if (/召喚|進化|蘇生|伏せ|執刀|ダイス|心を/.test(line)) return 'lg-play';
+  if (/ドロー/.test(line)) return 'lg-draw';
+  return '';
+}
 function v7LogHTML(v) {
-  return `<div class="v7p-log">${v.logTail.map(escapeHtml).reverse().join('<br>')}</div>`;
+  const lines = v.logTail.slice().reverse();
+  return `<div class="v7p-log">${lines.map((l, i) => `<div class="lgl ${v7LogClass(l)} ${i === 0 ? 'lg-new' : ''}">${escapeHtml(l)}</div>`).join('')}</div>`;
 }
 
 function v7TrackHTML(v) {
@@ -6560,21 +6645,19 @@ function v7PlayBoardHTML(v) {
   </div>${v7LogHTML(v)}`;
 }
 
-function v7PlayRender() {
-  v7PlayEnsureStyle();
-  const root = document.getElementById('playRoot');
-  if (!root) return;
-  if (typeof window.V7Engine === 'undefined' || typeof window.V7Match === 'undefined') {
-    root.innerHTML = `<div class="empty-state"><h3>v7 エンジン未読込</h3>
-      <p>play/v7_engine.js / play/v7_match.js が読み込めていません(ローカルでファイルを開いている場合は同じ階層に play/ が必要です)。</p></div>`;
-    return;
-  }
-  root.innerHTML = v7match ? v7PlayBoardHTML(v7match.view()) : v7PlaySetupHTML();
-}
-
 // PLAYタブのエントリ: v7 AI対戦が進行中なら専用盤面、それ以外は旧PLAY(モードタブに🤖AI対戦を統合)
 function renderPlay() {
-  if (v7match) { v7PlayEnsureStyle(); document.getElementById('playRoot').innerHTML = v7PlayBoardHTML(v7match.view()); return; }
+  if (v7match) {
+    v7PlayEnsureStyle();
+    const root = document.getElementById('playRoot');
+    if (typeof window.V7Engine === 'undefined' || typeof window.V7Match === 'undefined') {
+      root.innerHTML = `<div class="empty-state"><h3>v7 エンジン未読込</h3>
+        <p>play/v7_engine.js / play/v7_match.js が読み込めていません(同じ階層に play/ が必要です)。</p></div>`;
+      v7match = null; return;
+    }
+    root.innerHTML = v7PlayBoardHTML(v7match.view());
+    return;
+  }
   return _oldRenderPlay();
 }
 
