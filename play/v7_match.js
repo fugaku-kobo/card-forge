@@ -408,6 +408,8 @@
       return {
         turn: (this._t || 0) + 1, maxTurns: V7.MAX_TURNS, winGenko: V7.WIN_GENKO,
         page, pageName: pinfo[0], pageDesc: pinfo[1],
+        trackIdx: (this._t || 0),
+        track: g.track.map(id => ({ id: id, name: (PAGE_INFO[id] || [id])[0], desc: (PAGE_INFO[id] || ['', ''])[1] })),
         activeSide: this._active === this.HUMAN ? 'human' : 'ai',
         firstSide: g.first === this.HUMAN ? 'human' : 'ai',
         over: this.over, winner: this.winner == null ? null : (this.winner === this.HUMAN ? 'human' : 'ai'), winKind: this.winKind,

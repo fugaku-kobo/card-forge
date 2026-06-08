@@ -6262,6 +6262,11 @@ function v7PlayEnsureStyle() {
   .v7p-btn.alt{background:transparent;color:var(--gold);border:1px solid var(--gold)}
   .v7p-btn.danger{background:#8a3b3b;color:#fff}
   .v7p-btn.ghost{background:transparent;color:var(--parchment-dim);border:1px solid rgba(201,169,97,.3);padding:5px 12px;font-size:.8rem}
+  .v7p-track{display:flex;gap:3px;flex-wrap:wrap;align-items:center;background:var(--bg-deep);border:1px solid rgba(201,169,97,.2);border-radius:3px;padding:5px 8px;margin-bottom:8px}
+  .v7p-track .tlabel{font-size:.66rem;color:var(--gold);font-family:'Cinzel',serif;margin-right:4px}
+  .v7p-track .tcell{font-size:.64rem;padding:1px 5px;border-radius:2px;border:1px solid rgba(201,169,97,.22);color:var(--parchment-dim);white-space:nowrap;cursor:default}
+  .v7p-track .tcell.past{opacity:.38}
+  .v7p-track .tcell.cur{background:var(--gold);color:var(--ink);font-weight:700;border-color:var(--gold)}
   .v7p-log{background:var(--bg-deep);border:1px solid rgba(201,169,97,.2);border-radius:3px;padding:8px 12px;max-height:130px;overflow:auto;font-size:.76rem;color:var(--parchment-dim);line-height:1.55;margin-top:8px}
   .v7p-result{text-align:center;padding:28px;background:var(--bg-mid);border:2px solid var(--gold);border-radius:4px}
   .v7p-result h2{font-family:'Cinzel',serif;color:var(--gold-bright);font-size:1.6rem;margin:0 0 8px}
@@ -6288,8 +6293,6 @@ function v7PlaySetupHTML() {
     <div class="field"><label>AIのリーダー</label><div class="v7p-pick">${pick('aiWork')}</div></div>
     <div class="v7p-opt">
       <label><input type="checkbox" ${v7setup.humanFirst ? 'checked' : ''} onclick="v7PlayToggle('humanFirst')"> あなたが先攻</label>
-      <label><input type="checkbox" ${v7setup.humanPierce ? 'checked' : ''} onclick="v7PlayToggle('humanPierce')"> 自分に貫通カードを入れる</label>
-      <label><input type="checkbox" ${v7setup.aiPierce ? 'checked' : ''} onclick="v7PlayToggle('aiPierce')"> AIに貫通カードを入れる</label>
     </div>
     <div class="v7p-opt">
       <label>AIの強さ:&nbsp;
@@ -6441,12 +6444,21 @@ function v7LogHTML(v) {
   return `<div class="v7p-log">${v.logTail.map(escapeHtml).reverse().join('<br>')}</div>`;
 }
 
+function v7TrackHTML(v) {
+  const cells = (v.track || []).map((p, i) => {
+    const cls = i < v.trackIdx ? 'past' : (i === v.trackIdx ? 'cur' : '');
+    const label = i === v.trackIdx ? `${i + 1}.${escapeHtml(p.name)}` : `${i + 1}`;
+    return `<span class="tcell ${cls}" title="${escapeHtml(p.name + ' — ' + p.desc)}">${label}</span>`;
+  }).join('');
+  return `<div class="v7p-track"><span class="tlabel">📄ページトラック(開始時に固定・毎ターン1枚公開)</span>${cells}</div>`;
+}
+
 function v7PlayBoardHTML(v) {
   if (v.over) return v7ResultHTML(v);
   const p = v.pending || {};
   const attackable = (p.type === 'attack') ? v7match.attackableUids() : [];
   const blockOpts = (p.type === 'block') ? p.options : [];
-  return `<div class="v7p-board">
+  return `${v7TrackHTML(v)}<div class="v7p-board">
     ${v7SideHTML(v.ai, v, false, [], [])}
     ${v7BarHTML(v)}
     ${v7SideHTML(v.human, v, true, attackable, blockOpts)}
