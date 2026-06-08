@@ -14,6 +14,8 @@
 <!-- v7 AI対戦エンジン(PLAYタブ) -->
 <script src="play/v7_engine.js"></script>
 <script src="play/v7_match.js"></script>
+<!-- 同梱カードデータ(初回シード・編集はxlsx→tools/build_seed.py) -->
+<script src="data/seed.js"></script>
 <style>
 :root {
   --bg-deep: #1a1410;
@@ -70,6 +72,12 @@ header {
   font-family: 'Noto Serif JP', serif;
   font-size: 0.78rem; color: var(--parchment-dim);
   letter-spacing: 0.15em; font-style: italic;
+}
+.app-version {
+  font-family: 'Cinzel', serif; font-style: normal;
+  font-size: 0.66rem; color: var(--gold); letter-spacing: 0.05em;
+  border: 1px solid rgba(201,169,97,0.35); border-radius: 10px;
+  padding: 1px 8px; margin-left: 6px; white-space: nowrap;
 }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -2642,14 +2650,16 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
   <div class="header-inner">
     <div class="brand">
       <div class="brand-mark">CARD FORGE</div>
-      <div class="brand-tag">— 手塚カード制作ツール —</div>
+      <div class="brand-tag">— 手塚カード制作ツール — <span class="app-version" id="appVersion"></span></div>
     </div>
     <div class="actions">
+      <button onclick="reloadSeedData()" class="btn-small" title="同梱の最新カードデータで上書きします">📦 最新データに更新</button>
       <button onclick="document.getElementById('importXlsxFile').click()" class="btn-small">📊 Excel取込</button>
       <input type="file" id="importXlsxFile" accept=".xlsx" style="display:none" onchange="importXLSX(event)">
       <button onclick="exportJSON()" class="btn-small">📥 JSON出力</button>
       <button onclick="document.getElementById('importJsonFile').click()" class="btn-small">📤 JSON読込</button>
       <input type="file" id="importJsonFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button onclick="exportSeedJs()" class="btn-small" title="現在の状態を data/seed.js として書き出す(開発用)">💾 シード書出</button>
       <button onclick="generatePDF('all')" class="btn-primary">⚔ 全PDF</button>
     </div>
   </div>
@@ -3061,6 +3071,8 @@ let state = {
 let editingIdx = null;
 let dragSrcIdx = null;
 let cardIdCounter = 1;
+const TOOL_VERSION = '7.3';   // ツール版(手動更新)
+let dataVersion = '';         // 読み込み中のカードデータ版(同梱シード/取込元)
 // デッキ編集画面の追加カードリスト用フィルタ状態
 let deckAddFilter = { search: '', work: '', type: '' };
 // 追加カード表示モード: 'list' (リスト) | 'grid' (ミニカード) | 'large' (大きい画像)
@@ -3104,9 +3116,25 @@ function loadData() {
         });
       }
       cardIdCounter = data.cardIdCounter || (state.cards.length + 1);
+      dataVersion = data.dataVersion || '';
       loaded = true;
     }
   } catch(e) { console.error(e); }
+
+  // 初回(localStorage が空)は同梱シードで初期化(非破壊・既存ユーザは触らない)
+  if (!loaded && typeof window.CARD_FORGE_SEED !== 'undefined') {
+    try {
+      const seed = window.CARD_FORGE_SEED;
+      state.cards = (seed.cards || []).slice();
+      state.types = (seed.types || []).slice();
+      state.decks = (seed.decks || []).slice();
+      cardIdCounter = seed.cardIdCounter || (state.cards.length + 1);
+      dataVersion = seed.version || '';
+      loaded = true;
+      saveData();
+      console.log('同梱シードで初期化:', dataVersion, state.cards.length + '枚');
+    } catch(e) { console.error('seed init failed', e); }
+  }
 
   // 基本タイプは常に存在を保証
   ensureBuiltinTypes();
@@ -3180,7 +3208,8 @@ function saveData() {
     types: state.types,
     decks: state.decks,
     playSession: state.playSession,
-    cardIdCounter: cardIdCounter
+    cardIdCounter: cardIdCounter,
+    dataVersion: dataVersion
   }));
   // データ変更があった可能性があるのでアイコンキャッシュをクリア
   invalidateIconCache();
@@ -5264,6 +5293,43 @@ function exportJSON() {
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   download(blob, 'card-forge-data.json');
   toast('JSON出力完了');
+}
+
+// 同梱シード(data/seed.js)で現在のデータを上書き
+function reloadSeedData() {
+  if (typeof window.CARD_FORGE_SEED === 'undefined') { alert('同梱データ(data/seed.js)が読み込めていません。'); return; }
+  const seed = window.CARD_FORGE_SEED;
+  if (!confirm('同梱の最新カードデータ(' + (seed.version || '') + '・カード' + (seed.cards || []).length + '枚)で上書きします。\n今のライブラリ/デッキ/タイプは置き換わります。よろしいですか?')) return;
+  state.cards = (seed.cards || []).slice();
+  state.types = (seed.types || []).slice();
+  state.decks = (seed.decks || []).slice();
+  cardIdCounter = seed.cardIdCounter || (state.cards.length + 1);
+  dataVersion = seed.version || '';
+  ensureBuiltinTypes();
+  saveData();
+  updateVersionBadge();
+  render();
+  if (typeof renderDeckList === 'function') renderDeckList();
+  toast('同梱データ ' + dataVersion + ' に更新しました');
+}
+
+// 現在の状態を seed.js として書き出す(開発用・data/seed.js に置き換えてコミット)
+function exportSeedJs() {
+  const seed = {
+    version: dataVersion || (window.CARD_FORGE_SEED && window.CARD_FORGE_SEED.version) || 'manual',
+    generatedFrom: 'app-export', cards: state.cards, types: state.types, decks: state.decks,
+    cardIdCounter: cardIdCounter
+  };
+  const js = '/* 自動生成(アプリ書き出し)。data/seed.js に置き換えてコミット */\nwindow.CARD_FORGE_SEED = ' + JSON.stringify(seed) + ';\n';
+  download(new Blob([js], { type: 'application/javascript' }), 'seed.js');
+  toast('seed.js を書き出しました(data/ に置き換え)');
+}
+
+function updateVersionBadge() {
+  const el = document.getElementById('appVersion');
+  if (!el) return;
+  const dv = dataVersion || (window.CARD_FORGE_SEED && window.CARD_FORGE_SEED.version) || '';
+  el.textContent = 'ver.' + TOOL_VERSION + (dv ? ' / データ ' + dv : '');
 }
 function importJSON(ev) {
   const file = ev.target.files[0];
@@ -7657,6 +7723,7 @@ loadData();
 refreshTypeSelects();
 writeForm({});  // 初期状態をフォームに反映 (動的フィールド表示)
 render();
+updateVersionBadge();
 </script>
 </body>
 </html>
