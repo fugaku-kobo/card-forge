@@ -83,8 +83,10 @@
       this.seed = (opts.seed != null) ? opts.seed : Math.floor((Math.random ? Math.random() : 0.5) * 2 ** 31);
       this.rng = V7.makeRng(this.seed);
       this.HUMAN = 0; this.AI = 1;
-      this.game = new V7.Game(this.humanWork, this.aiWork, this.rng, null,
-        { pierce: !!opts.humanPierce }, { pierce: !!opts.aiPierce });
+      // opts.humanDeck/aiDeck: 事前構築のエンジンカード配列(自作デッキ)。なければリーダー内蔵デッキ。
+      const optA = opts.humanDeck ? { deck: opts.humanDeck } : { pierce: !!opts.humanPierce };
+      const optB = opts.aiDeck ? { deck: opts.aiDeck } : { pierce: !!opts.aiPierce };
+      this.game = new V7.Game(this.humanWork, this.aiWork, this.rng, null, optA, optB);
       this.game.first = opts.humanFirst ? this.HUMAN : this.AI;
       this._rolloutSeed = (this.seed ^ 0x5bd1e995) >>> 0;
       this.over = false; this.winner = null; this.winKind = null;
@@ -393,7 +395,7 @@
       const genkoNames = Array.from(pl.genkoNames());
       return {
         side: i === this.HUMAN ? 'human' : 'ai',
-        work: pl.work, workLabel: V7.LEADER_LABEL[pl.work], heart: pl.heart,
+        work: pl.work, workLabel: V7.LEADER_LABEL[pl.work] || (pl.work === 'NONE' ? '自作' : pl.work), heart: pl.heart,
         field: pl.field.map(u => this._unitView(u, i)),
         hand: i === this.HUMAN ? pl.hand.map((c, idx) => this._handView(c, idx)) : null,
         handCount: pl.hand.length, deckCount: pl.deck.length,

@@ -201,9 +201,14 @@
     constructor(workA, workB, rng, cfg, deckOptsA, deckOptsB) {
       this.rng = rng;
       this.cfg = Object.assign({}, DEFAULT_CFG, cfg || {});
+      // deckOpts.deck が与えられればそれを使う(自作デッキ)。なければ buildDeck。
+      const resolveDeck = (work, o) => {
+        if (o && o.deck && o.deck.length) { const d = o.deck.slice(); rng.shuffle(d); return d; }
+        return buildDeck(work, rng, o);
+      };
       this.players = [
-        new Player(workA, rng, buildDeck(workA, rng, deckOptsA)),
-        new Player(workB, rng, buildDeck(workB, rng, deckOptsB)),
+        new Player(workA, rng, resolveDeck(workA, deckOptsA)),
+        new Player(workB, rng, resolveDeck(workB, deckOptsB)),
       ];
       this.works = [workA, workB];
       this.track = rng.sample(PAGE_POOL, MAX_TURNS);

@@ -2911,6 +2911,7 @@ footer .ornament { color: var(--gold); letter-spacing: 0.5em; margin-bottom: 6px
       <aside class="deck-list-side">
         <div class="panel-title">デッキ一覧</div>
         <button class="btn-primary" style="width:100%; margin-bottom: 8px;" onclick="createDeck()">+ 新規デッキ</button>
+        <button class="btn-small" style="width:100%; margin-bottom: 6px;" onclick="v7GenStarterDecks()">🤖 v7スターターを自動生成</button>
         <button class="btn-small" style="width:100%; margin-bottom: 6px;" onclick="openImportDeckCode()">📥 コードから取込</button>
         <button class="btn-small" style="width:100%; margin-bottom: 12px;" onclick="openImportDeckList()">📋 型番リストから作成</button>
         <div id="deckListItems"></div>
@@ -6206,7 +6207,92 @@ function switchPlaySetupMode(mode) {
    v7 AI対戦(PLAYタブ)— play/v7_engine.js + play/v7_match.js を駆動
    ============================================================ */
 let v7match = null;
-let v7setup = { humanWork: 'BJ', aiWork: 'ATOM', humanFirst: true, aiMode: 'mcts', humanPierce: false, aiPierce: false };
+let v7setup = { humanSel: 'leader:BJ', aiSel: 'leader:ATOM', humanFirst: true, aiMode: 'mcts' };
+
+// WORKS名 -> {work, role, ability} の逆引き(キャッシュ)
+function v7WorksNameMap() {
+  if (v7WorksNameMap._c) return v7WorksNameMap._c;
+  const E = window.V7Engine, m = {};
+  for (const [w, chars] of Object.entries(E.WORKS)) for (const [nm, ra] of Object.entries(chars)) m[nm] = { work: w, role: ra[0], ability: ra[1] };
+  v7WorksNameMap._c = m; return m;
+}
+function v7WorkFromLeader(card) {
+  const NAME = v7WorksNameMap();
+  if (NAME[card.name]) return NAME[card.name].work;
+  const t = (card.work || '') + (card.name || '');
+  if (/ブラック|執刀/.test(t)) return 'BJ';
+  if (/アトム/.test(t)) return 'ATOM';
+  if (/火の鳥|ナギ|輪廻/.test(t)) return 'HINOTORI';
+  if (/サファイア|リボン|ふたつの心/.test(t)) return 'RIBBON';
+  return 'NONE';
+}
+
+// 自作デッキ(state.deck)をエンジン用 {work, deck:[...]} に変換
+function v7DeckToEngine(deck) {
+  const E = window.V7Engine, NAME = v7WorksNameMap();
+  let work = 'NONE'; const eng = []; const expand = [];
+  (deck.cards || []).forEach(e => { const c = state.cards.find(x => x.id === e.cardId); if (c) for (let i = 0; i < (e.count || 1); i++) expand.push(c); });
+  for (const c of expand) {
+    if (isLeaderCard(c)) { const w = v7WorkFromLeader(c); if (w !== 'NONE') work = w; continue; }
+    const kind = getTypeKind(c.type);
+    if (kind === 'character') {
+      let lv = parseInt(String(c.level || '1').replace(/[^0-9]/g, ''), 10) || 1; lv = lv >= 2 ? 2 : 1;
+      let atk = parseInt(String(c.atk || '').replace(/[^0-9]/g, ''), 10);
+      const info = NAME[c.name];
+      const isStar = info ? info.role === 'star' : false;
+      const abilText = ((c.skill1 || '') + (c.skill1Effect || '') + (c.skill1Full || '')).replace(/盾持ち|守り手|貫通/g, '').trim();
+      const hasAbil = (c.v7tag != null && c.v7tag !== '') ? true : (!!info && abilText.length > 0);
+      const ability = hasAbil ? (c.v7tag || (info ? info.ability : null)) : null;
+      if (!atk || atk < 1) atk = E.baseAtk(lv, hasAbil, isStar);
+      eng.push(E.makeChar(c.name, lv, hasAbil, isStar, ability, {
+        base: atk, shield: /盾持ち/.test(c.passive || ''), guardian: /守り手/.test(c.passive || ''), pierce: /貫通/.test(c.passive || ''),
+      }));
+    } else if (kind === 'effect') {
+      const code = String(c.cardCode || '').toUpperCase().replace(/^V7G-/, '');
+      if (['KT-002', 'KT-003', 'KT-005'].includes(code)) eng.push(E.makeKt(code));
+    }
+  }
+  return { work, deck: eng };
+}
+
+// DECKSタブ: v7 リーダー別スターターを state.cards/state.decks に自動生成(再生成は置換)
+function v7GenStarterDecks() {
+  if (typeof window.V7Engine === 'undefined') { alert('v7エンジンが読み込めていません(play/ が必要)'); return; }
+  const E = window.V7Engine, LBL = window.V7Match.ABILITY_LABEL, PRE = { BJ: 'BJ', ATOM: 'AT', HINOTORI: 'HT', RIBBON: 'RK' };
+  state.cards = state.cards.filter(c => !String(c.cardCode || '').startsWith('V7G-'));
+  state.decks = state.decks.filter(d => !String(d.name || '').startsWith('v7スターター:'));
+  const mk = (cc, name, type, level, atk, passive, work, tag) => {
+    const card = { id: cid(), cardCode: cc, name: name, type: type, work: work || '', icon: '', art: '' };
+    if (type === 'キャラクター') { card.level = String(level); card.atk = String(atk); card.passive = passive || ''; card.skill1 = passive || ''; card.v7tag = tag || ''; }
+    else if (type === '主人公') { card.level = '1'; card.frontEffect = passive || ''; }
+    state.cards.push(card); return card;
+  };
+  const KT = { 'KT-002': '没ネーム', 'KT-003': 'アシスタント呼出', 'KT-005': '読者の声' };
+  const ktCard = {}; for (const [cc, nm] of Object.entries(KT)) ktCard[cc] = mk('V7G-' + cc, nm, '急展開', '', '', '', '共通', '');
+  const spCard = {}; E.SPLASH.forEach((nm, i) => { spCard[nm] = { l1: mk('V7G-GN' + i + '-1', nm, 'キャラクター', 1, E.baseAtk(1, false, false), '', '汎用', ''), l2: mk('V7G-GN' + i + '-2', nm, 'キャラクター', 2, E.baseAtk(2, false, false), '', '汎用', '') }; });
+  let made = 0;
+  for (const work of E.LEADERS) {
+    const entries = [];
+    const starName = Object.entries(E.WORKS[work]).find(([n, ra]) => ra[0] === 'star')[0];
+    const hero = mk('V7G-' + PRE[work] + '-H', starName, '主人公', '', '', work + 'リーダー', work, '');
+    entries.push({ cardId: hero.id, count: 1 });
+    let ci = 1;
+    for (const [name, ra] of Object.entries(E.WORKS[work])) {
+      const star = ra[0] === 'star', tag = ra[1];
+      const l1a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 1, E.baseAtk(1, true, star), LBL[tag] || '', work, tag);
+      const l2a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, true, star), LBL[tag] || '', work, tag);
+      const l2n = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, false, star), '', work, '');
+      entries.push({ cardId: l1a.id, count: 2 }, { cardId: l2a.id, count: 1 }, { cardId: l2n.id, count: 1 });
+    }
+    for (const nm of E.SPLASH) entries.push({ cardId: spCard[nm].l1.id, count: 2 }, { cardId: spCard[nm].l2.id, count: 2 });
+    entries.push({ cardId: ktCard['KT-003'].id, count: 2 }, { cardId: ktCard['KT-002'].id, count: 2 }, { cardId: ktCard['KT-005'].id, count: 2 });
+    state.decks.push({ id: 'd' + Date.now() + '_v7' + work, name: 'v7スターター: ' + E.LEADER_LABEL[work], description: 'v7 自動生成デッキ', cards: entries, dondengCards: [] });
+    made++;
+  }
+  saveData();
+  renderDeckList();
+  alert(made + '個の v7 スターターデッキを生成しました(DECKS一覧)。AI対戦の「デッキ選択」でも使えます。');
+}
 
 function v7PlayEnsureStyle() {
   if (document.getElementById('v7p-style')) return;
@@ -6284,33 +6370,42 @@ function v7PlayToggle(k) { v7setup[k] = !v7setup[k]; if (!v7match) renderPlay();
 
 function v7PlaySetupHTML() {
   const E = window.V7Engine;
-  const pick = (key) => E.LEADERS.map(L =>
-    `<button class="${v7setup[key] === L ? 'sel' : ''}" onclick="v7PlaySet('${key}','${L}')">${escapeHtml(E.LEADER_LABEL[L])}</button>`).join('');
+  const optList = (selVal) => {
+    let o = E.LEADERS.map(L => `<option value="leader:${L}" ${selVal === 'leader:' + L ? 'selected' : ''}>内蔵: ${escapeHtml(E.LEADER_LABEL[L])}</option>`).join('');
+    if (state.decks.length) o += '<optgroup label="自作デッキ">' + state.decks.map(d => `<option value="deck:${d.id}" ${selVal === 'deck:' + d.id ? 'selected' : ''}>${escapeHtml(d.name)} (${getDeckTotalCount(d)}枚)</option>`).join('') + '</optgroup>';
+    return o;
+  };
   return `<div class="play-setup">
     <h2>🤖 v7 AI対戦</h2>
-    <p>リーダーを選んで対戦開始。攻撃力で「突破」して、違う名前のキャラ4枚を原稿に揃えたら勝ち。デッキは内蔵のリーダー専用デッキを使います。</p>
-    <div class="field"><label>あなたのリーダー</label><div class="v7p-pick">${pick('humanWork')}</div></div>
-    <div class="field"><label>AIのリーダー</label><div class="v7p-pick">${pick('aiWork')}</div></div>
+    <p>デッキを選んで対戦開始。内蔵リーダーデッキか、DECKSタブの自作デッキ(「🤖 v7スターターを自動生成」で作成可)を使えます。違う名前のキャラ4枚を原稿に揃えたら勝ち。</p>
+    <div class="field"><label>あなたのデッキ</label><select onchange="v7PlaySet('humanSel', this.value)">${optList(v7setup.humanSel)}</select></div>
+    <div class="field"><label>AIのデッキ</label><select onchange="v7PlaySet('aiSel', this.value)">${optList(v7setup.aiSel)}</select></div>
     <div class="v7p-opt">
       <label><input type="checkbox" ${v7setup.humanFirst ? 'checked' : ''} onclick="v7PlayToggle('humanFirst')"> あなたが先攻</label>
-    </div>
-    <div class="v7p-opt">
-      <label>AIの強さ:&nbsp;
-        <select onchange="v7PlaySet('aiMode', this.value)" style="width:auto">
-          <option value="mcts" ${v7setup.aiMode === 'mcts' ? 'selected' : ''}>MCTS(強い・先読み)</option>
-          <option value="greedy" ${v7setup.aiMode === 'greedy' ? 'selected' : ''}>貪欲(高速)</option>
-        </select>
-      </label>
+      <label>AIの強さ:&nbsp;<select onchange="v7PlaySet('aiMode', this.value)" style="width:auto"><option value="mcts" ${v7setup.aiMode === 'mcts' ? 'selected' : ''}>MCTS(強い)</option><option value="greedy" ${v7setup.aiMode === 'greedy' ? 'selected' : ''}>貪欲(高速)</option></select></label>
     </div>
     <div class="play-setup-actions"><button class="v7p-btn" style="font-size:1rem;padding:10px 28px" onclick="v7PlayStart()">▶ 対戦開始</button></div>
   </div>`;
 }
 
+function v7ResolveSel(sel) {
+  if (!sel || sel.indexOf('leader:') === 0) return { work: (sel || 'leader:BJ').slice(7), deck: null };
+  const d = state.decks.find(x => x.id === sel.slice(5));
+  if (!d) return { work: 'BJ', deck: null };
+  const conv = v7DeckToEngine(d);
+  if (conv.deck.filter(c => c.kind === 'char').length < 6) {
+    alert('「' + d.name + '」はv7対戦に使えるキャラが少ないため、内蔵' + (conv.work === 'NONE' ? 'BJ' : conv.work) + 'デッキで代用します。');
+    return { work: conv.work === 'NONE' ? 'BJ' : conv.work, deck: null };
+  }
+  return { work: conv.work, deck: conv.deck };
+}
+
 function v7PlayStart() {
   const VM = window.V7Match;
+  const H = v7ResolveSel(v7setup.humanSel), A = v7ResolveSel(v7setup.aiSel);
   v7match = new VM.V7Match({
-    humanWork: v7setup.humanWork, aiWork: v7setup.aiWork, humanFirst: v7setup.humanFirst,
-    aiMode: v7setup.aiMode, humanPierce: v7setup.humanPierce, aiPierce: v7setup.aiPierce,
+    humanWork: H.work, aiWork: A.work, humanDeck: H.deck, aiDeck: A.deck,
+    humanFirst: v7setup.humanFirst, aiMode: v7setup.aiMode,
     onUpdate: () => renderPlay(),
   });
   v7match.start();
