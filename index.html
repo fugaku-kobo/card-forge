@@ -6208,6 +6208,7 @@ function switchPlaySetupMode(mode) {
    ============================================================ */
 let v7match = null;
 let v7setup = { humanSel: 'leader:BJ', aiSel: 'leader:ATOM', humanFirst: true, aiMode: 'mcts' };
+let v7lastPageIdx = -1; // ページ変更検知(フリップ演出のトリガ)
 
 // WORKS名 -> {work, role, ability} の逆引き(キャッシュ)
 function v7WorksNameMap() {
@@ -6394,6 +6395,21 @@ function v7PlayEnsureStyle() {
     .v7p-track .tcell{font-size:.58rem;padding:1px 3px}
     #v7p-preview{width:130px}
   }
+  /* 現在ページのバナー(常時・大きく) */
+  .v7p-pagebanner{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#fbf6e6,#ece0bf);color:#2a2418;border:2px solid var(--gold);border-radius:5px;padding:8px 14px;margin-bottom:8px;box-shadow:0 1px 6px rgba(0,0,0,.3)}
+  .v7p-pagebanner .pb-ico{font-size:22px}
+  .v7p-pagebanner .pb-no{font-family:'Cinzel',serif;font-weight:700;color:#8a6d2c;font-size:.78rem;white-space:nowrap}
+  .v7p-pagebanner .pb-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.12rem;color:#5a3e1e;white-space:nowrap}
+  .v7p-pagebanner .pb-desc{font-size:.92rem;color:#33281a;line-height:1.3;flex:1;min-width:140px}
+  @media (max-width:760px){.v7p-pagebanner{flex-wrap:wrap;gap:6px}.v7p-pagebanner .pb-name{font-size:1rem}.v7p-pagebanner .pb-desc{font-size:.82rem}}
+  /* ページめくりフリップ演出 */
+  #v7p-flipfx{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;pointer-events:none}
+  #v7p-flipfx .v7p-flipcard{width:320px;max-width:82vw;background:linear-gradient(180deg,#fdfaf0,#e6d8b4);color:#2a2418;border:3px solid var(--gold);border-radius:10px;padding:22px 26px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.6);animation:v7flip 1.2s ease forwards}
+  #v7p-flipfx .fc-label{font-family:'Cinzel',serif;color:#8a6d2c;font-size:.74rem;letter-spacing:.12em}
+  #v7p-flipfx .fc-no{font-family:'Cinzel',serif;color:#8a6d2c;font-weight:700;font-size:.82rem}
+  #v7p-flipfx .fc-name{font-family:'Cinzel',serif;font-size:1.7rem;font-weight:700;color:#5a3e1e;margin:6px 0}
+  #v7p-flipfx .fc-desc{font-size:1.02rem;color:#33281a;line-height:1.4}
+  @keyframes v7flip{0%{transform:perspective(800px) rotateY(92deg) scale(.85);opacity:0}32%{transform:perspective(800px) rotateY(0) scale(1);opacity:1}82%{transform:perspective(800px) rotateY(0) scale(1);opacity:1}100%{transform:perspective(800px) rotateY(0) scale(1);opacity:0}}
   `;
   document.head.appendChild(s);
   v7PreviewInit();
@@ -6436,10 +6452,12 @@ function v7ResolveSel(sel) {
 
 function v7PlayStart() {
   const VM = window.V7Match;
+  v7lastPageIdx = -1;
   const H = v7ResolveSel(v7setup.humanSel), A = v7ResolveSel(v7setup.aiSel);
   v7match = new VM.V7Match({
     humanWork: H.work, aiWork: A.work, humanDeck: H.deck, aiDeck: A.deck,
     humanFirst: v7setup.humanFirst, aiMode: v7setup.aiMode,
+    aiDelayMs: (typeof window !== 'undefined' && window._v7aiDelay != null) ? window._v7aiDelay : 700,
     onUpdate: () => renderPlay(),
   });
   v7match.start();
@@ -6581,8 +6599,6 @@ function v7BarHTML(v) {
   }
   return `<div class="v7p-bar">
     <span class="turn">T${v.turn}/${v.maxTurns}</span>
-    <span class="pg">📄 ${escapeHtml(v.pageName || '')}</span>
-    <span class="pgd">${escapeHtml(v.pageDesc || '')}</span>
     <span class="who ${v.activeSide}">${v.activeSide === 'human' ? 'あなたの手番' : 'AIの手番'}</span>
     <span class="pgd">AI:${v.aiMode === 'mcts' ? 'MCTS' : '貪欲'}</span>
     <span class="sp"></span>
@@ -6630,15 +6646,41 @@ function v7TrackHTML(v) {
     const label = i === v.trackIdx ? `${i + 1}.${escapeHtml(p.name)}` : `${i + 1}`;
     return `<span class="tcell ${cls}" title="${escapeHtml(p.name + ' — ' + p.desc)}">${label}</span>`;
   }).join('');
-  return `<div class="v7p-track"><span class="tlabel">📄ページトラック(開始時に固定・毎ターン1枚公開)</span>${cells}</div>`;
+  return `<div class="v7p-track"><span class="tlabel">📄トラック</span>${cells}</div>`;
+}
+
+// 現在ページの大きなバナー(常時表示・効果を読みやすく)
+function v7PageBannerHTML(v) {
+  return `<div class="v7p-pagebanner">
+    <span class="pb-ico">📄</span>
+    <span class="pb-no">ページ ${v.trackIdx + 1}/${v.maxTurns}</span>
+    <span class="pb-name">${escapeHtml(v.pageName || '')}</span>
+    <span class="pb-desc">${escapeHtml(v.pageDesc || '')}</span>
+  </div>`;
+}
+
+// ページめくりのフリップ演出(ブラウザのみ)
+function v7PageFlipFx(no, name, desc) {
+  if (typeof requestAnimationFrame === 'undefined') return;
+  let host = document.getElementById('v7p-flipfx');
+  if (!host) { host = document.createElement('div'); host.id = 'v7p-flipfx'; document.body.appendChild(host); }
+  host.innerHTML = `<div class="v7p-flipcard"><div class="fc-label">PAGE</div><div class="fc-no">${escapeHtml(no)}</div><div class="fc-name">${escapeHtml(name)}</div><div class="fc-desc">${escapeHtml(desc)}</div></div>`;
+  host.style.display = 'flex';
+  clearTimeout(window._v7flipT);
+  window._v7flipT = setTimeout(() => { host.style.display = 'none'; }, 1250);
 }
 
 function v7PlayBoardHTML(v) {
   if (v.over) return v7ResultHTML(v);
+  // ページが変わったらフリップ演出(再描画で多重発火しないようインデックスで判定)
+  if (v.trackIdx !== v7lastPageIdx) {
+    v7lastPageIdx = v.trackIdx;
+    v7PageFlipFx('ページ ' + (v.trackIdx + 1) + '/' + v.maxTurns, v.pageName || '', v.pageDesc || '');
+  }
   const p = v.pending || {};
   const attackable = (p.type === 'attack') ? v7match.attackableUids() : [];
   const blockOpts = (p.type === 'block') ? p.options : [];
-  return `${v7TrackHTML(v)}<div class="v7p-board">
+  return `${v7TrackHTML(v)}${v7PageBannerHTML(v)}<div class="v7p-board">
     ${v7SideHTML(v.ai, v, false, [], [])}
     ${v7BarHTML(v)}
     ${v7SideHTML(v.human, v, true, attackable, blockOpts)}

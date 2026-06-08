@@ -80,6 +80,7 @@
       this.humanWork = opts.humanWork || 'BJ';
       this.aiWork = opts.aiWork || 'ATOM';
       this.aiMode = opts.aiMode || 'greedy';       // 'greedy' | 'mcts'
+      this.aiDelay = opts.aiDelayMs || 0;          // AIターンでページめくりを見せる遅延(ms・UI用)
       this.seed = (opts.seed != null) ? opts.seed : Math.floor((Math.random ? Math.random() : 0.5) * 2 ** 31);
       this.rng = V7.makeRng(this.seed);
       this.HUMAN = 0; this.AI = 1;
@@ -141,6 +142,10 @@
       // メインフェイズへ
       if (pi === this.HUMAN) {
         this.pending = { type: 'main' };
+      } else if (this.aiDelay > 0 && typeof setTimeout !== 'undefined') {
+        // ページめくりを見せてから AI が着手
+        this._update();
+        setTimeout(() => { if (!this.over && this.game.players) this._aiMainAndBattle(page); }, this.aiDelay);
       } else {
         this._aiMainAndBattle(page);
       }
