@@ -6268,7 +6268,7 @@ function v7GenStarterDecks() {
     state.cards.push(card); return card;
   };
   const KT = { 'KT-002': '没ネーム', 'KT-003': 'アシスタント呼出', 'KT-005': '読者の声' };
-  const ktCard = {}; for (const [cc, nm] of Object.entries(KT)) ktCard[cc] = mk('V7G-' + cc, nm, '急展開', '', '', '', '共通', '');
+  const ktCard = {}; for (const [cc, nm] of Object.entries(KT)) ktCard[cc] = mk('V7G-' + cc, nm, '急展開カード', '', '', '', '共通', '');
   const spCard = {}; E.SPLASH.forEach((nm, i) => { spCard[nm] = { l1: mk('V7G-GN' + i + '-1', nm, 'キャラクター', 1, E.baseAtk(1, false, false), '', '汎用', ''), l2: mk('V7G-GN' + i + '-2', nm, 'キャラクター', 2, E.baseAtk(2, false, false), '', '汎用', '') }; });
   let made = 0;
   for (const work of E.LEADERS) {
