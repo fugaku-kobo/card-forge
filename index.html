@@ -6260,6 +6260,7 @@ function v7DeckToEngine(deck) {
 function v7GenStarterDecks() {
   if (typeof window.V7Engine === 'undefined') { alert('v7エンジンが読み込めていません(play/ が必要)'); return; }
   const E = window.V7Engine, LBL = window.V7Match.ABILITY_LABEL, PRE = { BJ: 'BJ', ATOM: 'AT', HINOTORI: 'HT', RIBBON: 'RK' };
+  const WORK_JP = { BJ: 'ブラック・ジャック', ATOM: '鉄腕アトム', HINOTORI: '火の鳥', RIBBON: 'リボンの騎士' };
   state.cards = state.cards.filter(c => !String(c.cardCode || '').startsWith('V7G-'));
   state.decks = state.decks.filter(d => !String(d.name || '').startsWith('v7スターター:'));
   const mk = (cc, name, type, level, atk, passive, work, tag) => {
@@ -6269,20 +6270,20 @@ function v7GenStarterDecks() {
     state.cards.push(card); return card;
   };
   const KT = { 'KT-002': '没ネーム', 'KT-003': 'アシスタント呼出', 'KT-005': '読者の声' };
-  const ktCard = {}; for (const [cc, nm] of Object.entries(KT)) ktCard[cc] = mk('V7G-' + cc, nm, '急展開カード', '', '', '', '共通', '');
-  const spCard = {}; E.SPLASH.forEach((nm, i) => { spCard[nm] = { l1: mk('V7G-GN' + i + '-1', nm, 'キャラクター', 1, E.baseAtk(1, false, false), '', '汎用', ''), l2: mk('V7G-GN' + i + '-2', nm, 'キャラクター', 2, E.baseAtk(2, false, false), '', '汎用', '') }; });
+  const ktCard = {}; for (const [cc, nm] of Object.entries(KT)) ktCard[cc] = mk('V7G-' + cc, nm, '急展開カード', '', '', '', '', '');
+  const spCard = {}; E.SPLASH.forEach((nm, i) => { spCard[nm] = { l1: mk('V7G-GN' + i + '-1', nm, 'キャラクター', 1, E.baseAtk(1, false, false), '', '', ''), l2: mk('V7G-GN' + i + '-2', nm, 'キャラクター', 2, E.baseAtk(2, false, false), '', '', '') }; });
   let made = 0;
   for (const work of E.LEADERS) {
     const entries = [];
     const starName = Object.entries(E.WORKS[work]).find(([n, ra]) => ra[0] === 'star')[0];
-    const hero = mk('V7G-' + PRE[work] + '-H', starName, '主人公', '', '', work + 'リーダー', work, '');
+    const hero = mk('V7G-' + PRE[work] + '-H', starName, '主人公', '', '', WORK_JP[work] + 'のリーダー', WORK_JP[work], '');
     entries.push({ cardId: hero.id, count: 1 });
     let ci = 1;
     for (const [name, ra] of Object.entries(E.WORKS[work])) {
       const star = ra[0] === 'star', tag = ra[1];
-      const l1a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 1, E.baseAtk(1, true, star), LBL[tag] || '', work, tag);
-      const l2a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, true, star), LBL[tag] || '', work, tag);
-      const l2n = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, false, star), '', work, '');
+      const l1a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 1, E.baseAtk(1, true, star), LBL[tag] || '', WORK_JP[work], tag);
+      const l2a = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, true, star), LBL[tag] || '', WORK_JP[work], tag);
+      const l2n = mk('V7G-' + PRE[work] + '-C' + (ci++), name, 'キャラクター', 2, E.baseAtk(2, false, star), '', WORK_JP[work], '');
       entries.push({ cardId: l1a.id, count: 2 }, { cardId: l2a.id, count: 1 }, { cardId: l2n.id, count: 1 });
     }
     for (const nm of E.SPLASH) entries.push({ cardId: spCard[nm].l1.id, count: 2 }, { cardId: spCard[nm].l2.id, count: 2 });
@@ -6293,6 +6294,38 @@ function v7GenStarterDecks() {
   saveData();
   renderDeckList();
   alert(made + '個の v7 スターターデッキを生成しました(DECKS一覧)。AI対戦の「デッキ選択」でも使えます。');
+}
+
+// ページカード(全30種)を印刷用ウィンドウに出す
+function v7PrintPageCards() {
+  if (typeof window.V7Match === 'undefined') { alert('v7エンジン未読込'); return; }
+  const PI = window.V7Match.PAGE_INFO;
+  const ids = Object.keys(PI).sort();
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const cards = ids.map(id => `<div class="pcard"><div class="pc-id">${esc(id)}</div><div class="pc-name">${esc(PI[id][0])}</div><div class="pc-desc">${esc(PI[id][1])}</div><div class="pc-foot">手塚カードゲーム v7 — ページカード</div></div>`).join('');
+  const w = window.open('', '_blank');
+  if (!w) { alert('ポップアップがブロックされました。許可してから再度お試しください。'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>ページカード印刷</title><style>
+    *{box-sizing:border-box}
+    body{font-family:'Noto Sans JP',sans-serif;margin:8mm;color:#1a1410}
+    h1{font-size:15px;margin:0 0 6px}
+    .hint{font-size:11px;color:#666;margin-bottom:8px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5mm}
+    .pcard{border:1.5px solid #333;border-radius:6px;padding:8px 10px;height:48mm;display:flex;flex-direction:column;page-break-inside:avoid;background:#fffdf7}
+    .pc-id{font-size:10px;color:#999;font-weight:700;letter-spacing:.05em}
+    .pc-name{font-size:15px;font-weight:700;margin:3px 0 5px;border-bottom:1px solid #ccc;padding-bottom:4px}
+    .pc-desc{font-size:12.5px;line-height:1.45;flex:1}
+    .pc-foot{font-size:9px;color:#aaa;text-align:right}
+    .btns{margin-bottom:10px}
+    button{font-size:13px;padding:6px 16px;cursor:pointer}
+    @media print{.btns{display:none}body{margin:0}}
+  </style></head><body>
+    <div class="btns"><button onclick="window.print()">🖨 印刷する</button></div>
+    <h1>手塚カードゲーム v7 — ページカード(全${ids.length}種)</h1>
+    <div class="hint">各ゲームではこの30枚から20枚をランダムに使用します。厚紙に印刷して切り取ってお使いください。</div>
+    <div class="grid">${cards}</div>
+  </body></html>`);
+  w.document.close();
 }
 
 function v7PlayEnsureStyle() {
@@ -6434,7 +6467,10 @@ function v7PlaySetupHTML() {
       <label><input type="checkbox" ${v7setup.humanFirst ? 'checked' : ''} onclick="v7PlayToggle('humanFirst')"> あなたが先攻</label>
       <label>AIの強さ:&nbsp;<select onchange="v7PlaySet('aiMode', this.value)" style="width:auto"><option value="mcts" ${v7setup.aiMode === 'mcts' ? 'selected' : ''}>MCTS(強い)</option><option value="greedy" ${v7setup.aiMode === 'greedy' ? 'selected' : ''}>貪欲(高速)</option></select></label>
     </div>
-    <div class="play-setup-actions"><button class="v7p-btn" style="font-size:1rem;padding:10px 28px" onclick="v7PlayStart()">▶ 対戦開始</button></div>
+    <div class="play-setup-actions">
+      <button class="v7p-btn ghost" onclick="v7PrintPageCards()" title="ページカード全30種を印刷用に開く">🖨 ページカードを印刷</button>
+      <button class="v7p-btn" style="font-size:1rem;padding:10px 28px" onclick="v7PlayStart()">▶ 対戦開始</button>
+    </div>
   </div>`;
 }
 
