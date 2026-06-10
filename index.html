@@ -6515,6 +6515,7 @@ function v7PlayEnsureStyle() {
 }
 
 function v7PlaySet(k, v) { v7setup[k] = v; if (!v7match) renderPlay(); }
+function v7PlaySetSpeed(ms) { if (v7match) v7match.setSpeed(ms); v7setup.aiDelay = ms; renderPlay(); }
 function v7PlayToggle(k) { v7setup[k] = !v7setup[k]; if (!v7match) renderPlay(); }
 
 function v7PlaySetupHTML() {
@@ -6723,6 +6724,12 @@ function v7BarHTML(v) {
     <span class="who ${v.activeSide}">${v.activeSide === 'human' ? 'あなたの手番' : 'AIの手番'}</span>
     <span class="pgd">AI:${v.aiMode === 'mcts' ? 'MCTS' : '貪欲'}</span>
     <span class="sp"></span>
+    <label class="pgd" style="display:inline-flex;align-items:center;gap:3px">速さ:<select onchange="v7PlaySetSpeed(parseInt(this.value,10))" style="font-size:.74rem;padding:1px 3px;width:auto">
+      <option value="0" ${v.aiDelay === 0 ? 'selected' : ''}>即時</option>
+      <option value="350" ${v.aiDelay === 350 ? 'selected' : ''}>速い</option>
+      <option value="700" ${v.aiDelay === 700 ? 'selected' : ''}>標準</option>
+      <option value="1200" ${v.aiDelay === 1200 ? 'selected' : ''}>じっくり</option>
+    </select></label>
     <button class="v7p-btn ghost" onclick="v7PlayBackToSetup()">中断</button>
     <div class="prompt">${prompt}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%">${btns}</div>

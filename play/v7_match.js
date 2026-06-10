@@ -282,6 +282,9 @@
       this._update(); return true;
     }
 
+    // 対戦中にAI速度(ページめくり後の間)を変更
+    setSpeed(ms) { this.aiDelay = Math.max(0, ms | 0); }
+
     // サファイア: 自分のターン開始時(=メイン中)に心を選ぶ
     setHumanHeart(h) {
       if (!this.pending || this.pending.type !== 'main') return false;
@@ -473,7 +476,7 @@
         firstSide: g.first === this.HUMAN ? 'human' : 'ai',
         over: this.over, winner: this.winner == null ? null : (this.winner === this.HUMAN ? 'human' : 'ai'), winKind: this.winKind,
         pending: this.pending,
-        aiMode: this.aiMode,
+        aiMode: this.aiMode, aiDelay: this.aiDelay,
         human: this._sideView(this.HUMAN), ai: this._sideView(this.AI),
         logTail: this.log.slice(-40),
       };
