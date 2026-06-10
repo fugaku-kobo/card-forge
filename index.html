@@ -6273,7 +6273,7 @@ function switchPlaySetupMode(mode) {
    v7 AI対戦(PLAYタブ)— play/v7_engine.js + play/v7_match.js を駆動
    ============================================================ */
 let v7match = null;
-let v7setup = { humanSel: 'leader:BJ', aiSel: 'leader:ATOM', humanFirst: true, aiMode: 'mcts' };
+let v7setup = { humanSel: 'leader:BJ', aiSel: 'leader:ATOM', humanFirst: true, aiMode: 'mcts', aiDelay: 700 };
 let v7lastPageIdx = -1; // ページ変更検知(フリップ演出のトリガ)
 
 // WORKS名 -> {work, role, ability} の逆引き(キャッシュ)
@@ -6532,6 +6532,12 @@ function v7PlaySetupHTML() {
     <div class="v7p-opt">
       <label><input type="checkbox" ${v7setup.humanFirst ? 'checked' : ''} onclick="v7PlayToggle('humanFirst')"> あなたが先攻</label>
       <label>AIの強さ:&nbsp;<select onchange="v7PlaySet('aiMode', this.value)" style="width:auto"><option value="mcts" ${v7setup.aiMode === 'mcts' ? 'selected' : ''}>MCTS(強い)</option><option value="greedy" ${v7setup.aiMode === 'greedy' ? 'selected' : ''}>貪欲(高速)</option></select></label>
+      <label>AIの速さ:&nbsp;<select onchange="v7PlaySet('aiDelay', parseInt(this.value,10))" style="width:auto">
+        <option value="0" ${v7setup.aiDelay === 0 ? 'selected' : ''}>即時</option>
+        <option value="350" ${v7setup.aiDelay === 350 ? 'selected' : ''}>速い</option>
+        <option value="700" ${v7setup.aiDelay === 700 ? 'selected' : ''}>標準</option>
+        <option value="1200" ${v7setup.aiDelay === 1200 ? 'selected' : ''}>じっくり</option>
+      </select></label>
     </div>
     <div class="play-setup-actions">
       <button class="v7p-btn ghost" onclick="v7PrintPageCards()" title="ページカード全30種を印刷用に開く">🖨 ページカードを印刷</button>
@@ -6559,7 +6565,7 @@ function v7PlayStart() {
   v7match = new VM.V7Match({
     humanWork: H.work, aiWork: A.work, humanDeck: H.deck, aiDeck: A.deck,
     humanFirst: v7setup.humanFirst, aiMode: v7setup.aiMode,
-    aiDelayMs: (typeof window !== 'undefined' && window._v7aiDelay != null) ? window._v7aiDelay : 700,
+    aiDelayMs: (typeof window !== 'undefined' && window._v7aiDelay != null) ? window._v7aiDelay : (v7setup.aiDelay != null ? v7setup.aiDelay : 700),
     onUpdate: () => renderPlay(),
   });
   v7match.start();
