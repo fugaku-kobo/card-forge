@@ -127,23 +127,45 @@
       g.doDraw(pi, page, t === 0);
       if (pl.work === 'RIBBON') { pl.heart = pl.field.some(u => !u.sick) ? 'prince' : 'princess'; }
       if (pl.work === 'ATOM') { const d = g.atomDice(pi); if (d) this._emitLog(`${this.sideName(pi)}: アトムのダイス ${d}`); }
-      // KT-005 / ナギ輪廻 は自動
+      // KT-005 は自動
       while (pl.hand.length < 4 && g.popTrap(pl, 'KT-005')) { pl.draw(2); this._emitLog(`${this.sideName(pi)}: 読者の声で2ドロー`); }
+      // ナギ「輪廻」: 人間は蘇生対象を選択、AIは自動
       if (pl.work === 'HINOTORI' && pl.field.length < V7.FIELD_CAP) {
         const rev = pl.bocchi.filter(c => c.kind === 'char');
         if (rev.length) {
-          const card = rev.reduce((m, c) => c.base > m.base ? c : m, rev[0]);
-          V7.removeItem(pl.bocchi, card);
-          const u = V7.newUnit(card); u.perm += g.cfg.nagi_revive;
-          pl.field.push(u); g.triggerEtb(pi, u, page);
-          this._emitLog(`${this.sideName(pi)}: 輪廻で${card.name}を蘇生(+200)`);
+          if (pi === this.HUMAN) {
+            this.pending = { type: 'revive', options: rev.map((c, i) => ({ idx: i, name: c.name, lv: c.lv, base: c.base })) };
+            return; // chooseRevive が続きを進める
+          }
+          this._doRevive(pi, rev.reduce((m, c) => c.base > m.base ? c : m, rev[0]));
         }
       }
-      // メインフェイズへ
+      this._enterMainOrAi(page);
+    }
+
+    _doRevive(pi, card) {
+      const g = this.game, pl = g.players[pi];
+      V7.removeItem(pl.bocchi, card);
+      const u = V7.newUnit(card); u.perm += g.cfg.nagi_revive;
+      pl.field.push(u); g.triggerEtb(pi, u, this._page);
+      this._emitLog(`${this.sideName(pi)}: 輪廻で${card.name}を蘇生(+${g.cfg.nagi_revive})`);
+    }
+
+    // 人間: 輪廻の蘇生対象を選ぶ(idx=null でスキップ)
+    chooseRevive(idx) {
+      if (!this.pending || this.pending.type !== 'revive') return;
+      const rev = this.game.players[this.HUMAN].bocchi.filter(c => c.kind === 'char');
+      if (idx != null && rev[idx]) this._doRevive(this.HUMAN, rev[idx]);
+      this.pending = null;
+      this._enterMainOrAi(this._page);
+      this._update();
+    }
+
+    _enterMainOrAi(page) {
+      const pi = this._active;
       if (pi === this.HUMAN) {
         this.pending = { type: 'main' };
       } else if (this.aiDelay > 0 && typeof setTimeout !== 'undefined') {
-        // ページめくりを見せてから AI が着手
         this._update();
         setTimeout(() => { if (!this.over && this.game.players) this._aiMainAndBattle(page); }, this.aiDelay);
       } else {
@@ -274,9 +296,35 @@
       if (!this.pending || this.pending.type !== 'main') return;
       this._plays = 0;
       const g = this.game, page = this._page;
-      const attackers = g.battlePreSteps(this.HUMAN, page);
-      if (g._bjLog) this._emitLog(`あなた: ${g._bjLog}`);
+      const attackers = g.battlePreSteps(this.HUMAN, page, { skipShitto: true });
       this._battle = { atk: this.HUMAN, def: this.AI, pool: attackers, maxAtk: page === 'PG-025' ? 1 : 99, done: 0, blockersUsed: 0, attacked: new Set() };
+      // BJ「執刀」: 人間は救命(自分)/ロック(相手)の対象を選ぶ
+      if (g.players[this.HUMAN].work === 'BJ' && !g.bj_used && attackers.length) {
+        const heals = g.players[this.HUMAN].field.map(u => ({ uid: u.uid, name: u.card.name, eff: g.effAtk(this.HUMAN, u, page, g.active) }));
+        const locks = g.players[this.AI].field.filter(u => !u.locked).map(u => ({ uid: u.uid, name: u.card.name, eff: g.effAtk(this.AI, u, page, g.active) }));
+        if (heals.length || locks.length) {
+          this.pending = { type: 'shitto', heals, locks, bonus: g.cfg.bj_shitto };
+          this._update();
+          return;
+        }
+      }
+      this.pending = { type: 'attack' };
+      this._update();
+    }
+
+    // 人間: 執刀の対象を選ぶ。mode: 'heal'(自分救命) / 'lock'(相手ロック) / 'skip'
+    chooseShitto(mode, uid) {
+      if (!this.pending || this.pending.type !== 'shitto') return;
+      const g = this.game, page = this._page;
+      if (mode === 'heal' && uid != null) {
+        const u = g.players[this.HUMAN].field.find(x => x.uid === uid);
+        if (u) { u.temp += g.cfg.bj_shitto; u.no_botsu = true; g.bj_used = true; this._emitLog(`あなた: 執刀 ${u.card.name}を救命(+${g.cfg.bj_shitto}・没にならない)`); }
+      } else if (mode === 'lock' && uid != null) {
+        const u = g.players[this.AI].field.find(x => x.uid === uid);
+        if (u) { u.locked = true; g.bj_used = true; this._emitLog(`あなた: 執刀 相手の${u.card.name}をブロック不可に`); }
+      } else {
+        this._emitLog('あなた: 執刀を使わなかった');
+      }
       this.pending = { type: 'attack' };
       this._update();
     }

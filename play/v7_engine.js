@@ -393,7 +393,8 @@
 
     // ---- バトルフェイズ前処理(KT-002・BJ執刀)→ 攻撃者リストを返す ----
     // 人間/AI 共通。攻撃可能ユニットを攻撃力降順で返す。
-    battlePreSteps(pi, page) {
+    // opts.skipShitto: BJ執刀の自動適用を飛ばす(人間が手動で選ぶため)。
+    battlePreSteps(pi, page, opts) {
       const atkPl = this.players[pi];
       const defI = 1 - pi;
       const ignoreSick = page === 'PG-023';
@@ -412,7 +413,7 @@
       }
       // BJ「執刀」
       this._bjLog = null;
-      if (atkPl.work === 'BJ' && !this.bj_used && attackers.length) {
+      if (atkPl.work === 'BJ' && !this.bj_used && attackers.length && !(opts && opts.skipShitto)) {
         const best = attackers[0];
         const bae = this.effAtk(pi, best, page, this.active);
         const blks = this.players[defI].field.slice().sort((x, y) =>

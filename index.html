@@ -6578,6 +6578,10 @@ function v7PlayAct(kind, arg) {
   else if (kind === 'block') v7match.chooseBlock(arg);
   else if (kind === 'blockPass') v7match.chooseBlock(null);
   else if (kind === 'heart') v7match.setHumanHeart(arg);
+  else if (kind === 'revive') v7match.chooseRevive(arg);
+  else if (kind === 'shittoHeal') v7match.chooseShitto('heal', arg);
+  else if (kind === 'shittoLock') v7match.chooseShitto('lock', arg);
+  else if (kind === 'shittoSkip') v7match.chooseShitto('skip', null);
   renderPlay();
 }
 
@@ -6698,6 +6702,15 @@ function v7BarHTML(v) {
   } else if (p.type === 'block') {
     prompt = `🛡 AIの「${escapeHtml(p.attacker.name)}」(⚔${p.ae})が攻撃! ブロックするキャラを選ぶ(緑枠=勝てる)。`;
     btns = `<button class="v7p-btn danger" onclick="v7PlayAct('blockPass')">ブロックしない</button>`;
+  } else if (p.type === 'revive') {
+    prompt = '🔥 ナギ「輪廻」: 没案ゾーンから蘇生するキャラを選ぶ(攻撃力+200・召喚酔いあり)。';
+    btns = (p.options || []).map(o => `<button class="v7p-btn ghost" onclick="v7PlayAct('revive',${o.idx})">${escapeHtml(o.name)}(Lv${o.lv}・⚔${o.base})</button>`).join(' ')
+      + ` <button class="v7p-btn alt" onclick="v7PlayAct('revive',null)">蘇生しない</button>`;
+  } else if (p.type === 'shitto') {
+    prompt = `🔪 BJ「執刀」: 救命(自分のキャラ +${p.bonus}・このターン没にならない)か、ロック(相手のキャラをこのターンブロック不可)を選ぶ。`;
+    const heals = (p.heals || []).map(h => `<button class="v7p-btn ghost" onclick="v7PlayAct('shittoHeal',${h.uid})">救命: ${escapeHtml(h.name)}(⚔${h.eff})</button>`).join(' ');
+    const locks = (p.locks || []).map(l => `<button class="v7p-btn ghost" onclick="v7PlayAct('shittoLock',${l.uid})">ロック: 相手${escapeHtml(l.name)}(⚔${l.eff})</button>`).join(' ');
+    btns = heals + ' ' + locks + ` <button class="v7p-btn alt" onclick="v7PlayAct('shittoSkip')">使わない</button>`;
   }
   return `<div class="v7p-bar">
     <span class="turn">T${v.turn}/${v.maxTurns}</span>
